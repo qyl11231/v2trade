@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信号查询 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                <a href="javascript:;"><i class="layui-icon layui-icon-username"></i><span id="userName">用户</span></a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item">
+                    <a href="javascript:;">系统管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/users.html">用户管理</a></dd>
+                        <dd><a href="/apikey.html">API密钥管理</a></dd>
+                        <dd><a href="/trading-pair.html">交易对管理</a></dd>
+                        <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">信号模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                        <dd class="layui-this"><a href="/signal-list.html">信号查询</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html">策略配置管理</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <fieldset class="layui-elem-field">
+                <legend>信号查询</legend>
+                <div class="layui-field-box">
+                    <div class="layui-form layui-form-pane" style="margin-bottom: 15px;">
+                        <div class="layui-form-item">
+                            <div class="layui-inline">
+                                <label class="layui-form-label">信号名称</label>
+                                <div class="layui-input-inline" style="width: 220px;">
+                                    <input type="text" id="signalNameFilter" placeholder="信号名称（模糊匹配）" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">交易对</label>
+                                <div class="layui-input-inline" style="width: 220px;">
+                                    <input type="text" id="symbolFilter" placeholder="如：BTC-USDT" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <button class="layui-btn" onclick="searchSignals()">
+                                    <i class="layui-icon layui-icon-search"></i> 查询
+                                </button>
+                                <button class="layui-btn layui-btn-normal" style="margin-left: 8px;" onclick="resetFilter()">重置</button>
+                            </div>
+                        </div>
+                    </div>
+                    <table class="layui-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>信号名称</th>
+                                <th>交易对</th>
+                                <th>方向提示</th>
+                                <th>事件类型</th>
+                                <th>价格</th>
+                                <th>数量</th>
+                                <th>信号来源</th>
+                                <th>接收时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="signalList"></tbody>
+                    </table>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+    <div class="layui-footer">© 2024 V2 Trade - 交易管理系统</div>
+</div>
+
+<!-- 信号详情弹窗 -->
+<div id="signalDetail" style="display: none; padding: 20px;">
+    <div class="layui-form">
+        <div class="layui-form-item">
+            <label class="layui-form-label">原始数据</label>
+            <div class="layui-input-block">
+                <textarea id="rawPayload" readonly class="layui-textarea" style="min-height: 200px; font-family: monospace;"></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    // 加载信号列表
+    function loadSignals(symbol, signalName){
+        var url = '/api/signal/query/list?limit=100';
+        
+        request({url: url}).then(function(res){
+            var html = '';
+            var list = res.data || [];
+            
+            // 前端过滤：按交易对和信号名称
+            if (symbol) {
+                var symbolLower = symbol.toLowerCase();
+                list = list.filter(function(item){
+                    return item.symbol && item.symbol.toLowerCase().indexOf(symbolLower) !== -1;
+                });
+            }
+            if (signalName) {
+                var nameLower = signalName.toLowerCase();
+                list = list.filter(function(item){
+                    return item.signalName && item.signalName.toLowerCase().indexOf(nameLower) !== -1;
+                });
+            }
+            
+            if(list.length > 0){
+                list.forEach(function(item){
+                    var directionBadge = '';
+                    if(item.signalDirectionHint == 'LONG'){
+                        directionBadge = '<span class="layui-badge layui-bg-red">做多</span>';
+                    } else if(item.signalDirectionHint == 'SHORT'){
+                        directionBadge = '<span class="layui-badge layui-bg-blue">做空</span>';
+                    } else {
+                        directionBadge = '<span class="layui-badge layui-bg-gray">中性</span>';
+                    }
+                    
+                    var sourceText = '';
+                    if(item.signalSource == 'tv'){
+                        sourceText = 'TradingView';
+                    } else if(item.signalSource == 'internal'){
+                        sourceText = '内部计算';
+                    } else if(item.signalSource == 'manual'){
+                        sourceText = '手工测试';
+                    } else {
+                        sourceText = item.signalSource || '-';
+                    }
+                    
+                    html += '<tr>' +
+                        '<td>' + item.id + '</td>' +
+                        '<td>' + item.signalName + '</td>' +
+                        '<td>' + item.symbol + '</td>' +
+                        '<td>' + directionBadge + '</td>' +
+                        '<td>' + (item.signalEventType || '-') + '</td>' +
+                        '<td>' + (item.price || '-') + '</td>' +
+                        '<td>' + (item.quantity || '-') + '</td>' +
+                        '<td>' + sourceText + '</td>' +
+                        '<td>' + (item.receivedAt || '-') + '</td>' +
+                        '<td>' +
+                        '<button class="layui-btn layui-btn-xs" onclick="viewDetail(' + item.id + ', \'' + (item.rawPayload || '').replace(/'/g, "\\'") + '\')">详情</button>' +
+                        '</td></tr>';
+                });
+            } else {
+                html = '<tr><td colspan="10" style="text-align: center; color: #999;">暂无数据</td></tr>';
+            }
+            $('#signalList').html(html);
+        });
+    }
+    
+    // 查询信号
+    window.searchSignals = function(){
+        var symbol = $('#symbolFilter').val();
+        var signalName = $('#signalNameFilter').val();
+        loadSignals(symbol, signalName);
+    };
+    
+    // 重置筛选
+    window.resetFilter = function(){
+        $('#symbolFilter').val('');
+        $('#signalNameFilter').val('');
+        loadSignals();
+    };
+    
+    // 查看详情
+    window.viewDetail = function(id, rawPayload){
+        try {
+            var json = JSON.parse(rawPayload);
+            $('#rawPayload').val(JSON.stringify(json, null, 2));
+        } catch(e){
+            $('#rawPayload').val(rawPayload);
+        }
+        layer.open({
+            type: 1,
+            title: '信号详情 - ID: ' + id,
+            area: ['700px', '500px'],
+            content: $('#signalDetail')
+        });
+    };
+    
+    // 初始化
+    loadSignals();
+});
+</script>
+</body>
+</html>
+

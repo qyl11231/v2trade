@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人设置 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                <a href="javascript:;"><i class="layui-icon layui-icon-username"></i><span id="userName">用户</span></a>
+                <dl class="layui-nav-child">
+                    <dd class="layui-this"><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">系统管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/users.html">用户管理</a></dd>
+                        <dd><a href="/apikey.html">API密钥管理</a></dd>
+                        <dd><a href="/trading-pair.html">交易对管理</a></dd>
+                        <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">信号模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                        <dd><a href="/signal-list.html">信号查询</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html">策略配置管理</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <div class="layui-row layui-col-space15">
+                <div class="layui-col-md12">
+                    <fieldset class="layui-elem-field">
+                        <legend>基本信息</legend>
+                        <div class="layui-field-box">
+                            <form class="layui-form" lay-filter="userInfoForm" style="padding: 20px;">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">用户名</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" id="username" disabled="disabled" class="layui-input layui-disabled">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">昵称</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="nickname" id="nickname" placeholder="请输入昵称" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">邮箱</label>
+                                    <div class="layui-input-block">
+                                        <input type="email" name="email" id="email" placeholder="请输入邮箱" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <div class="layui-input-block">
+                                        <button type="submit" class="layui-btn" lay-submit lay-filter="updateInfo">保存修改</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="layui-col-md12">
+                    <fieldset class="layui-elem-field">
+                        <legend>修改密码</legend>
+                        <div class="layui-field-box">
+                            <form class="layui-form" lay-filter="passwordForm" style="padding: 20px;">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">原密码</label>
+                                    <div class="layui-input-block">
+                                        <input type="password" name="oldPassword" lay-verify="required" placeholder="请输入原密码" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">新密码</label>
+                                    <div class="layui-input-block">
+                                        <input type="password" name="newPassword" lay-verify="required" placeholder="请输入新密码" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">确认密码</label>
+                                    <div class="layui-input-block">
+                                        <input type="password" name="confirmPassword" lay-verify="required" placeholder="请再次输入新密码" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <div class="layui-input-block">
+                                        <button type="submit" class="layui-btn" lay-submit lay-filter="changePassword">修改密码</button>
+                                        <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-footer">© 2024 V2 Trade - 交易管理系统</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    function loadUserInfo(){
+        request({url: '/api/user/info'}).then(function(res){
+            $('#username').val(res.data.username);
+            $('#nickname').val(res.data.nickname || '');
+            $('#email').val(res.data.email || '');
+        });
+    }
+    
+    loadUserInfo();
+    
+    form.on('submit(updateInfo)', function(data){
+        var loading = layer.load(1);
+        request({url: '/api/user/info', method: 'PUT', data: data.field}).then(function(res){
+            layer.close(loading);
+            layer.msg(res.message, {icon: 1});
+            user.nickname = res.data.nickname;
+            user.email = res.data.email;
+            setCurrentUser(user);
+        }).catch(function(){ layer.close(loading); });
+        return false;
+    });
+    
+    form.on('submit(changePassword)', function(data){
+        if(data.field.newPassword !== data.field.confirmPassword){
+            layer.msg('两次密码输入不一致', {icon: 2});
+            return false;
+        }
+        var loading = layer.load(1);
+        request({url: '/api/user/password', method: 'POST', data: data.field}).then(function(res){
+            layer.close(loading);
+            layer.msg(res.message, {icon: 1});
+            $('input[name="oldPassword"]').val('');
+            $('input[name="newPassword"]').val('');
+            $('input[name="confirmPassword"]').val('');
+        }).catch(function(){ layer.close(loading); });
+        return false;
+    });
+});
+</script>
+</body>
+</html>

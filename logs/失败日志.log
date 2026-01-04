@@ -1,0 +1,285 @@
+D:\soft\java17\bin\java.exe -agentlib:jdwp=transport=dt_socket,address=127.0.0.1:9148,suspend=y,server=n -javaagent:C:\Users\Mengh\AppData\Local\JetBrains\IntelliJIdea2025.2\captureAgent\debugger-agent.jar=file:///C:/Users/Mengh/AppData/Local/Temp/capture5808757670427396446.props -DsocksProxyHost=127.0.0.1 -DsocksProxyPort=7890 -Dkotlinx.coroutines.debug.enable.creation.stack.trace=false -Ddebugger.agent.enable.coroutines=true -Dkotlinx.coroutines.debug.enable.flows.stack.trace=true -Dkotlinx.coroutines.debug.enable.mutable.state.flows.stack.trace=true -Dfile.encoding=UTF-8 -classpath "D:\okx_trade\qyl\v2-trade\target\classes;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-web\3.5.7\spring-boot-starter-web-3.5.7.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter\3.5.7\spring-boot-starter-3.5.7.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot\3.5.7\spring-boot-3.5.7.jar;C:\Users\Mengh\.m2\repository\jakarta\annotation\jakarta.annotation-api\2.1.1\jakarta.annotation-api-2.1.1.jar;C:\Users\Mengh\.m2\repository\org\yaml\snakeyaml\2.4\snakeyaml-2.4.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-json\3.5.7\spring-boot-starter-json-3.5.7.jar;C:\Users\Mengh\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.19.2\jackson-databind-2.19.2.jar;C:\Users\Mengh\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.19.2\jackson-annotations-2.19.2.jar;C:\Users\Mengh\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.19.2\jackson-core-2.19.2.jar;C:\Users\Mengh\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.19.2\jackson-datatype-jdk8-2.19.2.jar;C:\Users\Mengh\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.19.2\jackson-datatype-jsr310-2.19.2.jar;C:\Users\Mengh\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.19.2\jackson-module-parameter-names-2.19.2.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\3.5.7\spring-boot-starter-tomcat-3.5.7.jar;C:\Users\Mengh\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\10.1.48\tomcat-embed-core-10.1.48.jar;C:\Users\Mengh\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\10.1.48\tomcat-embed-websocket-10.1.48.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-web\6.2.12\spring-web-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-beans\6.2.12\spring-beans-6.2.12.jar;C:\Users\Mengh\.m2\repository\io\micrometer\micrometer-observation\1.15.5\micrometer-observation-1.15.5.jar;C:\Users\Mengh\.m2\repository\io\micrometer\micrometer-commons\1.15.5\micrometer-commons-1.15.5.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-webmvc\6.2.12\spring-webmvc-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-aop\6.2.12\spring-aop-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-context\6.2.12\spring-context-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-expression\6.2.12\spring-expression-6.2.12.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus-spring-boot3-starter\3.5.9\mybatis-plus-spring-boot3-starter-3.5.9.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus\3.5.9\mybatis-plus-3.5.9.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus-core\3.5.9\mybatis-plus-core-3.5.9.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus-annotation\3.5.9\mybatis-plus-annotation-3.5.9.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus-spring\3.5.9\mybatis-plus-spring-3.5.9.jar;C:\Users\Mengh\.m2\repository\org\mybatis\mybatis\3.5.16\mybatis-3.5.16.jar;C:\Users\Mengh\.m2\repository\org\mybatis\mybatis-spring\3.0.4\mybatis-spring-3.0.4.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus-spring-boot-autoconfigure\3.5.9\mybatis-plus-spring-boot-autoconfigure-3.5.9.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\3.5.7\spring-boot-autoconfigure-3.5.7.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-jdbc\3.5.7\spring-boot-starter-jdbc-3.5.7.jar;C:\Users\Mengh\.m2\repository\com\zaxxer\HikariCP\6.3.3\HikariCP-6.3.3.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-jdbc\6.2.12\spring-jdbc-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-validation\3.5.7\spring-boot-starter-validation-3.5.7.jar;C:\Users\Mengh\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\10.1.48\tomcat-embed-el-10.1.48.jar;C:\Users\Mengh\.m2\repository\org\hibernate\validator\hibernate-validator\8.0.3.Final\hibernate-validator-8.0.3.Final.jar;C:\Users\Mengh\.m2\repository\jakarta\validation\jakarta.validation-api\3.0.2\jakarta.validation-api-3.0.2.jar;C:\Users\Mengh\.m2\repository\org\jboss\logging\jboss-logging\3.6.1.Final\jboss-logging-3.6.1.Final.jar;C:\Users\Mengh\.m2\repository\com\fasterxml\classmate\1.7.1\classmate-1.7.1.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-thymeleaf\3.5.7\spring-boot-starter-thymeleaf-3.5.7.jar;C:\Users\Mengh\.m2\repository\org\thymeleaf\thymeleaf-spring6\3.1.3.RELEASE\thymeleaf-spring6-3.1.3.RELEASE.jar;C:\Users\Mengh\.m2\repository\org\thymeleaf\thymeleaf\3.1.3.RELEASE\thymeleaf-3.1.3.RELEASE.jar;C:\Users\Mengh\.m2\repository\org\attoparser\attoparser\2.0.7.RELEASE\attoparser-2.0.7.RELEASE.jar;C:\Users\Mengh\.m2\repository\org\unbescape\unbescape\1.1.6.RELEASE\unbescape-1.1.6.RELEASE.jar;C:\Users\Mengh\.m2\repository\org\slf4j\slf4j-api\2.0.17\slf4j-api-2.0.17.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-data-redis\3.5.7\spring-boot-starter-data-redis-3.5.7.jar;C:\Users\Mengh\.m2\repository\io\lettuce\lettuce-core\6.6.0.RELEASE\lettuce-core-6.6.0.RELEASE.jar;C:\Users\Mengh\.m2\repository\redis\clients\authentication\redis-authx-core\0.1.1-beta2\redis-authx-core-0.1.1-beta2.jar;C:\Users\Mengh\.m2\repository\io\netty\netty-common\4.1.128.Final\netty-common-4.1.128.Final.jar;C:\Users\Mengh\.m2\repository\io\netty\netty-handler\4.1.128.Final\netty-handler-4.1.128.Final.jar;C:\Users\Mengh\.m2\repository\io\netty\netty-resolver\4.1.128.Final\netty-resolver-4.1.128.Final.jar;C:\Users\Mengh\.m2\repository\io\netty\netty-buffer\4.1.128.Final\netty-buffer-4.1.128.Final.jar;C:\Users\Mengh\.m2\repository\io\netty\netty-transport-native-unix-common\4.1.128.Final\netty-transport-native-unix-common-4.1.128.Final.jar;C:\Users\Mengh\.m2\repository\io\netty\netty-codec\4.1.128.Final\netty-codec-4.1.128.Final.jar;C:\Users\Mengh\.m2\repository\io\netty\netty-transport\4.1.128.Final\netty-transport-4.1.128.Final.jar;C:\Users\Mengh\.m2\repository\io\projectreactor\reactor-core\3.7.12\reactor-core-3.7.12.jar;C:\Users\Mengh\.m2\repository\org\reactivestreams\reactive-streams\1.0.4\reactive-streams-1.0.4.jar;C:\Users\Mengh\.m2\repository\org\springframework\data\spring-data-redis\3.5.5\spring-data-redis-3.5.5.jar;C:\Users\Mengh\.m2\repository\org\springframework\data\spring-data-keyvalue\3.5.5\spring-data-keyvalue-3.5.5.jar;C:\Users\Mengh\.m2\repository\org\springframework\data\spring-data-commons\3.5.5\spring-data-commons-3.5.5.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-tx\6.2.12\spring-tx-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-oxm\6.2.12\spring-oxm-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-context-support\6.2.12\spring-context-support-6.2.12.jar;C:\Users\Mengh\.m2\repository\com\mysql\mysql-connector-j\9.4.0\mysql-connector-j-9.4.0.jar;C:\Users\Mengh\.m2\repository\jakarta\xml\bind\jakarta.xml.bind-api\4.0.4\jakarta.xml.bind-api-4.0.4.jar;C:\Users\Mengh\.m2\repository\jakarta\activation\jakarta.activation-api\2.1.4\jakarta.activation-api-2.1.4.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-core\6.2.12\spring-core-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-jcl\6.2.12\spring-jcl-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-log4j2\3.5.7\spring-boot-starter-log4j2-3.5.7.jar;C:\Users\Mengh\.m2\repository\org\apache\logging\log4j\log4j-slf4j2-impl\2.24.3\log4j-slf4j2-impl-2.24.3.jar;C:\Users\Mengh\.m2\repository\org\apache\logging\log4j\log4j-api\2.24.3\log4j-api-2.24.3.jar;C:\Users\Mengh\.m2\repository\org\apache\logging\log4j\log4j-core\2.24.3\log4j-core-2.24.3.jar;C:\Users\Mengh\.m2\repository\org\apache\logging\log4j\log4j-jul\2.24.3\log4j-jul-2.24.3.jar;C:\Users\Mengh\.m2\repository\org\projectlombok\lombok\1.18.42\lombok-1.18.42.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus-jsqlparser-4.9\3.5.9\mybatis-plus-jsqlparser-4.9-3.5.9.jar;C:\Users\Mengh\.m2\repository\com\github\jsqlparser\jsqlparser\4.9\jsqlparser-4.9.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus-jsqlparser-common\3.5.9\mybatis-plus-jsqlparser-common-3.5.9.jar;C:\Users\Mengh\.m2\repository\com\baomidou\mybatis-plus-extension\3.5.9\mybatis-plus-extension-3.5.9.jar;C:\Users\Mengh\.m2\repository\org\postgresql\postgresql\42.7.8\postgresql-42.7.8.jar;C:\Users\Mengh\.m2\repository\org\checkerframework\checker-qual\3.49.5\checker-qual-3.49.5.jar;C:\Users\Mengh\.m2\repository\org\springframework\boot\spring-boot-starter-websocket\3.5.7\spring-boot-starter-websocket-3.5.7.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-messaging\6.2.12\spring-messaging-6.2.12.jar;C:\Users\Mengh\.m2\repository\org\springframework\spring-websocket\6.2.12\spring-websocket-6.2.12.jar;C:\Users\Mengh\.m2\repository\com\squareup\okhttp3\okhttp\4.12.0\okhttp-4.12.0.jar;C:\Users\Mengh\.m2\repository\com\squareup\okio\okio\3.6.0\okio-3.6.0.jar;C:\Users\Mengh\.m2\repository\com\squareup\okio\okio-jvm\3.6.0\okio-jvm-3.6.0.jar;C:\Users\Mengh\.m2\repository\org\jetbrains\kotlin\kotlin-stdlib-common\1.9.25\kotlin-stdlib-common-1.9.25.jar;C:\Users\Mengh\.m2\repository\org\jetbrains\kotlin\kotlin-stdlib-jdk8\1.9.25\kotlin-stdlib-jdk8-1.9.25.jar;C:\Users\Mengh\.m2\repository\org\jetbrains\kotlin\kotlin-stdlib\1.9.25\kotlin-stdlib-1.9.25.jar;C:\Users\Mengh\.m2\repository\org\jetbrains\annotations\13.0\annotations-13.0.jar;C:\Users\Mengh\.m2\repository\org\jetbrains\kotlin\kotlin-stdlib-jdk7\1.9.25\kotlin-stdlib-jdk7-1.9.25.jar;D:\Tools\IntelliJ IDEA 2025.2.4\lib\idea_rt.jar" com.qyl.v2trade.V2TradeApplication
+Connected to the target VM, address: '127.0.0.1:9148', transport: 'socket'
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+2025-12-25 14:00:21.404 [background-preinit] INFO  org.hibernate.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2025-12-25 14:00:21.519 [main] INFO  com.qyl.v2trade.V2TradeApplication - Starting V2TradeApplication using Java 17.0.15 with PID 20672 (D:\okx_trade\qyl\v2-trade\target\classes started by Test in D:\okx_trade\qyl\v2-trade)
+2025-12-25 14:00:21.533 [main] INFO  com.qyl.v2trade.V2TradeApplication - No active profile set, falling back to 1 default profile: "default"
+2025-12-25 14:00:23.443 [main] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2025-12-25 14:00:23.447 [main] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-12-25 14:00:23.575 [main] INFO  org.springframework.data.repository.config.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 89 ms. Found 0 Redis repository interfaces.
+2025-12-25 14:00:25.419 [main] INFO  org.springframework.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-12-25 14:00:25.475 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2025-12-25 14:00:25.483 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2025-12-25 14:00:25.484 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.48]
+2025-12-25 14:00:25.683 [main] INFO  org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-12-25 14:00:25.693 [main] INFO  org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 4065 ms
+Logging initialized using 'class org.apache.ibatis.logging.stdout.StdOutImpl' adapter.
+Get /172.17.144.1 network interface 
+Get network interface info: name:eth8 (Hyper-V Virtual Ethernet Adapter)
+Initialization Sequence datacenterId:20 workerId:21
+ _ _   |_  _ _|_. ___ _ |    _ 
+| | |\/|_)(_| | |_\  |_)||_|_\ 
+     /               |         
+                        3.5.9 
+JacksonTypeHandler(interface java.util.Map)
+2025-12-25 14:00:30.866 [main] INFO  com.qyl.v2trade.market.config.MarketWebSocketConfig - 创建 ChannelRouter Bean
+2025-12-25 14:00:30.870 [main] INFO  com.qyl.v2trade.market.config.MarketWebSocketConfig - 创建 MarketEventBus Bean
+2025-12-25 14:00:30.879 [main] INFO  com.qyl.v2trade.market.config.MarketWebSocketConfig - 创建 KlineChannel Bean
+2025-12-25 14:00:30.883 [main] INFO  com.qyl.v2trade.market.config.MarketWebSocketConfig - 创建 ExchangeWebSocketManager Bean
+2025-12-25 14:00:30.889 [main] INFO  com.qyl.v2trade.market.router.ChannelRouter - 注册 Channel: type=KLINE
+2025-12-25 14:00:30.890 [main] INFO  com.qyl.v2trade.market.config.MarketWebSocketConfig - 已注册 Channel: KLINE
+2025-12-25 14:00:30.916 [main] INFO  com.qyl.v2trade.market.websocket.ExchangeWebSocketManager - 配置验证通过: url=wss://ws.okx.com:8443/ws/v5/business, connectTimeout=15s
+2025-12-25 14:00:31.376 [main] INFO  com.qyl.v2trade.market.websocket.ExchangeWebSocketManager - ExchangeWebSocketManager 初始化完成
+2025-12-25 14:00:31.796 [main] INFO  org.springframework.boot.autoconfigure.web.servlet.WelcomePageHandlerMapping - Adding welcome page: class path resource [static/index.html]
+2025-12-25 14:00:32.415 [main] WARN  org.springframework.boot.autoconfigure.thymeleaf.ThymeleafAutoConfiguration$DefaultTemplateResolverConfiguration - Cannot find template location: classpath:/templates/ (please add some templates, check your Thymeleaf configuration, or set spring.thymeleaf.check-template-location=false)
+2025-12-25 14:00:32.922 [main] INFO  org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler - Starting...
+2025-12-25 14:00:32.923 [main] INFO  org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@46610fc9]]
+2025-12-25 14:00:32.926 [main] INFO  org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler - Started.
+2025-12-25 14:00:32.928 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2025-12-25 14:00:32.979 [main] INFO  org.springframework.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-12-25 14:00:33.002 [main] INFO  com.qyl.v2trade.V2TradeApplication - Started V2TradeApplication in 12.258 seconds (process running for 13.999)
+2025-12-25 14:00:33.014 [MessageBroker-2] INFO  com.qyl.v2trade.market.monitor.MarketDataMonitor - 行情数据监控指标 - 收到K线: 0, 保存K线: 0, 检测到缺口: 0, 补拉次数: 0, WebSocket重连: 0
+2025-12-25 14:00:33.014 [main] INFO  com.qyl.v2trade.market.MarketDataCenter - 行情数据中心启动中...
+2025-12-25 14:00:33.016 [main] INFO  com.qyl.v2trade.market.eventbus.impl.SimpleMarketEventBus - 新增事件订阅者，当前订阅者数量: 1
+2025-12-25 14:00:33.016 [main] INFO  com.qyl.v2trade.market.MarketDataCenter - 已订阅 EventBus
+2025-12-25 14:00:33.017 [main] INFO  com.qyl.v2trade.market.MarketDataCenter - 启动行情采集服务...
+2025-12-25 14:00:33.019 [main] INFO  com.qyl.v2trade.market.eventbus.impl.SimpleMarketEventBus - 新增事件订阅者，当前订阅者数量: 2
+2025-12-25 14:00:33.019 [main] INFO  com.qyl.v2trade.market.ingestor.impl.OkxMarketIngestor - 已订阅 EventBus
+2025-12-25 14:00:33.019 [main] INFO  com.qyl.v2trade.market.websocket.ExchangeWebSocketManager - 尝试连接 WebSocket: wss://ws.okx.com:8443/ws/v5/business (重连次数: 0)
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4d3f58c0] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@222703467 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,trading_pair_id,enabled,cache_duration_minutes,remark,created_at,updated_at FROM market_subscription_config WHERE (enabled = ?)
+==> Parameters: 1(Integer)
+<==    Columns: id, trading_pair_id, enabled, cache_duration_minutes, remark, created_at, updated_at
+<==        Row: 1, 712, 1, 60, null, 2025-12-24 10:17:40.144, 2025-12-24 10:17:40.148
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4d3f58c0]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@47211f91] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@815561387 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,symbol,base_currency,quote_currency,market_type,enabled,created_at,updated_at FROM trading_pair WHERE id=?
+==> Parameters: 712(Long)
+<==    Columns: id, symbol, base_currency, quote_currency, market_type, enabled, created_at, updated_at
+<==        Row: 712, BTC-USDT, BTC, USDT, SWAP, 1, 2025-12-17 09:45:41, 2025-12-17 09:45:41
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@47211f91]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4a6815f2] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@589047532 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,trading_pair_id,enabled,cache_duration_minutes,remark,created_at,updated_at FROM market_subscription_config WHERE (enabled = ?)
+==> Parameters: 1(Integer)
+<==    Columns: id, trading_pair_id, enabled, cache_duration_minutes, remark, created_at, updated_at
+<==        Row: 1, 712, 1, 60, null, 2025-12-24 10:17:40.144, 2025-12-24 10:17:40.148
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4a6815f2]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@57c67d50] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@249654502 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,symbol,base_currency,quote_currency,market_type,enabled,created_at,updated_at FROM trading_pair WHERE id=?
+==> Parameters: 712(Long)
+<==    Columns: id, symbol, base_currency, quote_currency, market_type, enabled, created_at, updated_at
+<==        Row: 712, BTC-USDT, BTC, USDT, SWAP, 1, 2025-12-17 09:45:41, 2025-12-17 09:45:41
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@57c67d50]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@66d21622] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1596342545 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,trading_pair_id,enabled,cache_duration_minutes,remark,created_at,updated_at FROM market_subscription_config WHERE (enabled = ?)
+==> Parameters: 1(Integer)
+<==    Columns: id, trading_pair_id, enabled, cache_duration_minutes, remark, created_at, updated_at
+<==        Row: 1, 712, 1, 60, null, 2025-12-24 10:17:40.144, 2025-12-24 10:17:40.148
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@66d21622]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2e171207] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@803685490 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,symbol,base_currency,quote_currency,market_type,enabled,created_at,updated_at FROM trading_pair WHERE id=?
+==> Parameters: 712(Long)
+<==    Columns: id, symbol, base_currency, quote_currency, market_type, enabled, created_at, updated_at
+<==        Row: 712, BTC-USDT, BTC, USDT, SWAP, 1, 2025-12-17 09:45:41, 2025-12-17 09:45:41
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2e171207]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5eda9c8e] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1097567557 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,trading_pair_id,enabled,cache_duration_minutes,remark,created_at,updated_at FROM market_subscription_config WHERE (enabled = ?)
+==> Parameters: 1(Integer)
+<==    Columns: id, trading_pair_id, enabled, cache_duration_minutes, remark, created_at, updated_at
+<==        Row: 1, 712, 1, 60, null, 2025-12-24 10:17:40.144, 2025-12-24 10:17:40.148
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5eda9c8e]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4d7e0e5] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1227889915 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,symbol,base_currency,quote_currency,market_type,enabled,created_at,updated_at FROM trading_pair WHERE id=?
+==> Parameters: 712(Long)
+<==    Columns: id, symbol, base_currency, quote_currency, market_type, enabled, created_at, updated_at
+<==        Row: 712, BTC-USDT, BTC, USDT, SWAP, 1, 2025-12-17 09:45:41, 2025-12-17 09:45:41
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@4d7e0e5]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1c83b478] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1552789541 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,trading_pair_id,enabled,cache_duration_minutes,remark,created_at,updated_at FROM market_subscription_config WHERE (enabled = ?)
+==> Parameters: 1(Integer)
+<==    Columns: id, trading_pair_id, enabled, cache_duration_minutes, remark, created_at, updated_at
+<==        Row: 1, 712, 1, 60, null, 2025-12-24 10:17:40.144, 2025-12-24 10:17:40.148
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1c83b478]
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@594f88ac] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1236176514 wrapping com.mysql.cj.jdbc.ConnectionImpl@27296d0e] will not be managed by Spring
+==>  Preparing: SELECT id,symbol,base_currency,quote_currency,market_type,enabled,created_at,updated_at FROM trading_pair WHERE id=?
+==> Parameters: 712(Long)
+<==    Columns: id, symbol, base_currency, quote_currency, market_type, enabled, created_at, updated_at
+<==        Row: 712, BTC-USDT, BTC, USDT, SWAP, 1, 2025-12-17 09:45:41, 2025-12-17 09:45:41
+<==      Total: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@594f88ac]
+2025-12-25 14:00:48.156 [main] ERROR com.qyl.v2trade.market.websocket.ExchangeWebSocketManager - WebSocket 连接失败: WebSocket 连接超时
+java.lang.RuntimeException: WebSocket 连接超时
+	at com.qyl.v2trade.market.websocket.ExchangeWebSocketManager.connect(ExchangeWebSocketManager.java:270) ~[classes/:?]
+	at com.qyl.v2trade.market.ingestor.impl.OkxMarketIngestor.start(OkxMarketIngestor.java:62) ~[classes/:?]
+	at com.qyl.v2trade.market.MarketDataCenter.start(MarketDataCenter.java:107) ~[classes/:?]
+	at com.qyl.v2trade.market.MarketDataCenter.run(MarketDataCenter.java:88) ~[classes/:?]
+	at org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:784) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772) ~[spring-boot-3.5.7.jar:3.5.7]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:183) [?:?]
+	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) [?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:150) [?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:173) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) [?:?]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) [?:?]
+	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) [spring-boot-3.5.7.jar:3.5.7]
+	at com.qyl.v2trade.V2TradeApplication.main(V2TradeApplication.java:13) [classes/:?]
+2025-12-25 14:00:48.171 [main] ERROR com.qyl.v2trade.market.MarketDataCenter - 行情数据中心启动失败
+java.lang.RuntimeException: WebSocket 连接失败: WebSocket 连接超时
+	at com.qyl.v2trade.market.websocket.ExchangeWebSocketManager.connect(ExchangeWebSocketManager.java:277) ~[classes/:?]
+	at com.qyl.v2trade.market.ingestor.impl.OkxMarketIngestor.start(OkxMarketIngestor.java:62) ~[classes/:?]
+	at com.qyl.v2trade.market.MarketDataCenter.start(MarketDataCenter.java:107) ~[classes/:?]
+	at com.qyl.v2trade.market.MarketDataCenter.run(MarketDataCenter.java:88) ~[classes/:?]
+	at org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:784) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772) ~[spring-boot-3.5.7.jar:3.5.7]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:183) [?:?]
+	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) [?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:150) [?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:173) [?:?]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) [?:?]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) [?:?]
+	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) [spring-boot-3.5.7.jar:3.5.7]
+	at com.qyl.v2trade.V2TradeApplication.main(V2TradeApplication.java:13) [classes/:?]
+Caused by: java.lang.RuntimeException: WebSocket 连接超时
+	at com.qyl.v2trade.market.websocket.ExchangeWebSocketManager.connect(ExchangeWebSocketManager.java:270) ~[classes/:?]
+	... 23 more
+2025-12-25 14:00:48.180 [main] INFO  org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLogger - 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2025-12-25 14:00:48.251 [main] ERROR org.springframework.boot.SpringApplication - Application run failed
+java.lang.RuntimeException: 启动失败
+	at com.qyl.v2trade.market.MarketDataCenter.start(MarketDataCenter.java:120) ~[classes/:?]
+	at com.qyl.v2trade.market.MarketDataCenter.run(MarketDataCenter.java:88) ~[classes/:?]
+	at org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86) ~[spring-core-6.2.12.jar:6.2.12]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:784) ~[spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772) [spring-boot-3.5.7.jar:3.5.7]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:183) ~[?:?]
+	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357) ~[?:?]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510) ~[?:?]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:150) ~[?:?]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:173) ~[?:?]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[?:?]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) ~[?:?]
+	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) [spring-boot-3.5.7.jar:3.5.7]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) [spring-boot-3.5.7.jar:3.5.7]
+	at com.qyl.v2trade.V2TradeApplication.main(V2TradeApplication.java:13) [classes/:?]
+Caused by: java.lang.RuntimeException: WebSocket 连接失败: WebSocket 连接超时
+	at com.qyl.v2trade.market.websocket.ExchangeWebSocketManager.connect(ExchangeWebSocketManager.java:277) ~[classes/:?]
+	at com.qyl.v2trade.market.ingestor.impl.OkxMarketIngestor.start(OkxMarketIngestor.java:62) ~[classes/:?]
+	at com.qyl.v2trade.market.MarketDataCenter.start(MarketDataCenter.java:107) ~[classes/:?]
+	... 21 more
+Caused by: java.lang.RuntimeException: WebSocket 连接超时
+	at com.qyl.v2trade.market.websocket.ExchangeWebSocketManager.connect(ExchangeWebSocketManager.java:270) ~[classes/:?]
+	at com.qyl.v2trade.market.ingestor.impl.OkxMarketIngestor.start(OkxMarketIngestor.java:62) ~[classes/:?]
+	at com.qyl.v2trade.market.MarketDataCenter.start(MarketDataCenter.java:107) ~[classes/:?]
+	... 21 more
+2025-12-25 14:00:48.328 [main] INFO  org.springframework.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-12-25 14:00:50.626 [tomcat-shutdown] INFO  org.springframework.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2025-12-25 14:00:50.632 [main] INFO  org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler - Stopping...
+2025-12-25 14:00:50.632 [main] INFO  org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@46610fc9]]
+2025-12-25 14:00:50.635 [main] INFO  org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler - Stopped.
+2025-12-25 14:00:50.687 [main] INFO  com.qyl.v2trade.market.websocket.ExchangeWebSocketManager - 开始关闭 ExchangeWebSocketManager...
+2025-12-25 14:00:50.691 [main] INFO  com.qyl.v2trade.market.websocket.ExchangeWebSocketManager - ExchangeWebSocketManager 已关闭
+2025-12-25 14:00:50.691 [main] INFO  com.qyl.v2trade.market.eventbus.impl.SimpleMarketEventBus - 开始关闭 MarketEventBus...
+2025-12-25 14:00:50.693 [main] INFO  com.qyl.v2trade.market.eventbus.impl.SimpleMarketEventBus - MarketEventBus 已关闭
+2025-12-25 14:01:03.453 [OkHttp https://ws.okx.com:8443/...] ERROR com.qyl.v2trade.market.websocket.ExchangeWebSocketManager - WebSocket 连接失败: Remote host terminated the handshake
+javax.net.ssl.SSLHandshakeException: Remote host terminated the handshake
+	at java.base/sun.security.ssl.SSLSocketImpl.handleEOF(SSLSocketImpl.java:1715) ~[?:?]
+	at java.base/sun.security.ssl.SSLSocketImpl.decode(SSLSocketImpl.java:1514) ~[?:?]
+	at java.base/sun.security.ssl.SSLSocketImpl.readHandshakeRecord(SSLSocketImpl.java:1421) ~[?:?]
+	at java.base/sun.security.ssl.SSLSocketImpl.startHandshake(SSLSocketImpl.java:455) ~[?:?]
+	at java.base/sun.security.ssl.SSLSocketImpl.startHandshake(SSLSocketImpl.java:426) ~[?:?]
+	at okhttp3.internal.connection.RealConnection.connectTls(RealConnection.kt:379) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.RealConnection.establishProtocol(RealConnection.kt:337) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.RealConnection.connect(RealConnection.kt:209) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.ExchangeFinder.findConnection(ExchangeFinder.kt:226) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.ExchangeFinder.findHealthyConnection(ExchangeFinder.kt:106) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.ExchangeFinder.find(ExchangeFinder.kt:74) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.RealCall.initExchange$okhttp(RealCall.kt:255) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.ConnectInterceptor.intercept(ConnectInterceptor.kt:32) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.cache.CacheInterceptor.intercept(CacheInterceptor.kt:95) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.http.BridgeInterceptor.intercept(BridgeInterceptor.kt:83) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.http.RetryAndFollowUpInterceptor.intercept(RetryAndFollowUpInterceptor.kt:76) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.RealCall.getResponseWithInterceptorChain$okhttp(RealCall.kt:201) ~[okhttp-4.12.0.jar:?]
+	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:517) [okhttp-4.12.0.jar:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136) [?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635) [?:?]
+	at java.base/java.lang.Thread.run(Thread.java:842) [?:?]
+Caused by: java.io.EOFException: SSL peer shut down incorrectly
+	at java.base/sun.security.ssl.SSLSocketInputRecord.read(SSLSocketInputRecord.java:489) ~[?:?]
+	at java.base/sun.security.ssl.SSLSocketInputRecord.readHeader(SSLSocketInputRecord.java:478) ~[?:?]
+	at java.base/sun.security.ssl.SSLSocketInputRecord.decode(SSLSocketInputRecord.java:160) ~[?:?]
+	at java.base/sun.security.ssl.SSLTransport.decode(SSLTransport.java:111) ~[?:?]
+	at java.base/sun.security.ssl.SSLSocketImpl.decode(SSLSocketImpl.java:1506) ~[?:?]
+	... 23 more
+Disconnected from the target VM, address: '127.0.0.1:9148', transport: 'socket'
+
+Process finished with exit code 1

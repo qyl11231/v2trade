@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行情订阅配置管理 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                <a href="javascript:;"><i class="layui-icon layui-icon-username"></i><span id="userName">用户</span></a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">系统管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/users.html">用户管理</a></dd>
+                        <dd><a href="/apikey.html">API密钥管理</a></dd>
+                        <dd><a href="/trading-pair.html">交易对管理</a></dd>
+                        <dd class="layui-this"><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">信号模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                        <dd><a href="/signal-list.html">信号查询</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html">策略配置管理</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <fieldset class="layui-elem-field">
+                <legend>行情订阅配置管理</legend>
+                <div class="layui-field-box">
+                    <div class="layui-form" style="margin-bottom: 15px;">
+                        <div class="layui-inline">
+                            <select id="searchEnabled" class="layui-input" style="width: 150px;">
+                                <option value="">全部状态</option>
+                                <option value="1">启用</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn" onclick="searchConfig()"><i class="layui-icon layui-icon-search"></i> 搜索</button>
+                            <button class="layui-btn layui-btn-normal" onclick="openAddConfig()"><i class="layui-icon layui-icon-add-1"></i> 添加配置</button>
+                        </div>
+                    </div>
+                    <table class="layui-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>交易对</th>
+                                <th>市场类型</th>
+                                <th>状态</th>
+                                <th>缓存时长(分钟)</th>
+                                <th>备注</th>
+                                <th>创建时间</th>
+                                <th>更新时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="configTableBody"></tbody>
+                    </table>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+    <div class="layui-footer">© 2024 V2 Trade - 交易管理系统</div>
+</div>
+
+<!-- 添加/编辑表单 -->
+<div id="configForm" style="display: none; padding: 20px;">
+    <form class="layui-form" lay-filter="configForm">
+        <input type="hidden" name="id" id="configId">
+        <div class="layui-form-item">
+            <label class="layui-form-label">交易对<span style="color: red;">*</span></label>
+            <div class="layui-input-block">
+                <select name="tradingPairId" id="tradingPairSelect" lay-verify="required" lay-search>
+                    <option value="">请选择交易对</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">是否启用</label>
+            <div class="layui-input-block">
+                <input type="radio" name="enabled" value="1" title="启用" checked>
+                <input type="radio" name="enabled" value="0" title="禁用">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">缓存时长(分钟)</label>
+            <div class="layui-input-block">
+                <input type="number" name="cacheDurationMinutes" value="60" lay-verify="required|number" placeholder="请输入缓存时长" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">备注</label>
+            <div class="layui-input-block">
+                <textarea name="remark" placeholder="请输入备注说明（选填）" class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="submit" class="layui-btn" lay-submit lay-filter="submitConfig">提交</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    var isEditMode = false;
+    var currentEditId = null;
+    
+    // 加载交易对列表（用于下拉框）
+    function loadTradingPairs() {
+        request({
+            url: '/api/trading-pair/list?enabled=1',
+            method: 'GET'
+        }).then(function(res) {
+            var html = '<option value="">请选择交易对</option>';
+            if(res.data && res.data.length > 0){
+                res.data.forEach(function(item){
+                    var displayText = item.symbol + ' (' + item.marketType + ')';
+                    html += '<option value="' + item.id + '">' + displayText + '</option>';
+                });
+            }
+            $('#tradingPairSelect').html(html);
+            form.render('select');
+        });
+    }
+    
+    // 加载配置列表
+    function loadConfigs() {
+        var enabled = $('#searchEnabled').val();
+        var url = '/api/market-subscription/list';
+        if (enabled !== '') {
+            url += '?enabled=' + enabled;
+        }
+        
+        request({
+            url: url,
+            method: 'GET'
+        }).then(function(res) {
+            var html = '';
+            if(res.data && res.data.length > 0){
+                res.data.forEach(function(item){
+                    var statusBadge = item.enabled == 1 ? 
+                        '<span class="layui-badge layui-bg-green">启用</span>' : 
+                        '<span class="layui-badge layui-bg-gray">禁用</span>';
+                    var symbolText = item.symbol || '未知';
+                    var marketTypeText = item.marketType || '-';
+                    html += '<tr>' +
+                        '<td>' + item.id + '</td>' +
+                        '<td>' + symbolText + '</td>' +
+                        '<td>' + marketTypeText + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '<td>' + (item.cacheDurationMinutes || 60) + '</td>' +
+                        '<td>' + (item.remark || '-') + '</td>' +
+                        '<td>' + (item.createdAt || '-') + '</td>' +
+                        '<td>' + (item.updatedAt || '-') + '</td>' +
+                        '<td>' +
+                            '<button class="layui-btn layui-btn-xs" onclick="editConfig(' + item.id + ')">编辑</button>' +
+                            '<button class="layui-btn layui-btn-xs layui-btn-warm" onclick="toggleConfig(' + item.id + ', ' + item.enabled + ')">' + 
+                                (item.enabled == 1 ? '禁用' : '启用') + '</button>' +
+                            '<button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteConfig(' + item.id + ')">删除</button>' +
+                        '</td>' +
+                    '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="9" style="text-align: center; color: #999;">暂无数据</td></tr>';
+            }
+            $('#configTableBody').html(html);
+        });
+    }
+    
+    // 初始化加载
+    loadTradingPairs();
+    loadConfigs();
+    
+    // 搜索配置
+    window.searchConfig = function() {
+        loadConfigs();
+    };
+    
+    // 打开添加配置窗口
+    window.openAddConfig = function() {
+        isEditMode = false;
+        currentEditId = null;
+        
+        // 清空表单数据
+        $('#configId').val('');
+        $('#tradingPairSelect').val('');
+        $('input[name="enabled"][value="1"]').prop('checked', true);
+        $('input[name="cacheDurationMinutes"]').val('60');
+        $('textarea[name="remark"]').val('');
+        
+        // 重新加载交易对列表
+        loadTradingPairs();
+        
+        layer.open({
+            type: 1,
+            title: '添加行情订阅配置',
+            area: ['500px', '450px'],
+            content: $('#configForm'),
+            success: function() {
+                form.render();
+            }
+        });
+    };
+    
+    // 编辑配置
+    window.editConfig = function(id) {
+        isEditMode = true;
+        currentEditId = id;
+        
+        request({
+            url: '/api/market-subscription/' + id,
+            method: 'GET'
+        }).then(function(res) {
+            var config = res.data;
+            if (config) {
+                $('#configId').val(config.id);
+                $('#tradingPairSelect').val(config.tradingPairId);
+                $('input[name="enabled"][value="' + config.enabled + '"]').prop('checked', true);
+                $('input[name="cacheDurationMinutes"]').val(config.cacheDurationMinutes || 60);
+                $('textarea[name="remark"]').val(config.remark || '');
+                
+                // 重新加载交易对列表
+                loadTradingPairs();
+                
+                layer.open({
+                    type: 1,
+                    title: '编辑行情订阅配置',
+                    area: ['500px', '450px'],
+                    content: $('#configForm'),
+                    success: function() {
+                        // 等待交易对列表加载完成后再设置选中值
+                        setTimeout(function() {
+                            $('#tradingPairSelect').val(config.tradingPairId);
+                            form.render('select');
+                        }, 300);
+                    }
+                });
+            }
+        });
+    };
+    
+    // 启用/禁用配置
+    window.toggleConfig = function(id, currentEnabled) {
+        var newEnabled = currentEnabled == 1 ? 0 : 1;
+        var action = newEnabled == 1 ? '启用' : '禁用';
+        
+        layer.confirm('确定要' + action + '该配置吗？', function(index){
+            request({
+                url: '/api/market-subscription/' + id + '/toggle',
+                method: 'PUT',
+                data: { enabled: newEnabled }
+            }).then(function(res){
+                layer.msg(res.message, {icon: 1});
+                loadConfigs(); // 重新加载列表
+                layer.close(index);
+            });
+        });
+    };
+    
+    // 删除配置
+    window.deleteConfig = function(id) {
+        layer.confirm('确定删除该配置吗？', function(index){
+            request({
+                url: '/api/market-subscription/' + id,
+                method: 'DELETE'
+            }).then(function(res){
+                layer.msg(res.message, {icon: 1});
+                loadConfigs(); // 重新加载列表
+                layer.close(index);
+            });
+        });
+    };
+    
+    // 提交表单
+    form.on('submit(submitConfig)', function(data){
+        var loading = layer.load(1);
+        var url = '/api/market-subscription';
+        var method = 'POST';
+        
+        if (isEditMode && currentEditId) {
+            url = '/api/market-subscription/' + currentEditId;
+            method = 'PUT';
+        }
+        
+        // 构建请求数据
+        var requestData = {
+            tradingPairId: parseInt(data.field.tradingPairId),
+            enabled: parseInt(data.field.enabled),
+            cacheDurationMinutes: parseInt(data.field.cacheDurationMinutes),
+            remark: data.field.remark || null
+        };
+        
+        request({
+            url: url,
+            method: method,
+            data: requestData
+        }).then(function(res){
+            layer.close(loading);
+            layer.msg(res.message, {icon: 1});
+            layer.closeAll('page');
+            loadConfigs(); // 重新加载列表
+        }).catch(function(){
+            layer.close(loading);
+        });
+        return false;
+    });
+});
+</script>
+</body>
+</html>
+

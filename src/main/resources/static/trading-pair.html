@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易对管理 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        /* --- AI 优化后的 CSS 样式 --- */
+        
+        /* 基础样式 */
+        body { margin: 0; padding: 0; background: #f5f7fa; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+        .layui-body { background: #f5f7fa; }
+        .layui-elem-field { background: #fff; border-radius: 8px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .layui-field-box { padding: 20px; }
+        
+        /* ==================== 1. 统计信息区优化 ==================== */
+        .stats-box {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            background: #ffffff;
+            padding: 20px 28px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #1a73e8;
+            min-width: 140px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-item:nth-child(1) { border-left-color: #1a73e8; }
+        .stat-item:nth-child(2) { border-left-color: #1890ff; }
+        .stat-item:nth-child(3) { border-left-color: #fa8c16; }
+        .stat-item:nth-child(4) { border-left-color: #52c41a; }
+        
+        .stat-item .num {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a73e8;
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+        
+        .stat-item:nth-child(1) .num { color: #1a73e8; }
+        .stat-item:nth-child(2) .num { color: #1890ff; }
+        .stat-item:nth-child(3) .num { color: #fa8c16; }
+        .stat-item:nth-child(4) .num { color: #52c41a; }
+        
+        .stat-item .label {
+            color: #8c8c8c;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        
+        /* ==================== 2. 筛选和操作栏优化 ==================== */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: #fafbfc;
+            border-radius: 8px;
+            border: 1px solid #e8eaed;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        
+        .filter-bar .layui-form {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .filter-bar .layui-form-label {
+            padding: 0;
+            width: auto;
+            font-size: 13px;
+            color: #5f6368;
+            font-weight: 500;
+            margin-left: 0 !important;
+        }
+        
+        .filter-bar .layui-input,
+        .filter-bar select,
+        .filter-bar .layui-form-select {
+            height: 38px;
+            line-height: 38px;
+            border-radius: 6px;
+            border: 1px solid #dadce0;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-bar .layui-input:focus,
+        .filter-bar select:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+        }
+        
+        .filter-bar #keywordFilter {
+            width: 220px !important;
+            padding-left: 12px;
+        }
+        
+        .sync-btn {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .sync-btn .layui-btn {
+            height: 38px;
+            line-height: 38px;
+            padding: 0 18px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        
+        .sync-btn .layui-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        }
+        
+        .sync-btn .layui-btn-normal {
+            background: #1a73e8;
+        }
+        
+        .sync-btn .layui-btn-normal:hover {
+            background: #1557b0;
+        }
+        
+        /* ==================== 3. 表格优化 ==================== */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #e8eaed;
+        }
+        
+        .layui-table {
+            margin: 0;
+        }
+        
+        .layui-table thead th {
+            background: #f8f9fa;
+            color: #5f6368;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 14px 15px;
+            border-bottom: 2px solid #e8eaed;
+        }
+        
+        .layui-table tbody td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            color: #5f6368;
+        }
+        
+        .layui-table tbody tr {
+            transition: background 0.2s ease;
+        }
+        
+        .layui-table tbody tr:hover {
+            background: #f8fafd;
+        }
+        
+        .layui-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* 交易对名称强调 */
+        .layui-table td strong {
+            color: #202124;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        /* 市场类型标签美化 */
+        .market-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .market-tag.spot {
+            background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
+            color: #0958d9;
+            border: 1px solid #91caff;
+        }
+        
+        .market-tag.swap {
+            background: linear-gradient(135deg, #fff7e6 0%, #ffd591 100%);
+            color: #d46b08;
+            border: 1px solid #ffc069;
+        }
+        
+        /* 状态指示器美化 */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.trading {
+            background: #52c41a;
+            box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2);
+        }
+        
+        .status-dot.suspended {
+            background: #faad14;
+            box-shadow: 0 0 0 2px rgba(250, 173, 20, 0.2);
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        /* 表格内按钮优化 */
+        .layui-table .layui-btn-xs {
+            height: 28px;
+            line-height: 28px;
+            padding: 0 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        
+        .layui-table .layui-btn-primary {
+            border: 1px solid #d9d9d9;
+            color: #5f6368;
+        }
+        
+        .layui-table .layui-btn-primary:hover {
+            border-color: #1a73e8;
+            color: #1a73e8;
+        }
+        
+        /* 分页信息 */
+        #pageInfo {
+            font-size: 13px;
+            color: #8c8c8c;
+            padding: 12px 0;
+        }
+        
+        /* 弹窗表格优化 */
+        #ruleDetail .layui-table td {
+            padding: 10px 15px;
+        }
+        
+        #ruleDetail .layui-table td:first-child {
+            color: #8c8c8c;
+            font-weight: 500;
+            background: #fafafa;
+        }
+        
+        /* 响应式适配 */
+        @media screen and (max-width: 768px) {
+            .stats-box {
+                gap: 12px;
+            }
+            
+            .stat-item {
+                flex: 1;
+                min-width: 100px;
+                padding: 14px 16px;
+            }
+            
+            .stat-item .num {
+                font-size: 24px;
+            }
+            
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-bar .layui-form {
+                width: 100%;
+            }
+            
+            .sync-btn {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            
+            .filter-bar #keywordFilter {
+                width: 100% !important;
+            }
+        }
+        
+        /* --- AI 优化后的 CSS 样式结束 --- */
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                <a href="javascript:;"><i class="layui-icon layui-icon-username"></i><span id="userName">用户</span></a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">系统管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/users.html">用户管理</a></dd>
+                        <dd><a href="/apikey.html">API密钥管理</a></dd>
+                        <dd class="layui-this"><a href="/trading-pair.html">交易对管理</a></dd>
+                        <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">信号模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                        <dd><a href="/signal-list.html">信号查询</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html">策略配置管理</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <fieldset class="layui-elem-field">
+                <legend>交易对管理</legend>
+                <div class="layui-field-box">
+                    <!-- 统计信息 -->
+                    <div class="stats-box">
+                        <div class="stat-item">
+                            <div class="num" id="totalCount">0</div>
+                            <div class="label">总交易对</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="num" id="spotCount">0</div>
+                            <div class="label">现货 SPOT</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="num" id="swapCount">0</div>
+                            <div class="label">永续 SWAP</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="num" id="enabledCount">0</div>
+                            <div class="label">已启用</div>
+                        </div>
+                    </div>
+
+                    <!-- 筛选栏 -->
+                    <div class="filter-bar">
+                        <div class="layui-form" lay-filter="filterForm">
+                            <span class="layui-form-label">市场类型</span>
+                            <select name="marketType" id="marketTypeFilter" lay-filter="marketTypeFilter">
+                                <option value="">全部</option>
+                                <option value="SPOT">现货 SPOT</option>
+                                <option value="SWAP">永续 SWAP</option>
+                            </select>
+                            <span class="layui-form-label" style="margin-left: 15px;">状态</span>
+                            <select name="enabled" id="enabledFilter" lay-filter="enabledFilter">
+                                <option value="">全部</option>
+                                <option value="1">已启用</option>
+                                <option value="0">已禁用</option>
+                            </select>
+                            <span class="layui-form-label" style="margin-left: 15px;">搜索</span>
+                            <input type="text" name="keyword" id="keywordFilter" placeholder="输入交易对搜索" class="layui-input" style="width: 180px; display: inline-block;">
+                        </div>
+                        <div class="sync-btn">
+                            <button class="layui-btn layui-btn-normal" onclick="syncTradingPairs()">
+                                <i class="layui-icon layui-icon-refresh"></i> 同步OKX交易对
+                            </button>
+                            <button class="layui-btn" onclick="syncTradingPairs('SPOT')">同步现货</button>
+                            <button class="layui-btn layui-btn-warm" onclick="syncTradingPairs('SWAP')">同步合约</button>
+                        </div>
+                    </div>
+
+                    <!-- 数据表格 -->
+                    <div class="table-wrapper">
+                        <table class="layui-table" lay-skin="line">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">ID</th>
+                                    <th style="width: 120px;">交易对</th>
+                                    <th style="width: 80px;">基础货币</th>
+                                    <th style="width: 80px;">计价货币</th>
+                                    <th style="width: 90px;">市场类型</th>
+                                    <th style="width: 130px;">交易所标识</th>
+                                    <th style="width: 90px;">交易状态</th>
+                                    <th style="width: 80px;">价格精度</th>
+                                    <th style="width: 80px;">数量精度</th>
+                                    <th style="width: 100px;">最小下单量</th>
+                                    <th style="width: 80px;">最大杠杆</th>
+                                    <th style="width: 80px;">启用状态</th>
+                                    <th style="width: 100px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pairList"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 分页信息 -->
+                    <div style="margin-top: 10px; color: #666;">
+                        <span id="pageInfo">显示 0 条记录</span>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+    <div class="layui-footer">© 2024 V2 Trade - 交易管理系统</div>
+</div>
+
+<!-- 交易规则详情弹窗 -->
+<div id="ruleDetail" style="display: none; padding: 20px;">
+    <table class="layui-table">
+        <tbody id="ruleDetailContent"></tbody>
+    </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    // 全部数据缓存（用于前端筛选）
+    var allData = [];
+    
+    // 加载交易对列表
+    function loadTradingPairs(){
+        var loading = layer.load(1);
+        request({url: '/api/trading-pair/list'}).then(function(res){
+            layer.close(loading);
+            allData = res.data || [];
+            updateStats();
+            renderTable();
+        }).catch(function(){
+            layer.close(loading);
+        });
+    }
+    
+    // 更新统计信息
+    function updateStats(){
+        var total = allData.length;
+        var spot = allData.filter(function(item){ return item.marketType === 'SPOT'; }).length;
+        var swap = allData.filter(function(item){ return item.marketType === 'SWAP'; }).length;
+        var enabled = allData.filter(function(item){ return item.enabled === 1; }).length;
+        
+        $('#totalCount').text(total);
+        $('#spotCount').text(spot);
+        $('#swapCount').text(swap);
+        $('#enabledCount').text(enabled);
+    }
+    
+    // 渲染表格
+    function renderTable(){
+        var marketType = $('#marketTypeFilter').val();
+        var enabled = $('#enabledFilter').val();
+        var keyword = $('#keywordFilter').val().toLowerCase().trim();
+        
+        var filtered = allData.filter(function(item){
+            if (marketType && item.marketType !== marketType) return false;
+            if (enabled !== '' && item.enabled != enabled) return false;
+            if (keyword) {
+                var searchStr = (item.symbol + ' ' + item.baseCurrency + ' ' + item.quoteCurrency + ' ' + (item.symbolOnExchange || '')).toLowerCase();
+                if (searchStr.indexOf(keyword) === -1) return false;
+            }
+            return true;
+        });
+        
+        var html = '';
+        if (filtered.length > 0) {
+            filtered.forEach(function(item){
+                var marketTag = item.marketType === 'SPOT' 
+                    ? '<span class="market-tag spot">SPOT</span>' 
+                    : '<span class="market-tag swap">SWAP</span>';
+                
+                var statusDot = item.tradingStatus === 'TRADING'
+                    ? '<span class="status-dot trading"></span>交易中'
+                    : '<span class="status-dot suspended"></span>暂停';
+                
+                var enabledBadge = item.enabled == 1 
+                    ? '<span class="layui-badge layui-bg-green">启用</span>' 
+                    : '<span class="layui-badge layui-bg-gray">禁用</span>';
+                
+                var toggleBtn = item.enabled == 1
+                    ? '<button class="layui-btn layui-btn-xs layui-btn-warm" onclick="togglePair(' + item.id + ', 0)">禁用</button>'
+                    : '<button class="layui-btn layui-btn-xs" onclick="togglePair(' + item.id + ', 1)">启用</button>';
+                
+                html += '<tr>' +
+                    '<td>' + item.id + '</td>' +
+                    '<td><strong>' + item.symbol + '</strong></td>' +
+                    '<td>' + item.baseCurrency + '</td>' +
+                    '<td>' + item.quoteCurrency + '</td>' +
+                    '<td>' + marketTag + '</td>' +
+                    '<td>' + (item.symbolOnExchange || '-') + '</td>' +
+                    '<td>' + (item.tradingStatus ? statusDot : '-') + '</td>' +
+                    '<td>' + (item.pricePrecision != null ? item.pricePrecision : '-') + '</td>' +
+                    '<td>' + (item.quantityPrecision != null ? item.quantityPrecision : '-') + '</td>' +
+                    '<td>' + (item.minOrderQty || '-') + '</td>' +
+                    '<td>' + (item.maxLeverage || '-') + '</td>' +
+                    '<td>' + enabledBadge + '</td>' +
+                    '<td>' + 
+                        toggleBtn +
+                        '<button class="layui-btn layui-btn-xs layui-btn-primary" onclick="viewRule(' + item.id + ')">详情</button>' +
+                    '</td></tr>';
+            });
+        } else {
+            html = '<tr><td colspan="13" style="text-align: center; color: #999;">暂无数据，请点击"同步OKX交易对"按钮获取数据</td></tr>';
+        }
+        
+        $('#pairList').html(html);
+        $('#pageInfo').text('显示 ' + filtered.length + ' 条记录');
+    }
+    
+    // 同步交易对
+    window.syncTradingPairs = function(marketType){
+        var url = '/api/trading-pair/sync';
+        if (marketType) {
+            url += '?marketType=' + marketType;
+        }
+        
+        var loading = layer.load(1, {shade: [0.3, '#000']});
+        layer.msg('正在同步OKX交易对数据，请稍候...', {icon: 16, time: 0, shade: 0.3});
+        
+        request({
+            url: url,
+            method: 'POST'
+        }).then(function(res){
+            layer.close(loading);
+            layer.closeAll('dialog');
+            
+            var msg = '同步完成！';
+            if (res.data && res.data.length > 0) {
+                var details = res.data.map(function(item){
+                    return item.marketType + ': ' + item.syncCount + '个 (' + item.syncTime + 'ms)';
+                }).join('，');
+                msg += details;
+            }
+            layer.msg(msg, {icon: 1, time: 3000});
+            loadTradingPairs();
+        }).catch(function(){
+            layer.close(loading);
+            layer.closeAll('dialog');
+        });
+    };
+    
+    // 切换启用状态
+    window.togglePair = function(id, enabled){
+        var action = enabled == 1 ? '启用' : '禁用';
+        layer.confirm('确定要' + action + '该交易对吗？', function(index){
+            request({
+                url: '/api/trading-pair/' + id + '/toggle',
+                method: 'PUT',
+                data: {enabled: enabled}
+            }).then(function(res){
+                layer.msg(res.message, {icon: 1});
+                loadTradingPairs();
+                layer.close(index);
+            });
+        });
+    };
+    
+    // 查看交易规则详情
+    window.viewRule = function(id){
+        request({url: '/api/trading-pair/' + id + '/rule'}).then(function(res){
+            if (res.data) {
+                var rule = res.data;
+                var html = '';
+                html += '<tr><td width="120">交易所</td><td>' + rule.exchangeCode + '</td></tr>';
+                html += '<tr><td>交易所标识</td><td>' + rule.symbolOnExchange + '</td></tr>';
+                html += '<tr><td>交易状态</td><td>' + rule.status + '</td></tr>';
+                html += '<tr><td>价格精度</td><td>' + rule.pricePrecision + '</td></tr>';
+                html += '<tr><td>数量精度</td><td>' + rule.quantityPrecision + '</td></tr>';
+                html += '<tr><td>最小下单量</td><td>' + rule.minOrderQty + '</td></tr>';
+                html += '<tr><td>最小下单金额</td><td>' + rule.minOrderAmount + '</td></tr>';
+                if (rule.maxOrderQty) {
+                    html += '<tr><td>最大下单量</td><td>' + rule.maxOrderQty + '</td></tr>';
+                }
+                if (rule.maxLeverage) {
+                    html += '<tr><td>最大杠杆</td><td>' + rule.maxLeverage + 'x</td></tr>';
+                }
+                html += '<tr><td>更新时间</td><td>' + (rule.updatedAt || '-') + '</td></tr>';
+                
+                $('#ruleDetailContent').html(html);
+                layer.open({
+                    type: 1,
+                    title: '交易规则详情',
+                    area: ['500px', '450px'],
+                    content: $('#ruleDetail')
+                });
+            }
+        });
+    };
+    
+    // 监听筛选变化
+    form.on('select(marketTypeFilter)', renderTable);
+    form.on('select(enabledFilter)', renderTable);
+    $('#keywordFilter').on('input', renderTable);
+    
+    // 初始化
+    loadTradingPairs();
+    form.render();
+});
+</script>
+</body>
+</html>
+

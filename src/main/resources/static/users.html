@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                <a href="javascript:;"><i class="layui-icon layui-icon-username"></i><span id="userName">用户</span></a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">系统管理</a>
+                    <dl class="layui-nav-child">
+                        <dd class="layui-this"><a href="/users.html">用户管理</a></dd>
+                        <dd><a href="/apikey.html">API密钥管理</a></dd>
+                        <dd><a href="/trading-pair.html">交易对管理</a></dd>
+                        <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">信号模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                        <dd><a href="/signal-list.html">信号查询</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html">策略配置管理</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <fieldset class="layui-elem-field">
+                <legend>用户管理</legend>
+                <div class="layui-field-box">
+                    <div class="layui-form" style="margin-bottom: 15px;">
+                        <div class="layui-inline">
+                            <input type="text" id="searchUsername" placeholder="请输入用户名" class="layui-input">
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn" onclick="searchUser()"><i class="layui-icon layui-icon-search"></i> 搜索</button>
+                            <button class="layui-btn layui-btn-normal" onclick="openAddUser()"><i class="layui-icon layui-icon-add-1"></i> 添加用户</button>
+                        </div>
+                    </div>
+                    <table class="layui-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>昵称</th>
+                                <th>邮箱</th>
+                                <th>状态</th>
+                                <th>最后登录</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody"></tbody>
+                    </table>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+    <div class="layui-footer">© 2024 V2 Trade - 交易管理系统</div>
+</div>
+
+<div id="addUserForm" style="display: none; padding: 20px;">
+    <form class="layui-form" lay-filter="addUserForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label">用户名</label>
+            <div class="layui-input-block">
+                <input type="text" name="username" lay-verify="required" placeholder="请输入用户名" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">密码</label>
+            <div class="layui-input-block">
+                <input type="password" name="password" lay-verify="required" placeholder="请输入密码" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">确认密码</label>
+            <div class="layui-input-block">
+                <input type="password" name="confirmPassword" lay-verify="required" placeholder="请再次输入密码" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">昵称</label>
+            <div class="layui-input-block">
+                <input type="text" name="nickname" placeholder="请输入昵称（选填）" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">邮箱</label>
+            <div class="layui-input-block">
+                <input type="email" name="email" placeholder="请输入邮箱（选填）" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="submit" class="layui-btn" lay-submit lay-filter="submitAddUser">提交</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    // 加载用户列表
+    function loadUsers() {
+        var params = {
+            page: 1,
+            limit: 10,
+            username: $('#searchUsername').val()
+        };
+        
+        request({
+            url: '/api/admin/users?page=' + params.page + '&limit=' + params.limit + 
+                 (params.username ? '&username=' + params.username : ''),
+            method: 'GET'
+        }).then(function(res) {
+            var html = '';
+            if(res.data.records && res.data.records.length > 0){
+                res.data.records.forEach(function(item){
+                    var statusBadge = item.enabled == 1 ? 
+                        '<span class="layui-badge layui-bg-green">启用</span>' : 
+                        '<span class="layui-badge layui-bg-gray">禁用</span>';
+                    html += '<tr>' +
+                        '<td>' + item.id + '</td>' +
+                        '<td>' + item.username + '</td>' +
+                        '<td>' + (item.nickname || '') + '</td>' +
+                        '<td>' + (item.email || '') + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '<td>' + (item.lastLoginAt || '') + '</td>' +
+                        '<td>' + item.createdAt + '</td>' +
+                        '<td>' +
+                            '<button class="layui-btn layui-btn-xs" onclick="resetPwd(' + item.id + ')">重置密码</button>' +
+                            '<button class="layui-btn layui-btn-xs layui-btn-warm" onclick="toggleUser(' + item.id + ')">' + 
+                                (item.enabled == 1 ? '禁用' : '启用') + '</button>' +
+                            '<button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteUser(' + item.id + ')">删除</button>' +
+                        '</td>' +
+                    '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="8" style="text-align: center; color: #999;">暂无数据</td></tr>';
+            }
+            $('#userTableBody').html(html);
+        });
+    }
+    
+    // 初始化加载
+    loadUsers();
+    
+    // 搜索用户
+    window.searchUser = function() {
+        loadUsers();
+    };
+    
+    // 打开添加用户窗口
+    window.openAddUser = function() {
+        // 清空表单数据
+        $('#addUserForm input[name="username"]').val('');
+        $('#addUserForm input[name="password"]').val('');
+        $('#addUserForm input[name="confirmPassword"]').val('');
+        $('#addUserForm input[name="nickname"]').val('');
+        $('#addUserForm input[name="email"]').val('');
+        
+        layer.open({
+            type: 1,
+            title: '添加用户',
+            area: ['450px', '500px'],
+            content: $('#addUserForm'),
+            success: function() {
+                form.render();
+            }
+        });
+    };
+    
+    // 重置密码
+    window.resetPwd = function(id) {
+        layer.confirm('确定重置该用户密码为 123456 吗？', function(index){
+            request({
+                url: '/api/admin/users/' + id + '/reset-password',
+                method: 'POST'
+            }).then(function(res){
+                layer.msg(res.message, {icon: 1});
+                layer.close(index);
+            });
+        });
+    };
+    
+    // 启用/禁用用户
+    window.toggleUser = function(id) {
+        request({
+            url: '/api/admin/users/' + id + '/toggle',
+            method: 'POST'
+        }).then(function(res){
+            layer.msg(res.message, {icon: 1});
+            loadUsers(); // 重新加载列表
+        });
+    };
+    
+    // 删除用户
+    window.deleteUser = function(id) {
+        layer.confirm('确定删除该用户吗？', function(index){
+            request({
+                url: '/api/admin/users/' + id,
+                method: 'DELETE'
+            }).then(function(res){
+                layer.msg(res.message, {icon: 1});
+                loadUsers(); // 重新加载列表
+                layer.close(index);
+            });
+        });
+    };
+    
+    // 提交添加用户表单
+    form.on('submit(submitAddUser)', function(data){
+        var loading = layer.load(1);
+        request({
+            url: '/api/admin/users',
+            method: 'POST',
+            data: data.field
+        }).then(function(res){
+            layer.close(loading);
+            layer.msg(res.message, {icon: 1});
+            layer.closeAll('page');
+            loadUsers(); // 重新加载列表
+        }).catch(function(){
+            layer.close(loading);
+        });
+        return false;
+    });
+});
+</script>
+</body>
+</html>

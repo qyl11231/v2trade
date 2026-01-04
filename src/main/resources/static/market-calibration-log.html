@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行情校准执行日志 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+        .log-details { background: #1e1e1e; color: #abb2bf; padding: 15px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; line-height: 1.6; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .log-success { color: #98c379; }
+        .log-error { color: #e06c75; }
+        .log-info { color: #61afef; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                <a href="javascript:;"><i class="layui-icon layui-icon-username"></i><span id="userName">用户</span></a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">系统管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/users.html">用户管理</a></dd>
+                        <dd><a href="/apikey.html">API密钥管理</a></dd>
+                        <dd><a href="/trading-pair.html">交易对管理</a></dd>
+                        <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">信号模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                        <dd><a href="/signal-list.html">信号查询</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html">策略配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">行情模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/market-center.html">行情中心</a></dd>
+                        <dd><a href="/market-calibration.html">行情校准</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <fieldset class="layui-elem-field">
+                <legend>执行日志记录</legend>
+                <div class="layui-field-box">
+                    <!-- 搜索表单 -->
+                    <div class="layui-form" style="margin-bottom: 15px;">
+                        <div class="layui-inline">
+                            <input type="text" id="searchTaskName" placeholder="任务名 / 交易对" class="layui-input" style="width: 200px;">
+                        </div>
+                        <div class="layui-inline">
+                            <select id="searchStatus" class="layui-input" style="width: 120px;">
+                                <option value="">全部状态</option>
+                                <option value="SUCCESS">成功</option>
+                                <option value="FAILED">失败</option>
+                                <option value="RUNNING">执行中</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <input type="text" id="searchDateRange" placeholder="时间范围" class="layui-input" style="width: 300px;" readonly>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn" onclick="searchLogs()"><i class="layui-icon layui-icon-search"></i> 查询</button>
+                            <button class="layui-btn layui-btn-primary" onclick="refreshLogs()"><i class="layui-icon layui-icon-refresh"></i> 刷新</button>
+                        </div>
+                    </div>
+
+                    <!-- 日志列表表格 -->
+                    <table class="layui-table">
+                        <thead>
+                            <tr>
+                                <th>日志ID</th>
+                                <th>任务/交易对</th>
+                                <th>状态</th>
+                                <th>处理结果</th>
+                                <th>开始执行时间</th>
+                                <th>执行耗时</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody"></tbody>
+                    </table>
+
+                    <!-- 分页 -->
+                    <div id="pagination" style="text-align: center; margin-top: 20px;"></div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+    <div class="layui-footer">© 2024 V2 Trade - 交易管理系统</div>
+</div>
+
+<!-- 日志详情抽屉 -->
+<div id="logDetailDrawer" style="display: none; padding: 20px;">
+    <div id="logDetailContent"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'laydate', 'laypage'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var laydate = layui.laydate;
+    var laypage = layui.laypage;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    var currentPage = 1;
+    var pageSize = 10;
+    var totalCount = 0;
+    
+    // 获取URL参数
+    var urlParams = new URLSearchParams(window.location.search);
+    var taskConfigId = urlParams.get('taskConfigId');
+    
+    // 初始化日期时间范围选择器
+    laydate.render({
+        elem: '#searchDateRange',
+        type: 'datetime',
+        range: true,
+        format: 'yyyy-MM-dd HH:mm:ss'
+    });
+    
+    // 加载日志列表
+    function loadLogs(page) {
+        currentPage = page || 1;
+        var params = ['current=' + currentPage, 'size=' + pageSize];
+        
+        var taskName = $('#searchTaskName').val();
+        var status = $('#searchStatus').val();
+        var dateRange = $('#searchDateRange').val();
+        
+        if (taskConfigId) {
+            params.push('taskConfigId=' + taskConfigId);
+        }
+        if (taskName) {
+            // 前端过滤，实际应该后端支持
+        }
+        if (status) {
+            params.push('status=' + status);
+        }
+        if (dateRange) {
+            // 前端过滤，实际应该后端支持
+        }
+        
+        var url = '/api/market-calibration/log?' + params.join('&');
+        
+        var loading = layer.load(1);
+        request({
+            url: url,
+            method: 'GET'
+        }).then(function(res) {
+            layer.close(loading);
+            var html = '';
+            // 后端返回的是IPage对象，包含records和total字段
+            var logs = (res.data && res.data.records) ? res.data.records : (res.data || []);
+            // 如果res.data是数组，说明不是分页结果
+            if (Array.isArray(res.data)) {
+                logs = res.data;
+            }
+            totalCount = (res.data && res.data.total) ? res.data.total : logs.length;
+            
+            if(logs.length > 0){
+                logs.forEach(function(item){
+                    var statusBadge = '';
+                    if (item.status === 'SUCCESS') {
+                        statusBadge = '<span class="layui-badge layui-bg-green">成功</span>';
+                    } else if (item.status === 'FAILED') {
+                        statusBadge = '<span class="layui-badge layui-bg-red">失败</span>';
+                    } else {
+                        statusBadge = '<span class="layui-badge layui-bg-cyan">执行中</span>';
+                    }
+                    
+                    var resultText = '';
+                    if (item.taskType === 'MISSING_DATA') {
+                        resultText = '已补全: <b style="color: #1E9FFF;">' + (item.filledCount || 0) + '</b> 条 K 线';
+                    } else {
+                        // 数据核对类型：尝试从 executeLog 中解析缺失数量
+                        var missingKlineCount = 0;
+                        if (item.executeLog) {
+                            try {
+                                var logData = typeof item.executeLog === 'string' ? JSON.parse(item.executeLog) : item.executeLog;
+                                missingKlineCount = logData.missingKlineCount || 0;
+                            } catch(e) {
+                                // 解析失败，忽略
+                            }
+                        }
+                        resultText = '核对: <b>' + (item.duplicateCount || 0) + '</b> | 异常: <b style="color: #FF5722;">' + (item.errorCount || 0) + '</b>';
+                        if (missingKlineCount > 0) {
+                            resultText += ' | 缺失: <b style="color: #FF9800;">' + missingKlineCount + '</b>';
+                        }
+                    }
+                    
+                    var duration = item.executeDurationMs ? (item.executeDurationMs + 'ms') : '-';
+                    var startTime = item.createdAt ? item.createdAt.substring(0, 19) : '-';
+                    
+                    html += '<tr>' +
+                        '<td>' + item.id + '</td>' +
+                        '<td>' +
+                            '<div style="font-weight: bold;">' + (item.taskName || '-') + '</div>' +
+                            '<div style="font-size: 12px; color: #999; font-family: monospace;">' + (item.symbol || '-') + '</div>' +
+                        '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '<td>' + resultText + '</td>' +
+                        '<td>' + startTime + '</td>' +
+                        '<td>' + duration + '</td>' +
+                        '<td>' +
+                            '<button class="layui-btn layui-btn-xs" onclick="viewDetail(' + item.id + ')">详情</button>' +
+                        '</td>' +
+                    '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="7" style="text-align: center; color: #999;">暂无数据</td></tr>';
+            }
+            
+            $('#logTableBody').html(html);
+            
+            // 渲染分页
+            laypage.render({
+                elem: 'pagination',
+                count: totalCount,
+                curr: currentPage,
+                limit: pageSize,
+                layout: ['count', 'prev', 'page', 'next'],
+                jump: function(obj, first){
+                    if(!first){
+                        loadLogs(obj.curr);
+                    }
+                }
+            });
+        }).catch(function(err){
+            layer.close(loading);
+            console.error('加载日志失败:', err);
+        });
+    }
+    
+    // 查看详情
+    window.viewDetail = function(id) {
+        request({
+            url: '/api/market-calibration/log/' + id,
+            method: 'GET'
+        }).then(function(res) {
+            var log = res.data;
+            if (log) {
+                var html = '<div class="layui-row">' +
+                    '<div class="layui-col-md12">' +
+                    '<table class="layui-table">' +
+                    '<tr><td width="100">任务名称</td><td>' + (log.taskName || '-') + '</td></tr>' +
+                    '<tr><td>交易对</td><td>' + (log.symbol || '-') + '</td></tr>' +
+                    '<tr><td>任务类型</td><td>' + (log.taskType === 'MISSING_DATA' ? '缺失数据检测' : '数据核对') + '</td></tr>' +
+                    '<tr><td>执行时段</td><td>' + (log.detectStartTime || '-') + ' 至 ' + (log.detectEndTime || '-') + '</td></tr>' +
+                    '<tr><td>执行状态</td><td>' + 
+                        (log.status === 'SUCCESS' ? '<span class="layui-badge layui-bg-green">成功</span>' : 
+                         log.status === 'FAILED' ? '<span class="layui-badge layui-bg-red">失败</span>' : 
+                         '<span class="layui-badge layui-bg-cyan">执行中</span>') +
+                    '</td></tr>';
+                
+                if (log.taskType === 'MISSING_DATA') {
+                    html += '<tr><td>缺失数量</td><td>' + (log.missingCount || 0) + '</td></tr>' +
+                           '<tr><td>补全数量</td><td>' + (log.filledCount || 0) + '</td></tr>';
+                } else {
+                    // 数据核对类型：从 executeLog 中解析缺失数量
+                    var missingKlineCount = 0;
+                    if (log.executeLog) {
+                        try {
+                            var logData = typeof log.executeLog === 'string' ? JSON.parse(log.executeLog) : log.executeLog;
+                            missingKlineCount = logData.missingKlineCount || 0;
+                        } catch(e) {
+                            // 解析失败，忽略
+                        }
+                    }
+                    html += '<tr><td>重复数量</td><td>' + (log.duplicateCount || 0) + '</td></tr>' +
+                           '<tr><td>异常数量</td><td>' + (log.errorCount || 0) + '</td></tr>' +
+                           '<tr><td>缺失数量</td><td><b style="color: #FF5722;">' + missingKlineCount + '</b></td></tr>';
+                }
+                
+                html += '<tr><td>执行耗时</td><td>' + (log.executeDurationMs ? log.executeDurationMs + 'ms' : '-') + '</td></tr>' +
+                       '<tr><td>错误信息</td><td>' + (log.errorMessage || '-') + '</td></tr>' +
+                       '</table>' +
+                       '</div>' +
+                       '</div>';
+                
+                if (log.executeLog) {
+                    html += '<div style="margin-top: 20px;">' +
+                           '<h3 style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">详细执行轨迹</h3>' +
+                           '<div class="log-details">';
+                    
+                    try {
+                        var logData = typeof log.executeLog === 'string' ? JSON.parse(log.executeLog) : log.executeLog;
+                        
+                        // 缺失K线数据（数据核对类型）
+                        if (logData.missingKlineCount !== undefined && logData.missingKlineCount > 0) {
+                            html += '<div class="log-info" style="margin-bottom: 10px;">' +
+                                   '<strong>[INFO] 缺失K线数量: ' + logData.missingKlineCount + '</strong></div>';
+                            
+                            if (logData.missingKlines && logData.missingKlines.length > 0) {
+                                html += '<div style="margin-left: 20px; margin-bottom: 15px;">' +
+                                       '<div style="color: #98c379; margin-bottom: 5px;">缺失K线列表:</div>' +
+                                       '<table style="width: 100%; border-collapse: collapse; font-size: 11px;">' +
+                                       '<thead><tr style="border-bottom: 1px solid #444;">' +
+                                       '<th style="padding: 5px; text-align: left; color: #61afef;">时间戳</th>' +
+                                       '<th style="padding: 5px; text-align: left; color: #61afef;">UTC时间</th>' +
+                                       '</tr></thead><tbody>';
+                                
+                                var maxDisplay = 100; // 最多显示100条
+                                var displayList = logData.missingKlines.slice(0, maxDisplay);
+                                displayList.forEach(function(item) {
+                                    html += '<tr style="border-bottom: 1px solid #333;">' +
+                                           '<td style="padding: 5px;">' + (item.timestamp || '-') + '</td>' +
+                                           '<td style="padding: 5px; color: #98c379;">' + (item.utcTime || '-') + '</td>' +
+                                           '</tr>';
+                                });
+                                
+                                html += '</tbody></table>';
+                                
+                                if (logData.missingKlines.length > maxDisplay) {
+                                    html += '<div style="margin-top: 5px; color: #999; font-size: 11px;">' +
+                                           '（仅显示前 ' + maxDisplay + ' 条，共 ' + logData.missingKlines.length + ' 条）</div>';
+                                }
+                                
+                                html += '</div>';
+                            }
+                        }
+                        
+                        // 缺失时间戳（缺失数据检测类型）
+                        if (logData.missingTimestamps) {
+                            html += '<div class="log-info">[INFO] 发现缺失时间戳: ' + logData.missingTimestamps.join(', ') + '</div>';
+                        }
+                        
+                        // 重复数据
+                        if (logData.duplicates && logData.duplicates.length > 0) {
+                            html += '<div class="log-info" style="margin-top: 10px;">' +
+                                   '[INFO] 发现重复数据 (' + logData.duplicateCount + ' 条):</div>';
+                            var duplicateDisplay = logData.duplicates.slice(0, 10);
+                            duplicateDisplay.forEach(function(dup) {
+                                html += '<div style="margin-left: 20px; color: #e5c07b;">' +
+                                       JSON.stringify(dup) + '</div>';
+                            });
+                            if (logData.duplicates.length > 10) {
+                                html += '<div style="margin-left: 20px; color: #999;">... 还有 ' + 
+                                       (logData.duplicates.length - 10) + ' 条</div>';
+                            }
+                        }
+                        
+                        // 异常数据
+                        if (logData.dataErrors && logData.dataErrors.length > 0) {
+                            html += '<div class="log-error" style="margin-top: 10px;">' +
+                                   '[ERROR] 发现异常数据 (' + logData.dataErrorCount + ' 条):</div>';
+                            var errorDisplay = logData.dataErrors.slice(0, 10);
+                            errorDisplay.forEach(function(err) {
+                                html += '<div style="margin-left: 20px; color: #e06c75;">' +
+                                       JSON.stringify(err) + '</div>';
+                            });
+                            if (logData.dataErrors.length > 10) {
+                                html += '<div style="margin-left: 20px; color: #999;">... 还有 ' + 
+                                       (logData.dataErrors.length - 10) + ' 条</div>';
+                            }
+                        }
+                        
+                        // 时间顺序异常
+                        if (logData.outOfOrder && logData.outOfOrder.length > 0) {
+                            html += '<div class="log-error" style="margin-top: 10px;">' +
+                                   '[ERROR] 发现时间顺序异常 (' + logData.outOfOrderCount + ' 条):</div>';
+                            var orderDisplay = logData.outOfOrder.slice(0, 10);
+                            orderDisplay.forEach(function(order) {
+                                html += '<div style="margin-left: 20px; color: #e06c75;">' +
+                                       JSON.stringify(order) + '</div>';
+                            });
+                            if (logData.outOfOrder.length > 10) {
+                                html += '<div style="margin-left: 20px; color: #999;">... 还有 ' + 
+                                       (logData.outOfOrder.length - 10) + ' 条</div>';
+                            }
+                        }
+                        
+                    } catch(e) {
+                        html += '<div class="log-info">' + log.executeLog + '</div>';
+                    }
+                    
+                    html += '</div></div>';
+                }
+                
+                layer.open({
+                    type: 1,
+                    title: '日志详细信息',
+                    area: ['900px', '700px'],
+                    content: html,
+                    scrollbar: false
+                });
+            }
+        });
+    };
+    
+    // 搜索日志
+    window.searchLogs = function() {
+        loadLogs(1);
+    };
+    
+    // 刷新日志
+    window.refreshLogs = function() {
+        loadLogs(currentPage);
+    };
+    
+    // 初始化加载
+    loadLogs(1);
+});
+</script>
+</body>
+</html>
+

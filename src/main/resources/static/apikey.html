@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API密钥管理 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                <a href="javascript:;"><i class="layui-icon layui-icon-username"></i><span id="userName">用户</span></a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">系统管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/users.html">用户管理</a></dd>
+                        <dd class="layui-this"><a href="/apikey.html">API密钥管理</a></dd>
+                        <dd><a href="/trading-pair.html">交易对管理</a></dd>
+                        <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">信号模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                        <dd><a href="/signal-list.html">信号查询</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html">策略配置管理</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <fieldset class="layui-elem-field">
+                <legend>API密钥管理</legend>
+                <div class="layui-field-box">
+                    <button class="layui-btn layui-btn-normal" style="margin-bottom: 15px;" onclick="openAddApiKey()">
+                        <i class="layui-icon layui-icon-add-1"></i> 添加API密钥
+                    </button>
+                    <table class="layui-table">
+                        <thead>
+                            <tr><th>ID</th><th>交易所</th><th>名称</th><th>API Key</th><th>Secret Key</th><th>状态</th><th>备注</th><th>创建时间</th><th>操作</th></tr>
+                        </thead>
+                        <tbody id="apiKeyList"></tbody>
+                    </table>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+    <div class="layui-footer">© 2024 V2 Trade - 交易管理系统</div>
+</div>
+
+<div id="apiKeyForm" style="display: none; padding: 20px;">
+    <form class="layui-form" lay-filter="apiKeyForm">
+        <input type="hidden" name="keyId" id="keyId">
+        <div class="layui-form-item"><label class="layui-form-label">交易所</label><div class="layui-input-block"><select name="exchange" lay-verify="required"><option value="">请选择</option><option value="OKX">OKX</option><option value="Binance">Binance</option></select></div></div>
+        <div class="layui-form-item"><label class="layui-form-label">名称</label><div class="layui-input-block"><input type="text" name="apiKeyName" placeholder="请输入API Key名称" class="layui-input"></div></div>
+        <div class="layui-form-item"><label class="layui-form-label">API Key</label><div class="layui-input-block"><input type="text" name="apiKey" lay-verify="required" placeholder="请输入API Key" class="layui-input"></div></div>
+        <div class="layui-form-item"><label class="layui-form-label">Secret Key</label><div class="layui-input-block"><input type="text" name="secretKey" lay-verify="required" placeholder="请输入Secret Key" class="layui-input"></div></div>
+        <div class="layui-form-item"><label class="layui-form-label">Passphrase</label><div class="layui-input-block"><input type="text" name="passphrase" placeholder="请输入Passphrase（OKX需要）" class="layui-input"></div></div>
+        <div class="layui-form-item"><label class="layui-form-label">备注</label><div class="layui-input-block"><input type="text" name="remark" placeholder="请输入备注" class="layui-input"></div></div>
+        <div class="layui-form-item"><div class="layui-input-block"><button type="submit" class="layui-btn" lay-submit lay-filter="submitApiKey">提交</button><button type="reset" class="layui-btn layui-btn-primary">重置</button></div></div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    function loadApiKeys(){
+        request({url: '/api/user/api-keys'}).then(function(res){
+            var html = '';
+            if(res.data && res.data.length > 0){
+                res.data.forEach(function(item){
+                    var statusBadge = item.status == 1 ? '<span class="layui-badge layui-bg-green">启用</span>' : '<span class="layui-badge layui-bg-gray">禁用</span>';
+                    html += '<tr><td>' + item.id + '</td><td>' + item.exchange + '</td><td>' + (item.apiKeyName || '') + '</td><td>' + item.apiKey + '</td><td>' + item.secretKey + '</td><td>' + statusBadge + '</td><td>' + (item.remark || '-') + '</td><td>' + item.createdAt + '</td><td>' +
+                        '<button class="layui-btn layui-btn-xs" onclick="editApiKey(' + item.id + ')">编辑</button>' +
+                        '<button class="layui-btn layui-btn-xs layui-btn-warm" onclick="toggleApiKey(' + item.id + ')">' + (item.status == 1 ? '禁用' : '启用') + '</button>' +
+                        '<button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteApiKey(' + item.id + ')">删除</button></td></tr>';
+                });
+            } else { html = '<tr><td colspan="9" style="text-align: center; color: #999;">暂无数据</td></tr>'; }
+            $('#apiKeyList').html(html);
+        });
+    }
+    
+    loadApiKeys();
+    
+    window.openAddApiKey = function(){
+        $('#keyId').val('');
+        layer.open({type: 1, title: '添加API密钥', area: ['500px', '550px'], content: $('#apiKeyForm'), success: function(){
+            $('input[name="apiKeyName"]').val('');
+            $('input[name="apiKey"]').val(''); $('input[name="secretKey"]').val(''); $('input[name="passphrase"]').val(''); $('input[name="remark"]').val('');
+            form.render();
+        }});
+    };
+    
+    window.editApiKey = function(id){
+        // 先获取API Key详细信息
+        request({url: '/api/user/api-keys/' + id, method: 'GET'}).then(function(res){
+            if(res.data){
+                var item = res.data;
+                // 只有禁用状态的API Key才能编辑
+                if(item.status == 1){
+                    layer.msg('启用状态下的API Key不能编辑，请先禁用再编辑', {icon: 0});
+                    return;
+                }
+                
+                $('#keyId').val(item.id);
+                $('select[name="exchange"]').val(item.exchange);
+                $('input[name="apiKeyName"]').val(item.apiKeyName || '');
+                $('input[name="apiKey"]').val(item.apiKey);
+                $('input[name="secretKey"]').val(item.secretKey);
+                $('input[name="passphrase"]').val(item.passphrase || '');
+                $('input[name="remark"]').val(item.remark || '');
+                
+                layer.open({
+                    type: 1,
+                    title: '编辑API密钥',
+                    area: ['500px', '500px'],
+                    content: $('#apiKeyForm'),
+                    success: function(){
+                        form.render();
+                    }
+                });
+            }
+        });
+    };
+    window.toggleApiKey = function(id){
+        layer.confirm('确定切换该API Key状态吗？', function(index){
+            request({url: '/api/user/api-keys/' + id + '/toggle', method: 'POST'}).then(function(res){
+                layer.msg(res.message, {icon: 1}); loadApiKeys(); layer.close(index);
+            });
+        });
+    };
+    window.deleteApiKey = function(id){
+        layer.confirm('确定删除该API Key吗？', function(index){
+            request({url: '/api/user/api-keys/' + id, method: 'DELETE'}).then(function(res){
+                layer.msg(res.message, {icon: 1}); loadApiKeys(); layer.close(index);
+            });
+        });
+    };
+    
+    form.on('submit(submitApiKey)', function(data){
+        var loading = layer.load(1);
+        var keyId = $('#keyId').val();
+        
+        // 判断是添加还是编辑
+        var isEdit = keyId && keyId !== '';
+        var url = '/api/user/api-keys' + (isEdit ? '/' + keyId : '');
+        var method = isEdit ? 'PUT' : 'POST';
+        
+        request({url: url, method: method, data: data.field}).then(function(res){
+            layer.close(loading);
+            layer.msg(res.message, {icon: 1});
+            layer.closeAll('page');
+            loadApiKeys();
+        }).catch(function(){
+            layer.close(loading);
+        });
+        return false;
+    });
+});
+</script>
+</body>
+</html>

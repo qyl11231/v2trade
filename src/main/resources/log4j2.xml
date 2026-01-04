@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <Properties>
+        <!-- 日志文件路径配置 -->
+        <!-- Windows系统使用正斜杠或使用系统属性 -->
+        <Property name="LOG_PATH">logs</Property>
+        <Property name="LOG_FILE_NAME">v2-trade</Property>
+        <Property name="LOG_FILE_PATTERN">${LOG_PATH}/${LOG_FILE_NAME}-%d{yyyy-MM-dd}.log</Property>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- 控制台输出 -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+
+        <!-- 文件输出 - 按日期滚动 -->
+        <RollingFile name="RollingFile" fileName="${LOG_PATH}/${LOG_FILE_NAME}.log"
+                     filePattern="${LOG_PATH}/${LOG_FILE_NAME}-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <!-- 每天滚动一次 -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <!-- 文件大小超过100MB时滚动 -->
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <!-- 保留最近30天的日志 -->
+            <DefaultRolloverStrategy max="30">
+                <Delete basePath="${LOG_PATH}" maxDepth="1">
+                    <IfFileName glob="${LOG_FILE_NAME}-*.log.gz"/>
+                    <IfLastModified age="30d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- 应用日志级别 -->
+        <Logger name="com.qyl.v2trade" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RollingFile"/>
+        </Logger>
+
+        <!-- 第三方库日志级别 -->
+        <Logger name="org.springframework" level="INFO"/>
+        <Logger name="org.mybatis" level="WARN"/>  <!-- 关闭MyBatis SQL日志 -->
+        <Logger name="com.baomidou.mybatisplus" level="WARN"/>  <!-- 关闭MyBatis-Plus SQL日志 -->
+        <Logger name="java.sql" level="WARN"/>  <!-- 关闭JDBC SQL日志 -->
+        <Logger name="java.sql.Statement" level="WARN"/>
+        <Logger name="java.sql.PreparedStatement" level="WARN"/>
+        <Logger name="java.sql.ResultSet" level="WARN"/>
+        <Logger name="com.zaxxer.hikari" level="WARN"/>
+        <Logger name="org.apache.http" level="WARN"/>
+
+        <!-- Root日志级别 -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RollingFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
+

@@ -1,0 +1,126 @@
+spring:
+  application:
+    name: v2-trade
+
+  # Thymeleaf 配置
+  thymeleaf:
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+    prefix: classpath:/templates/
+    suffix: .html
+    # 关闭严格模式
+    servlet:
+      content-type: text/html
+
+  # Web 配置
+  web:
+    resources:
+      add-mappings: true
+      static-locations: classpath:/static/,classpath:/public/
+
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/v2_trade?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+      validation-timeout: 3000
+      leak-detection-threshold: 60000
+      initialization-fail-timeout: 1
+      pool-name: MySQL-HikariPool
+
+  # Redis 配置
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password:
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# 日志配置
+# 注意：使用Log4j2时，日志配置主要在log4j2.xml中
+# 这里的配置会被log4j2.xml覆盖
+logging:
+  level:
+    root: INFO
+    com.qyl.v2trade: DEBUG
+  # Log4j2详细配置在src/main/resources/log4j2.xml中
+
+# 应用配置
+server:
+  port: 8080
+  error:
+    whitelabel:
+      enabled: false
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 已关闭SQL日志输出
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 自定义配置
+okx:
+  api:
+    base-url: https://www.okx.com
+    timeout: 5000
+  websocket:
+    url: wss://ws.okx.com:8443/ws/v5/business
+    connect-timeout-seconds: 15
+    proxy:
+      enabled: false  # 设置为 true 启用代理
+      type: socks5     # socks5 | http
+      host: 127.0.0.1
+      port: 1080
+
+# QuestDB 配置
+questdb:
+  # QuestDB使用PostgreSQL协议进行JDBC连接
+  # HTTP界面端口：9000
+  # JDBC端口：8812（PostgreSQL协议）
+  url: jdbc:postgresql://127.0.0.1:8812/qdb
+  username: admin
+  password: quest
+  # 连接池配置
+  pool:
+    max-active: 10
+    max-idle: 5
+    min-idle: 2
+    max-wait: 30000
+
+# HTTP代理配置
+http:
+  proxy:
+    host: 127.0.0.1
+    port: 7890
+    username: 
+    password: 
+
+# 行情数据中心配置
+market:
+  data:
+    # Redis缓存配置
+    cache:
+      # 默认缓存时长（分钟）
+      default-duration-minutes: 60
+      # 缓存key前缀
+      key-prefix: "market:kline:"

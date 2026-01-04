@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行情校准任务配置 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+        .stats-card { text-align: center; padding: 20px; }
+        .stats-card .number { font-size: 32px; font-weight: bold; margin: 10px 0; }
+        .stats-card .label { color: #999; font-size: 14px; }
+        .execution-mode-section { background: #f5f5f5; padding: 15px; border-radius: 4px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                <a href="javascript:;"><i class="layui-icon layui-icon-username"></i><span id="userName">用户</span></a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">系统管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/users.html">用户管理</a></dd>
+                        <dd><a href="/apikey.html">API密钥管理</a></dd>
+                        <dd><a href="/trading-pair.html">交易对管理</a></dd>
+                        <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">信号模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                        <dd><a href="/signal-list.html">信号查询</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html">策略配置管理</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">行情模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/market-center.html">行情中心</a></dd>
+                        <dd class="layui-this"><a href="/market-calibration.html">行情校准</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <fieldset class="layui-elem-field">
+                <legend>行情校准任务配置</legend>
+                <div class="layui-field-box">
+                    <!-- 统计卡片 -->
+                    <div class="layui-row layui-col-space15" style="margin-bottom: 20px;">
+                        <div class="layui-col-md3">
+                            <div class="layui-card">
+                                <div class="stats-card">
+                                    <div class="label">总任务配置</div>
+                                    <div class="number" id="totalTasks">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-col-md3">
+                            <div class="layui-card">
+                                <div class="stats-card">
+                                    <div class="label">运行中 (自动)</div>
+                                    <div class="number" style="color: #5FB878;" id="runningTasks">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-col-md3">
+                            <div class="layui-card">
+                                <div class="stats-card">
+                                    <div class="label">累计补全 K 线</div>
+                                    <div class="number" style="color: #1E9FFF;">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-col-md3">
+                            <div class="layui-card">
+                                <div class="stats-card">
+                                    <div class="label">异常数据告警</div>
+                                    <div class="number" style="color: #FF5722;">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 搜索和操作 -->
+                    <div class="layui-form" style="margin-bottom: 15px;">
+                        <div class="layui-inline">
+                            <select id="searchTaskType" class="layui-input" style="width: 150px;">
+                                <option value="">全部类型</option>
+                                <option value="MISSING_DATA">缺失数据检测</option>
+                                <option value="DATA_VERIFY">数据核对</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <select id="searchExecutionMode" class="layui-input" style="width: 150px;">
+                                <option value="">全部模式</option>
+                                <option value="AUTO">自动</option>
+                                <option value="MANUAL">手动</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <select id="searchEnabled" class="layui-input" style="width: 150px;">
+                                <option value="">全部状态</option>
+                                <option value="1">启用</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn" onclick="searchTasks()"><i class="layui-icon layui-icon-search"></i> 搜索</button>
+                            <button class="layui-btn layui-btn-normal" onclick="openAddTask()"><i class="layui-icon layui-icon-add-1"></i> 新建任务</button>
+                        </div>
+                    </div>
+
+                    <!-- 任务列表表格 -->
+                    <table class="layui-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>任务名称</th>
+                                <th>任务类型</th>
+                                <th>交易对</th>
+                                <th>执行模式/范围</th>
+                                <th>状态</th>
+                                <th>备注</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskTableBody"></tbody>
+                    </table>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+    <div class="layui-footer">© 2024 V2 Trade - 交易管理系统</div>
+</div>
+
+<!-- 添加/编辑表单 -->
+<div id="taskForm" style="display: none; padding: 20px;">
+    <form class="layui-form" lay-filter="taskForm">
+        <input type="hidden" name="id" id="taskId">
+        <div class="layui-form-item">
+            <label class="layui-form-label">任务名称<span style="color: red;">*</span></label>
+            <div class="layui-input-block">
+                <input type="text" name="taskName" id="taskName" lay-verify="required" placeholder="如：BTC 缺失数据自动补全" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">交易对<span style="color: red;">*</span></label>
+            <div class="layui-input-block">
+                <select name="tradingPairId" id="tradingPairSelect" lay-verify="required" lay-search>
+                    <option value="">请选择交易对</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">任务类型<span style="color: red;">*</span></label>
+            <div class="layui-input-block">
+                <input type="radio" name="taskType" value="MISSING_DATA" title="缺失数据检测" checked>
+                <input type="radio" name="taskType" value="DATA_VERIFY" title="数据核对">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">执行模式<span style="color: red;">*</span></label>
+            <div class="layui-input-block">
+                <input type="radio" name="executionMode" value="AUTO" title="自动执行 (周期)" checked lay-filter="executionMode">
+                <input type="radio" name="executionMode" value="MANUAL" title="手动指定 (区间)" lay-filter="executionMode">
+            </div>
+        </div>
+        <div class="layui-form-item execution-mode-section" id="autoModeSection">
+            <label class="layui-form-label">检测周期</label>
+            <div class="layui-input-block">
+                <div style="display: flex; align-items: center;">
+                    <span style="margin-right: 10px;">检测最近</span>
+                    <input type="number" name="intervalHours" id="intervalHours" value="1" min="1" max="72" lay-verify="number" class="layui-input" style="width: 100px;">
+                    <span style="margin-left: 10px;">小时的数据</span>
+                </div>
+                <div style="color: #FF9800; font-size: 12px; margin-top: 10px;">
+                    <i class="layui-icon layui-icon-tips"></i> 系统将每10分钟自动扫描一次
+                </div>
+            </div>
+        </div>
+        <div class="layui-form-item execution-mode-section" id="manualModeSection" style="display: none;">
+            <label class="layui-form-label">时间范围</label>
+            <div class="layui-input-block">
+                <input type="text" name="dateRange" id="dateRange" placeholder="请选择时间范围" class="layui-input" readonly>
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">备注说明</label>
+            <div class="layui-input-block">
+                <textarea name="remark" id="remark" placeholder="可选填" class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">启用状态</label>
+            <div class="layui-input-block">
+                <input type="radio" name="enabled" value="1" title="立即启用" checked>
+                <input type="radio" name="enabled" value="0" title="禁用">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="submit" class="layui-btn" lay-submit lay-filter="submitTask">保存配置</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form', 'laydate'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var laydate = layui.laydate;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    var isEditMode = false;
+    var currentEditId = null;
+    
+    // 初始化日期时间范围选择器
+    laydate.render({
+        elem: '#dateRange',
+        type: 'datetime',
+        range: true,
+        format: 'yyyy-MM-dd HH:mm:ss'
+    });
+    
+    // 监听执行模式变化
+    form.on('radio(executionMode)', function(data){
+        if (data.value === 'AUTO') {
+            $('#autoModeSection').show();
+            $('#manualModeSection').hide();
+        } else {
+            $('#autoModeSection').hide();
+            $('#manualModeSection').show();
+        }
+    });
+    
+    // 加载交易对列表
+    function loadTradingPairs() {
+        request({
+            url: '/api/trading-pair/list?enabled=1',
+            method: 'GET'
+        }).then(function(res) {
+            var html = '<option value="">请选择交易对</option>';
+            if(res.data && res.data.length > 0){
+                res.data.forEach(function(item){
+                    var displayText = item.symbol + ' (' + item.marketType + ')';
+                    html += '<option value="' + item.id + '">' + displayText + '</option>';
+                });
+            }
+            $('#tradingPairSelect').html(html);
+            form.render('select');
+        });
+    }
+    
+    // 加载任务列表
+    function loadTasks() {
+        var params = [];
+        var taskType = $('#searchTaskType').val();
+        var executionMode = $('#searchExecutionMode').val();
+        var enabled = $('#searchEnabled').val();
+        
+        if (taskType) params.push('taskType=' + taskType);
+        if (executionMode) params.push('executionMode=' + executionMode);
+        if (enabled !== '') params.push('enabled=' + enabled);
+        
+        var url = '/api/market-calibration/config';
+        if (params.length > 0) {
+            url += '?' + params.join('&');
+        }
+        
+        request({
+            url: url,
+            method: 'GET'
+        }).then(function(res) {
+            var html = '';
+            // 后端返回的是IPage对象，包含records字段
+            var tasks = (res.data && res.data.records) ? res.data.records : (res.data || []);
+            // 如果res.data是数组，说明不是分页结果
+            if (Array.isArray(res.data)) {
+                tasks = res.data;
+            }
+            var totalTasks = tasks.length;
+            var runningTasks = 0;
+            
+            if(tasks.length > 0){
+                tasks.forEach(function(item){
+                    if (item.enabled == 1 && item.executionMode === 'AUTO') {
+                        runningTasks++;
+                    }
+                    
+                    var taskTypeBadge = item.taskType === 'MISSING_DATA' ? 
+                        '<span class="layui-badge layui-bg-blue">缺失补全</span>' : 
+                        '<span class="layui-badge layui-bg-orange">数据核对</span>';
+                    var statusBadge = item.enabled == 1 ? 
+                        '<span class="layui-badge layui-bg-green">启用</span>' : 
+                        '<span class="layui-badge layui-bg-gray">禁用</span>';
+                    
+                    var executionModeText = '';
+                    if (item.executionMode === 'AUTO') {
+                        executionModeText = '<span class="layui-badge layui-bg-green">AUTO</span> 每10分钟检测最近 <b>' + (item.intervalHours || 1) + 'h</b>';
+                    } else {
+                        var startTime = item.startTime ? item.startTime.substring(0, 16) : '-';
+                        var endTime = item.endTime ? item.endTime.substring(0, 16) : '-';
+                        executionModeText = '<span class="layui-badge">MANUAL</span><br/>' + startTime + '<br/>至<br/>' + endTime;
+                    }
+                    
+                    html += '<tr>' +
+                        '<td>' + item.id + '</td>' +
+                        '<td>' + (item.taskName || '-') + '</td>' +
+                        '<td>' + taskTypeBadge + '</td>' +
+                        '<td><span class="layui-badge layui-bg-gray">' + (item.symbol || '-') + '</span></td>' +
+                        '<td>' + executionModeText + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '<td>' + (item.remark || '-') + '</td>' +
+                        '<td>' +
+                            '<button class="layui-btn layui-btn-xs layui-btn-normal" onclick="executeTask(' + item.id + ')"><i class="layui-icon layui-icon-play"></i> 执行</button> ' +
+                            '<button class="layui-btn layui-btn-xs" onclick="editTask(' + item.id + ')">编辑</button> ' +
+                            '<button class="layui-btn layui-btn-xs layui-btn-primary" onclick="viewLogs(' + item.id + ')">日志</button> ' +
+                            '<button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteTask(' + item.id + ')">删除</button>' +
+                        '</td>' +
+                    '</tr>';
+                });
+            } else {
+                html = '<tr><td colspan="8" style="text-align: center; color: #999;">暂无数据</td></tr>';
+            }
+            
+            $('#taskTableBody').html(html);
+            $('#totalTasks').text(totalTasks);
+            $('#runningTasks').text(runningTasks);
+        });
+    }
+    
+    // 初始化加载
+    loadTradingPairs();
+    loadTasks();
+    
+    // 搜索任务
+    window.searchTasks = function() {
+        loadTasks();
+    };
+    
+    // 打开添加任务窗口
+    window.openAddTask = function() {
+        isEditMode = false;
+        currentEditId = null;
+        
+        // 清空表单数据
+        $('#taskId').val('');
+        $('#taskName').val('');
+        $('#tradingPairSelect').val('');
+        $('input[name="taskType"][value="MISSING_DATA"]').prop('checked', true);
+        $('input[name="executionMode"][value="AUTO"]').prop('checked', true);
+        $('#intervalHours').val('1');
+        $('#dateRange').val('');
+        $('#remark').val('');
+        $('input[name="enabled"][value="1"]').prop('checked', true);
+        
+        $('#autoModeSection').show();
+        $('#manualModeSection').hide();
+        
+        // 重新加载交易对列表
+        loadTradingPairs();
+        
+        layer.open({
+            type: 1,
+            title: '新建任务',
+            area: ['600px', '650px'],
+            content: $('#taskForm'),
+            success: function() {
+                form.render();
+            }
+        });
+    };
+    
+    // 编辑任务
+    window.editTask = function(id) {
+        isEditMode = true;
+        currentEditId = id;
+        
+        request({
+            url: '/api/market-calibration/config/' + id,
+            method: 'GET'
+        }).then(function(res) {
+            var task = res.data;
+            if (task) {
+                $('#taskId').val(task.id);
+                $('#taskName').val(task.taskName);
+                $('input[name="taskType"][value="' + task.taskType + '"]').prop('checked', true);
+                $('input[name="executionMode"][value="' + task.executionMode + '"]').prop('checked', true);
+                $('#intervalHours').val(task.intervalHours || 1);
+                $('#remark').val(task.remark || '');
+                $('input[name="enabled"][value="' + task.enabled + '"]').prop('checked', true);
+                
+                if (task.executionMode === 'AUTO') {
+                    $('#autoModeSection').show();
+                    $('#manualModeSection').hide();
+                } else {
+                    $('#autoModeSection').hide();
+                    $('#manualModeSection').show();
+                    if (task.startTime && task.endTime) {
+                        $('#dateRange').val(task.startTime + ' - ' + task.endTime);
+                    }
+                }
+                
+                // 重新加载交易对列表
+                loadTradingPairs();
+                
+                layer.open({
+                    type: 1,
+                    title: '编辑配置',
+                    area: ['600px', '650px'],
+                    content: $('#taskForm'),
+                    success: function() {
+                        // 等待交易对列表加载完成后再设置选中值
+                        setTimeout(function() {
+                            $('#tradingPairSelect').val(task.tradingPairId);
+                            form.render('select');
+                        }, 300);
+                    }
+                });
+            }
+        });
+    };
+    
+    // 执行任务
+    window.executeTask = function(id) {
+        // 先获取任务配置信息
+        request({
+            url: '/api/market-calibration/config/' + id,
+            method: 'GET'
+        }).then(function(res) {
+            var task = res.data;
+            if (!task) {
+                layer.msg('任务配置不存在', {icon: 2});
+                return;
+            }
+            
+            // 如果任务配置中有时间范围（手动模式），使用配置的时间；否则弹出时间选择框
+            var startTime = null;
+            var endTime = null;
+            
+            if (task.executionMode === 'MANUAL' && task.startTime && task.endTime) {
+                // 手动模式，使用配置的时间范围
+                // 后端返回的格式是 "yyyy-MM-dd HH:mm:ss"，需要转换为ISO格式 "yyyy-MM-ddTHH:mm:ss"
+                startTime = task.startTime.replace(' ', 'T');
+                endTime = task.endTime.replace(' ', 'T');
+                executeTaskDirectly(id, startTime, endTime);
+            } else {
+                // 自动模式或没有配置时间范围，弹出时间选择框
+                showExecuteTimeDialog(id);
+            }
+        }).catch(function(err) {
+            layer.msg('获取任务配置失败', {icon: 2});
+        });
+    };
+    
+    // 显示执行时间选择对话框
+    function showExecuteTimeDialog(taskId) {
+        var html = '<form class="layui-form" style="padding: 20px;">' +
+            '<div class="layui-form-item">' +
+            '<label class="layui-form-label">开始时间<span style="color: red;">*</span></label>' +
+            '<div class="layui-input-block">' +
+            '<input type="text" id="executeStartTime" placeholder="请选择开始时间" class="layui-input" readonly>' +
+            '</div>' +
+            '</div>' +
+            '<div class="layui-form-item">' +
+            '<label class="layui-form-label">结束时间<span style="color: red;">*</span></label>' +
+            '<div class="layui-input-block">' +
+            '<input type="text" id="executeEndTime" placeholder="请选择结束时间" class="layui-input" readonly>' +
+            '</div>' +
+            '</div>' +
+            '</form>';
+        
+        var executeDialogIndex = layer.open({
+            type: 1,
+            title: '选择执行时间范围',
+            area: ['500px', '300px'],
+            content: html,
+            btn: ['执行', '取消'],
+            yes: function(index) {
+                var startTime = $('#executeStartTime').val();
+                var endTime = $('#executeEndTime').val();
+                
+                if (!startTime || !endTime) {
+                    layer.msg('请选择开始时间和结束时间', {icon: 2});
+                    return;
+                }
+                
+                // 将时间格式转换为ISO格式（yyyy-MM-ddTHH:mm:ss）
+                // laydate的format为'yyyy-MM-dd HH:mm:ss'，所以已经有秒数了，只需替换空格为T
+                startTime = startTime.replace(' ', 'T');
+                endTime = endTime.replace(' ', 'T');
+                
+                executeTaskDirectly(taskId, startTime, endTime);
+                layer.close(index);
+            },
+            success: function(layero, index) {
+                // 初始化日期时间选择器
+                laydate.render({
+                    elem: '#executeStartTime',
+                    type: 'datetime',
+                    format: 'yyyy-MM-dd HH:mm:ss',
+                    value: new Date(Date.now() - 24 * 60 * 60 * 1000) // 默认前一天
+                });
+                
+                laydate.render({
+                    elem: '#executeEndTime',
+                    type: 'datetime',
+                    format: 'yyyy-MM-dd HH:mm:ss',
+                    value: new Date() // 默认当前时间
+                });
+            }
+        });
+    }
+    
+    // 直接执行任务
+    function executeTaskDirectly(taskId, startTime, endTime) {
+        var loading = layer.load(1, {content: '正在执行任务...'});
+        
+        request({
+            url: '/api/market-calibration/config/' + taskId + '/execute',
+            method: 'POST',
+            data: {
+                startTime: startTime,
+                endTime: endTime
+            }
+        }).then(function(res) {
+            layer.close(loading);
+            var result = res.data;
+            if (result && result.success) {
+                var msg = '任务执行成功！';
+                if (result.missingCount !== undefined) {
+                    msg += '\n缺失数量：' + result.missingCount;
+                }
+                if (result.filledCount !== undefined) {
+                    msg += '\n补全数量：' + result.filledCount;
+                }
+                if (result.duplicateCount !== undefined) {
+                    msg += '\n重复数据：' + result.duplicateCount;
+                }
+                if (result.errorCount !== undefined) {
+                    msg += '\n异常数据：' + result.errorCount;
+                }
+                if (result.executeDurationMs) {
+                    msg += '\n执行耗时：' + (result.executeDurationMs / 1000).toFixed(2) + '秒';
+                }
+                layer.alert(msg, {icon: 1, title: '执行结果'}, function() {
+                    // 可以跳转到日志页面
+                    // window.location.href = '/market-calibration-log.html?taskConfigId=' + taskId;
+                });
+            } else {
+                var errorMsg = result && result.errorMessage ? result.errorMessage : '任务执行失败';
+                layer.msg(errorMsg, {icon: 2, time: 3000});
+            }
+        }).catch(function(err) {
+            layer.close(loading);
+            var errorMsg = '执行失败：' + (err.responseJSON && err.responseJSON.message ? err.responseJSON.message : '未知错误');
+            layer.msg(errorMsg, {icon: 2, time: 3000});
+        });
+    }
+    
+    // 查看日志
+    window.viewLogs = function(id) {
+        window.location.href = '/market-calibration-log.html?taskConfigId=' + id;
+    };
+    
+    // 删除任务
+    window.deleteTask = function(id) {
+        layer.confirm('确定删除该任务吗？', function(index){
+            request({
+                url: '/api/market-calibration/config/' + id,
+                method: 'DELETE'
+            }).then(function(res){
+                layer.msg(res.message, {icon: 1});
+                loadTasks();
+                layer.close(index);
+            });
+        });
+    };
+    
+    // 提交表单
+    form.on('submit(submitTask)', function(data){
+        var loading = layer.load(1);
+        
+        // 处理执行模式相关字段
+        var requestData = {
+            taskName: data.field.taskName,
+            tradingPairId: parseInt(data.field.tradingPairId),
+            taskType: data.field.taskType,
+            executionMode: data.field.executionMode,
+            enabled: parseInt(data.field.enabled),
+            remark: data.field.remark || null
+        };
+        
+        if (data.field.executionMode === 'AUTO') {
+            requestData.intervalHours = parseInt(data.field.intervalHours);
+            requestData.startTime = null;
+            requestData.endTime = null;
+        } else {
+            requestData.intervalHours = null;
+            var dateRange = $('#dateRange').val();
+            if (dateRange) {
+                var dates = dateRange.split(' - ');
+                if (dates.length === 2) {
+                    requestData.startTime = dates[0];
+                    requestData.endTime = dates[1];
+                } else {
+                    layer.close(loading);
+                    layer.msg('请选择时间范围', {icon: 2});
+                    return false;
+                }
+            } else {
+                layer.close(loading);
+                layer.msg('请选择时间范围', {icon: 2});
+                return false;
+            }
+        }
+        
+        var url = '/api/market-calibration/config';
+        var method = 'POST';
+        
+        if (isEditMode && currentEditId) {
+            url = '/api/market-calibration/config/' + currentEditId;
+            method = 'PUT';
+        }
+        
+        request({
+            url: url,
+            method: method,
+            data: requestData
+        }).then(function(res){
+            layer.close(loading);
+            layer.msg(res.message, {icon: 1});
+            layer.closeAll('page');
+            loadTasks();
+        }).catch(function(){
+            layer.close(loading);
+        });
+        return false;
+    });
+});
+</script>
+</body>
+</html>
+

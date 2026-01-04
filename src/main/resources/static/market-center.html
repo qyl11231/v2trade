@@ -1,0 +1,2263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行情中心 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <!-- TradingView Lightweight Charts - Professional Trading Terminal Chart Library -->
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" 
+            onerror="console.error('LightweightCharts库加载失败，请检查网络连接')"></script>
+    <!-- SockJS and STOMP.js for WebSocket -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: #0b0e14;
+            color: #eaecef;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* 顶部全局Header */
+        .global-header {
+            background: #161a1e;
+            border-bottom: 1px solid #2a2e34;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 48px;
+            flex-shrink: 0;
+        }
+        
+        .global-header .logo {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f0b90b;
+            letter-spacing: 0.5px;
+        }
+        
+        .global-header-stats {
+            display: flex;
+            gap: 24px;
+            font-size: 12px;
+        }
+        
+        .global-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .global-stat-label {
+            color: #848e9c;
+            font-size: 11px;
+        }
+        
+        .global-stat-value {
+            color: #eaecef;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* 主容器布局 */
+        .main-container {
+            display: grid;
+            grid-template-columns: 240px 1fr 300px;
+            height: calc(100vh - 48px);
+            gap: 1px;
+            background: #2a2e34;
+        }
+        
+        .panel {
+            background: #161a1e;
+            overflow: hidden;
+        }
+        
+        /* ========== 左侧 Trading Pairs ========== */
+        .symbols-panel {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #2a2e34;
+        }
+        
+        .symbols-header {
+            padding: 16px 16px 12px;
+            border-bottom: 1px solid #2a2e34;
+            background: #1a1e23;
+        }
+        
+        .symbols-header-title {
+            font-size: 12px;
+            color: #848e9c;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .symbols-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .symbols-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .symbols-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .symbols-list::-webkit-scrollbar-thumb {
+            background: #2a2e34;
+            border-radius: 2px;
+        }
+        
+        .symbols-list::-webkit-scrollbar-thumb:hover {
+            background: #3a3e44;
+        }
+        
+        .symbol-item {
+            padding: 12px;
+            margin-bottom: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+        
+        .symbol-item:hover {
+            background: #1e2228;
+        }
+        
+        .symbol-item.active {
+            background: #1e2228;
+            border-left: 3px solid #f0b90b;
+        }
+        
+        .symbol-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #f0b90b;
+        }
+        
+        .symbol-item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .symbol-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #eaecef;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .symbol-item.active .symbol-name {
+            color: #f0b90b;
+            font-weight: 700;
+        }
+        
+        .symbol-price {
+            font-size: 13px;
+            font-weight: 600;
+            color: #eaecef;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+        }
+        
+        .symbol-change {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 3px;
+            min-width: 65px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+        
+        .symbol-change.up {
+            color: #0ecb81;
+            background: rgba(14, 203, 129, 0.15);
+        }
+        
+        .symbol-change.down {
+            color: #f6465d;
+            background: rgba(246, 70, 93, 0.15);
+        }
+        
+        .symbol-item.active .symbol-change.up {
+            background: rgba(14, 203, 129, 0.25);
+            color: #0ecb81;
+        }
+        
+        .symbol-item.active .symbol-change.down {
+            background: rgba(246, 70, 93, 0.25);
+            color: #f6465d;
+        }
+        
+        .symbol-stats {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 10px;
+            color: #848e9c;
+            margin-top: 4px;
+        }
+        
+        .symbol-stat-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .symbol-stat-label {
+            font-size: 9px;
+            color: #636a73;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .symbol-stat-value {
+            font-size: 11px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            color: #848e9c;
+        }
+        
+        .symbol-stat-value.up {
+            color: #0ecb81;
+        }
+        
+        .symbol-stat-value.down {
+            color: #f6465d;
+        }
+        
+        /* ========== 中央 Chart Section ========== */
+        .chart-panel {
+            display: flex;
+            flex-direction: column;
+            background: #161a1e;
+        }
+        
+        /* Chart Header */
+        .chart-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a2e34;
+            background: #1a1e23;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .chart-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .chart-symbol-info {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+        
+        .chart-symbol {
+            font-size: 24px;
+            font-weight: 700;
+            color: #eaecef;
+            letter-spacing: 0.3px;
+        }
+        
+        .chart-price {
+            font-size: 20px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .chart-price.up {
+            color: #0ecb81;
+        }
+        
+        .chart-price.down {
+            color: #f6465d;
+        }
+        
+        .chart-change {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .chart-change.up {
+            color: #0ecb81;
+            background: rgba(14, 203, 129, 0.15);
+        }
+        
+        .chart-change.down {
+            color: #f6465d;
+            background: rgba(246, 70, 93, 0.15);
+        }
+        
+        .timeframe-selector {
+            display: flex;
+            gap: 2px;
+            background: #0b0e14;
+            padding: 2px;
+            border-radius: 4px;
+            border: 1px solid #2a2e34;
+        }
+        
+        .timeframe-btn {
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+            color: #848e9c;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+        }
+        
+        .timeframe-btn:hover {
+            color: #eaecef;
+            background: #1e2228;
+        }
+        
+        .timeframe-btn.active {
+            color: #eaecef;
+            background: #2a2e34;
+            box-shadow: 0 0 0 1px #3a3e44;
+        }
+        
+        /* Chart Main Area */
+        .chart-main {
+            flex: 1;
+            position: relative;
+            background: #0b0e14;
+            overflow: hidden;
+        }
+        
+        .chart-canvas-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .chart-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* TradingView Chart Container */
+        #tv-chart-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        /* OHLC Tooltip */
+        .chart-tooltip {
+            position: absolute;
+            background: rgba(22, 26, 30, 0.95);
+            border: 1px solid #2a2e34;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+        
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 2px 0;
+        }
+        
+        .tooltip-label {
+            color: #848e9c;
+            font-size: 11px;
+        }
+        
+        .tooltip-value {
+            color: #eaecef;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .tooltip-value.up {
+            color: #0ecb81;
+        }
+        
+        .tooltip-value.down {
+            color: #f6465d;
+        }
+        
+        .tooltip-divider {
+            height: 1px;
+            background: #2a2e34;
+            margin: 6px 0;
+        }
+        
+        /* Loading Skeleton */
+        .chart-skeleton {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0b0e14;
+            display: none;
+        }
+        
+        .chart-skeleton.active {
+            display: block;
+        }
+        
+        .skeleton-grid {
+            width: 100%;
+            height: 100%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .skeleton-line {
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(42, 46, 52, 0.5) 20%, 
+                rgba(42, 46, 52, 0.5) 80%, 
+                transparent 100%);
+            animation: skeleton-pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes skeleton-pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+        
+        .chart-loading-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #848e9c;
+            font-size: 13px;
+            display: none;
+        }
+        
+        .chart-skeleton.active ~ .chart-loading-text {
+            display: block;
+        }
+        
+        /* Chart Footer */
+        .chart-footer {
+            padding: 10px 20px;
+            border-top: 1px solid #2a2e34;
+            background: #1a1e23;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #848e9c;
+            flex-shrink: 0;
+        }
+        
+        .chart-footer-left {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .chart-footer-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .chart-footer-label {
+            color: #848e9c;
+        }
+        
+        .chart-footer-value {
+            color: #eaecef;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-dot.connected {
+            background: #0ecb81;
+            box-shadow: 0 0 6px rgba(14, 203, 129, 0.5);
+            animation: status-pulse 2s ease-in-out infinite;
+        }
+        
+        .status-dot.disconnected {
+            background: #f6465d;
+            box-shadow: 0 0 6px rgba(246, 70, 93, 0.5);
+        }
+        
+        @keyframes status-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* ========== 右侧 Market Info ========== */
+        .market-info-panel {
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #2a2e34;
+        }
+        
+        .market-info-header {
+            padding: 16px 16px 12px;
+            border-bottom: 1px solid #2a2e34;
+            background: #1a1e23;
+        }
+        
+        .market-info-title {
+            font-size: 12px;
+            color: #848e9c;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .market-info-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        .market-info-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .market-info-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .market-info-content::-webkit-scrollbar-thumb {
+            background: #2a2e34;
+            border-radius: 2px;
+        }
+        
+        .market-info-content::-webkit-scrollbar-thumb:hover {
+            background: #3a3e44;
+        }
+        
+        .market-stat-card {
+            background: #1a1e23;
+            border: 1px solid #2a2e34;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .market-stat-label {
+            font-size: 11px;
+            color: #848e9c;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .market-stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #eaecef;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .market-stat-value.up {
+            color: #0ecb81;
+        }
+        
+        .market-stat-value.down {
+            color: #f6465d;
+        }
+        
+        .market-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .market-mini-stat {
+            background: #1a1e23;
+            border: 1px solid #2a2e34;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .market-mini-stat-label {
+            font-size: 10px;
+            color: #848e9c;
+            margin-bottom: 4px;
+        }
+        
+        .market-mini-stat-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #eaecef;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .market-mini-stat-value.up {
+            color: #0ecb81;
+        }
+        
+        .market-mini-stat-value.down {
+            color: #f6465d;
+        }
+        
+        /* Loading State */
+        .loading-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #848e9c;
+            font-size: 12px;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: #848e9c;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 全局Header -->
+    <header class="global-header">
+        <div class="logo">📊 Market Center</div>
+        <div class="global-header-stats">
+            <div class="global-stat">
+                <span class="global-stat-label">24h Volume:</span>
+                <span class="global-stat-value" id="headerVolume">-</span>
+            </div>
+            <div class="global-stat">
+                <span class="global-stat-label">Status:</span>
+                <span class="global-stat-value" id="headerStatus" style="color: #0ecb81;">● Live</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 左侧 Trading Pairs -->
+        <div class="panel symbols-panel">
+            <div class="symbols-header">
+                <div class="symbols-header-title">Trading Pairs</div>
+            </div>
+            <div class="symbols-list" id="symbolList">
+                <div class="loading-state">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 中央 Chart Section -->
+        <div class="panel chart-panel">
+            <!-- Chart Header -->
+            <div class="chart-header">
+                <div class="chart-header-left">
+                    <div class="chart-symbol-info">
+                        <span class="chart-symbol" id="currentSymbol">-</span>
+                        <span class="chart-price" id="currentPrice">$0.00</span>
+                        <span class="chart-change" id="currentChange">+0.00%</span>
+                    </div>
+                </div>
+                <div class="timeframe-selector" id="timeframeSelector">
+                    <button class="timeframe-btn active" data-tf="1m">1m</button>
+                    <button class="timeframe-btn" data-tf="5m">5m</button>
+                    <button class="timeframe-btn" data-tf="15m">15m</button>
+                    <button class="timeframe-btn" data-tf="30m">30m</button>
+                    <button class="timeframe-btn" data-tf="1h">1h</button>
+                    <button class="timeframe-btn" data-tf="4h">4h</button>
+                </div>
+            </div>
+
+            <!-- Chart Main -->
+            <div class="chart-main">
+                <div class="chart-skeleton active" id="chartSkeleton">
+                    <div class="skeleton-grid">
+                        <div class="skeleton-line" style="height: 20%;"></div>
+                        <div class="skeleton-line" style="height: 15%;"></div>
+                        <div class="skeleton-line" style="height: 18%;"></div>
+                        <div class="skeleton-line" style="height: 12%;"></div>
+                        <div class="skeleton-line" style="height: 15%;"></div>
+                        <div class="skeleton-line" style="height: 20%;"></div>
+                    </div>
+                </div>
+                <div class="chart-loading-text">加载K线数据中...</div>
+                <div class="chart-canvas-wrapper">
+                    <div id="tv-chart-container"></div>
+                    <canvas id="chartCanvas" class="chart-canvas" style="display: none;"></canvas>
+                </div>
+                <!-- OHLC Tooltip -->
+                <div id="chartTooltip" class="chart-tooltip">
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Time</span>
+                        <span class="tooltip-value" id="tooltipTime">--</span>
+                    </div>
+                    <div class="tooltip-divider"></div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Open</span>
+                        <span class="tooltip-value" id="tooltipOpen">--</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">High</span>
+                        <span class="tooltip-value up" id="tooltipHigh">--</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Low</span>
+                        <span class="tooltip-value down" id="tooltipLow">--</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Close</span>
+                        <span class="tooltip-value" id="tooltipClose">--</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Volume</span>
+                        <span class="tooltip-value" id="tooltipVolume">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Footer -->
+            <div class="chart-footer">
+                <div class="chart-footer-left">
+                    <div class="chart-footer-item">
+                        <span class="chart-footer-label">Last Update:</span>
+                        <span class="chart-footer-value" id="statusTime">--:--:--</span>
+                    </div>
+                    <div class="chart-footer-item">
+                        <span class="chart-footer-label">Timeframe:</span>
+                        <span class="chart-footer-value" id="statusTimeframe">1m</span>
+                    </div>
+                </div>
+                <div class="connection-status">
+                    <span class="status-dot connected" id="statusIndicator"></span>
+                    <span class="chart-footer-value" id="statusConnection">Connected</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧 Market Info -->
+        <div class="panel market-info-panel">
+            <div class="market-info-header">
+                <div class="market-info-title">Market Info</div>
+            </div>
+            <div class="market-info-content">
+                <div class="market-stat-card">
+                    <div class="market-stat-label">24h High</div>
+                    <div class="market-stat-value up" id="statTodayHigh">-</div>
+                </div>
+                <div class="market-stat-card">
+                    <div class="market-stat-label">24h Low</div>
+                    <div class="market-stat-value down" id="statTodayLow">-</div>
+                </div>
+                <div class="market-stat-card">
+                    <div class="market-stat-label">24h Change</div>
+                    <div class="market-stat-value" id="statTodayChange">-</div>
+                </div>
+                <div class="market-stat-card">
+                    <div class="market-stat-label">24h Volume</div>
+                    <div class="market-stat-value" id="statTodayVolume">-</div>
+                </div>
+                
+                <div class="market-stats-grid">
+                    <div class="market-mini-stat">
+                        <div class="market-mini-stat-label">Symbol</div>
+                        <div class="market-mini-stat-value" id="statusSymbol">-</div>
+                    </div>
+                    <div class="market-mini-stat">
+                        <div class="market-mini-stat-label">Latency</div>
+                        <div class="market-mini-stat-value" id="statusDelay">≈ 0.5s</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+    <script src="/js/common.js"></script>
+    <script>
+        // 检查登录状态
+        if (!checkLogin()) {
+            window.location.href = '/login.html';
+        }
+
+        // 全局变量
+        let activeSymbol = null;
+        let activeMarketType = null;  // 保存当前交易对的市场类型
+        let activeTimeframe = '1m';
+        let klinesData = [];
+        let stompClient = null;
+        let socket = null;
+        let currentChange = 0;
+        const chartSkeleton = document.getElementById('chartSkeleton');
+
+        // 存储所有交易对信息（symbol -> {symbol, marketType}）
+        let symbolInfoMap = {};
+        
+        // TradingView Lightweight Charts 实例
+        let tvChart = null;
+        let candlestickSeries = null;
+        let volumeSeries = null;
+        let tooltipElement = null;
+        
+        // 图表交互状态
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        
+        // ========== 数据窗口管理 ==========
+        /**
+         * Data Window Management
+         * 管理已加载的数据范围，防止重复请求
+         */
+        const dataWindow = {
+            // 已加载数据的时间范围（毫秒级UTC时间戳）
+            leftBoundary: null,   // 最早数据的时间戳
+            rightBoundary: null,  // 最新数据的时间戳
+            
+            // 正在加载的时间范围（防重复请求）
+            pendingRequests: new Set(),
+            
+            // 重置数据窗口
+            reset: function() {
+                this.leftBoundary = null;
+                this.rightBoundary = null;
+                this.pendingRequests.clear();
+            },
+            
+            // 更新边界（数据加载后）
+            updateBoundaries: function(data) {
+                if (!data || data.length === 0) return;
+                const firstTime = data[0].timestamp;
+                const lastTime = data[data.length - 1].timestamp;
+                
+                if (this.leftBoundary === null || firstTime < this.leftBoundary) {
+                    this.leftBoundary = firstTime;
+                }
+                if (this.rightBoundary === null || lastTime > this.rightBoundary) {
+                    this.rightBoundary = lastTime;
+                }
+            },
+            
+            // 检查是否需要加载更早的数据
+            shouldLoadEarlier: function(visibleStartTimeMs, thresholdBars) {
+                if (this.leftBoundary === null) return false;
+                
+                // 计算阈值时间（thresholdBars根K线的时间跨度）
+                const timeframeMs = getTimeframeMs(activeTimeframe);
+                const thresholdMs = thresholdBars * timeframeMs;
+                
+                // 如果可见范围的开始时间接近或超过左边界，需要加载
+                return visibleStartTimeMs <= (this.leftBoundary + thresholdMs);
+            },
+            
+            // 检查是否在实时模式（接近最新数据）
+            isNearRealtime: function(visibleEndTimeMs, thresholdBars) {
+                if (this.rightBoundary === null) return false;
+                
+                const timeframeMs = getTimeframeMs(activeTimeframe);
+                const thresholdMs = thresholdBars * timeframeMs;
+                // Date.now() 返回UTC时间戳（毫秒级）
+                const now = Date.now();
+                
+                // 如果可见范围接近最新数据，且最新数据接近当前时间，则认为是实时模式
+                return (visibleEndTimeMs >= (this.rightBoundary - thresholdMs)) &&
+                       ((now - this.rightBoundary) < timeframeMs * 2);
+            }
+        };
+        
+        // 获取时间周期对应的毫秒数
+        function getTimeframeMs(timeframe) {
+            const timeframeMsMap = {
+                '1m': 60000,
+                '5m': 300000,
+                '15m': 900000,
+                '30m': 1800000,
+                '1h': 3600000,
+                '4h': 14400000,
+                '1d': 86400000
+            };
+            return timeframeMsMap[timeframe] || 60000;
+        }
+        
+        // Auto-Scroll 状态管理
+        let isAutoScrollEnabled = true;  // 默认启用自动滚动（跟随最新数据）
+        let autoScrollCheckTimer = null;
+
+        // 初始化 TradingView Chart
+        function initTradingViewChart() {
+            const container = document.getElementById('tv-chart-container');
+            if (!container) {
+                console.warn('图表容器不存在');
+                return;
+            }
+            
+            // 检查库是否已加载
+            if (typeof LightweightCharts === 'undefined') {
+                console.error('TradingView Lightweight Charts 库未加载，请检查网络连接');
+                // 显示错误提示
+                container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #848e9c;">图表库加载失败，请刷新页面重试</div>';
+                return;
+            }
+            
+            // 销毁旧图表
+            if (tvChart) {
+                try {
+                    tvChart.remove();
+                } catch (e) {
+                    console.warn('清理旧图表时出错:', e);
+                }
+            }
+            
+            try {
+                // 创建新图表
+                tvChart = LightweightCharts.createChart(container, {
+                    layout: {
+                        background: { type: 'solid', color: '#0b0e14' },
+                        textColor: '#848e9c',
+                        fontSize: 12,
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
+                    },
+                    width: container.clientWidth,
+                    height: container.clientHeight,
+                    timeScale: {
+                        timeVisible: true,
+                        secondsVisible: false,
+                        rightOffset: 12,
+                        barSpacing: 3,
+                        fixLeftEdge: false,
+                        lockVisibleTimeRangeOnResize: false,
+                        rightBarStaysOnScroll: true,
+                        borderVisible: false,
+                        borderColor: '#2a2e39',
+                        visible: true,
+                        // 禁用时间标签的悬停效果，使用统一的UTC时间格式
+                        tickMarkFormatter: function(time, tickMarkType, locale) {
+                            // TradingView传入的time是秒级UTC时间戳
+                            // 必须使用UTC+8时区格式化（与后端UtcTimeConverter.utcTimestampToLocalString保持一致）
+                            // 不能使用浏览器的本地时区，否则会显示错误
+                            
+                            // 将UTC时间戳转换为UTC+8时区的时间
+                            // UTC+8 = UTC + 8小时 = UTC + 8 * 60 * 60 * 1000 毫秒
+                            const utc8OffsetMs = 8 * 60 * 60 * 1000;
+                            const utc8Timestamp = (time * 1000) + utc8OffsetMs;
+                            const date = new Date(utc8Timestamp);
+                            
+                            // 使用UTC方法提取时间（因为已经加上了8小时偏移）
+                            const year = date.getUTCFullYear();
+                            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                            const day = String(date.getUTCDate()).padStart(2, '0');
+                            const hours = String(date.getUTCHours()).padStart(2, '0');
+                            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+                            
+                            // 根据时间周期返回不同的格式
+                            if (activeTimeframe === '1d') {
+                                return year + '-' + month + '-' + day;
+                            } else if (activeTimeframe === '4h' || activeTimeframe === '1h') {
+                                return month + '-' + day + ' ' + hours + ':' + minutes;
+                            } else {
+                                // 1m, 5m, 15m, 30m 显示 月-日 时:分
+                                return month + '-' + day + ' ' + hours + ':' + minutes;
+                            }
+                        }
+                    },
+                    grid: {
+                        vertLines: { color: '#1a1e23', style: 0 },
+                        horzLines: { color: '#1a1e23', style: 0 }
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                        vertLine: {
+                            color: '#2a2e34',
+                            width: 1,
+                            style: 2,
+                            labelBackgroundColor: '#161a1e',
+                            // 禁用X轴时间标签的显示，避免与Tooltip冲突
+                            labelVisible: false
+                        },
+                        horzLine: {
+                            color: '#2a2e34',
+                            width: 1,
+                            style: 2,
+                            labelBackgroundColor: '#161a1e'
+                        }
+                    },
+                    rightPriceScale: {
+                        borderColor: '#2a2e34',
+                        textColor: '#848e9c',
+                        entireTextOnly: false,
+                        scaleMargins: {
+                            top: 0.1,
+                            bottom: 0.1
+                        }
+                    },
+                    handleScroll: {
+                        mouseWheel: true,
+                        pressedMouseMove: true,
+                        horzTouchDrag: true,
+                        vertTouchDrag: true
+                    },
+                    handleScale: {
+                        axisPressedMouseMove: true,
+                        axisDoubleClickReset: true,
+                        axisTouchDrag: true,
+                        mouseWheel: true,
+                        pinch: true
+                    }
+                });
+                
+                // 验证图表对象是否创建成功
+                if (!tvChart || typeof tvChart.addCandlestickSeries !== 'function') {
+                    throw new Error('图表对象创建失败，API方法不存在');
+                }
+                
+                // 创建K线系列
+                candlestickSeries = tvChart.addCandlestickSeries({
+                    upColor: '#0ecb81',
+                    downColor: '#f6465d',
+                    borderVisible: false,
+                    wickUpColor: '#0ecb81',
+                    wickDownColor: '#f6465d',
+                    priceLineVisible: false,
+                    lastValueVisible: true
+                });
+                
+                // 创建成交量系列（如果需要）
+                // volumeSeries = tvChart.addHistogramSeries({
+                //     color: '#26a69a',
+                //     priceFormat: {
+                //         type: 'volume',
+                //     },
+                //     priceScaleId: '',
+                //     scaleMargins: {
+                //         top: 0.8,
+                //         bottom: 0,
+                //     },
+                // });
+                
+                // 初始化 Tooltip
+                tooltipElement = document.getElementById('chartTooltip');
+                
+                // 绑定鼠标事件 - Crosshair 和 Tooltip
+                container.addEventListener('mousemove', handleChartMouseMove);
+                container.addEventListener('mouseleave', handleChartMouseLeave);
+                container.addEventListener('dblclick', handleChartDoubleClick);
+                
+                // 响应式调整
+                const resizeObserver = new ResizeObserver(function(entries) {
+                    if (tvChart && entries.length > 0) {
+                        const { width, height } = entries[0].contentRect;
+                        tvChart.applyOptions({ width, height });
+                    }
+                });
+                resizeObserver.observe(container);
+                
+                // 窗口大小调整
+                window.addEventListener('resize', function() {
+                    if (tvChart && container) {
+                        tvChart.applyOptions({
+                            width: container.clientWidth,
+                            height: container.clientHeight
+                        });
+                    }
+                });
+                
+                console.log('TradingView 图表初始化成功');
+            } catch (error) {
+                console.error('初始化 TradingView 图表失败:', error);
+                container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #f6465d;">图表初始化失败: ' + error.message + '</div>';
+                tvChart = null;
+                candlestickSeries = null;
+            }
+        }
+        
+        // 处理图表鼠标移动 - Crosshair 和 Tooltip
+        function handleChartMouseMove(e) {
+            if (!tvChart || !candlestickSeries || !tooltipElement || klinesData.length === 0) return;
+            
+            const container = document.getElementById('tv-chart-container');
+            const rect = container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            try {
+                // 获取坐标对应的时间（TradingView 返回秒级UTC时间戳）
+                const timeAtCoordinate = tvChart.timeScale().coordinateToTime(x);
+                if (!timeAtCoordinate || timeAtCoordinate < 0) {
+                    tooltipElement.style.display = 'none';
+                    return;
+                }
+                
+                // TradingView的coordinateToTime返回的是UTC时间的秒级时间戳
+                // 转换为毫秒级时间戳用于查找和显示
+                const timeMs = timeAtCoordinate * 1000;
+                
+                // 找到对应的K线数据（使用精确匹配，允许小范围误差）
+                const klineIndex = findKlineByTime(timeMs);
+                
+                if (klineIndex >= 0 && klineIndex < klinesData.length) {
+                    const kline = klinesData[klineIndex];
+                    
+                    // 直接使用K线的timestamp（后端返回的UTC时间戳），而不是坐标转换的时间
+                    // 这样可以确保Tooltip显示的时间与K线实际时间完全一致，避免时区转换问题
+                    updateTooltip(kline, kline.timestamp, x, y, rect);
+                    
+                    // 显示 Tooltip
+                    tooltipElement.style.display = 'block';
+                } else {
+                    tooltipElement.style.display = 'none';
+                }
+            } catch (err) {
+                // 静默处理错误
+                tooltipElement.style.display = 'none';
+            }
+        }
+        
+        // 查找对应时间的K线索引（使用二分查找优化）
+        function findKlineByTime(targetTimeMs) {
+            if (klinesData.length === 0) return -1;
+            
+            // 如果目标时间在数据范围外，返回最近的边界
+            if (targetTimeMs < klinesData[0].timestamp) {
+                return 0;
+            }
+            if (targetTimeMs > klinesData[klinesData.length - 1].timestamp) {
+                return klinesData.length - 1;
+            }
+            
+            // 二分查找最接近的K线
+            let left = 0;
+            let right = klinesData.length - 1;
+            let closestIndex = 0;
+            let minDiff = Infinity;
+            
+            while (left <= right) {
+                const mid = Math.floor((left + right) / 2);
+                const midTime = klinesData[mid].timestamp;
+                const diff = Math.abs(midTime - targetTimeMs);
+                
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIndex = mid;
+                }
+                
+                if (midTime === targetTimeMs) {
+                    return mid;
+                } else if (midTime < targetTimeMs) {
+                    left = mid + 1;
+                } else {
+                    right = mid - 1;
+                }
+            }
+            
+            return closestIndex;
+        }
+        
+        // ========== 时间格式化工具 ==========
+        /**
+         * 格式化时间戳为字符串
+         * 注意：后端返回的timestamp已经是UTC时间戳（毫秒级），直接使用UTC方法格式化即可
+         * 格式：YYYY-MM-DD HH:mm:ss
+         * 
+         * @param {number} timestampMs 毫秒级时间戳（后端返回的UTC时间戳）
+         * @returns {string} 格式化的时间字符串
+         */
+        /**
+         * 格式化时间戳为时间字符串（备用函数，主要用于兼容和调试）
+         * 正常情况下应该使用后端返回的timeString字段
+         * 
+         * @param {number} timestampMs 毫秒级UTC时间戳
+         * @returns {string} 格式化的时间字符串（本地时间）
+         */
+        function formatTimeUTC(timestampMs) {
+            if (!timestampMs || isNaN(timestampMs)) {
+                console.error('formatTimeUTC: 无效的时间戳', timestampMs);
+                return 'Invalid Time';
+            }
+            
+            // 使用本地时间方法格式化（与后端UtcTimeConverter.utcTimestampToLocalString保持一致）
+            const date = new Date(timestampMs);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+        
+        /**
+         * 格式化时间戳为完整字符串（备用函数）
+         * 正常情况下应该使用后端返回的timeString字段
+         */
+        function formatTimeUTCFull(timestampMs) {
+            return formatTimeUTC(timestampMs);
+        }
+        
+        // 更新 Tooltip 内容
+        /**
+         * 更新Tooltip显示内容
+         * 
+         * @param {Object} kline K线数据对象
+         * @param {number} displayTimeMs 要显示的时间戳（毫秒），用于确保与X轴时间一致
+         * @param {number} mouseX 鼠标X坐标
+         * @param {number} mouseY 鼠标Y坐标
+         * @param {DOMRect} containerRect 容器边界矩形
+         */
+        function updateTooltip(kline, displayTimeMs, mouseX, mouseY, containerRect) {
+            if (!tooltipElement || !kline) return;
+            
+            // 直接使用后端返回的timeString（后端已经使用UtcTimeConverter转换好时间）
+            // 格式：yyyy-MM-dd HH:mm:ss（本地时间，默认UTC+8）
+            const timeStr = kline.timeString || (kline.timestamp ? formatTimeUTCFull(kline.timestamp) : '');
+            
+            document.getElementById('tooltipTime').textContent = timeStr;
+            document.getElementById('tooltipOpen').textContent = kline.open.toFixed(2);
+            document.getElementById('tooltipHigh').textContent = kline.high.toFixed(2);
+            document.getElementById('tooltipLow').textContent = kline.low.toFixed(2);
+            document.getElementById('tooltipClose').textContent = kline.close.toFixed(2);
+            
+            // 设置涨跌颜色
+            const openEl = document.getElementById('tooltipOpen');
+            const closeEl = document.getElementById('tooltipClose');
+            if (kline.close >= kline.open) {
+                closeEl.classList.add('up');
+                closeEl.classList.remove('down');
+            } else {
+                closeEl.classList.add('down');
+                closeEl.classList.remove('up');
+            }
+            
+            if (kline.volume !== undefined) {
+                document.getElementById('tooltipVolume').textContent = formatVolume(kline.volume);
+            } else {
+                document.getElementById('tooltipVolume').textContent = '-';
+            }
+            
+            // 定位 Tooltip（固定在图表顶部）
+            const tooltipRect = tooltipElement.getBoundingClientRect();
+            const tooltipX = mouseX + 10;
+            const tooltipY = 10; // 固定在顶部
+            
+            // 防止超出右边界
+            if (tooltipX + tooltipRect.width > containerRect.width) {
+                tooltipElement.style.left = (mouseX - tooltipRect.width - 10) + 'px';
+            } else {
+                tooltipElement.style.left = tooltipX + 'px';
+            }
+            tooltipElement.style.top = tooltipY + 'px';
+        }
+        
+        // 处理图表鼠标离开
+        function handleChartMouseLeave() {
+            if (tooltipElement) {
+                tooltipElement.style.display = 'none';
+            }
+        }
+        
+        // 处理图表双击 - 视图重置
+        function handleChartDoubleClick() {
+            if (!tvChart || !klinesData || klinesData.length === 0) return;
+            
+            // 重置视图，显示最新数据
+            tvChart.timeScale().fitContent();
+        }
+
+        // 显示/隐藏Loading状态
+        function showChartLoading(show) {
+            if (show) {
+                chartSkeleton.classList.add('active');
+            } else {
+                chartSkeleton.classList.remove('active');
+            }
+        }
+
+        // 根据市场类型格式化交易对符号（SWAP合约添加-SWAP后缀）
+        function formatSymbolForDisplay(symbol, marketType) {
+            if (marketType === 'SWAP') {
+                return symbol + '-SWAP';
+            }
+            return symbol;
+        }
+        
+        // 根据市场类型格式化交易对符号用于API调用（SWAP合约添加-SWAP后缀）
+        function formatSymbolForApi(symbol, marketType) {
+            if (marketType === 'SWAP') {
+                return symbol + '-SWAP';
+            }
+            return symbol;
+        }
+
+        // 加载交易对列表
+        function loadSymbolList() {
+            return request({
+                url: '/api/market-subscription/list?enabled=1'
+            }).then(function(res) {
+                if (res.data && res.data.length > 0) {
+                    const symbolList = document.getElementById('symbolList');
+                    symbolList.innerHTML = '';
+                    
+                    // 清空并重新构建 symbolInfoMap
+                    symbolInfoMap = {};
+                    
+                    res.data.forEach(function(item) {
+                        // 保存交易对信息
+                        symbolInfoMap[item.symbol] = {
+                            symbol: item.symbol,
+                            marketType: item.marketType || 'SPOT'
+                        };
+                        
+                        const div = document.createElement('div');
+                        div.className = 'symbol-item';
+                        div.dataset.symbol = item.symbol;
+                        
+                        const change = parseFloat(item.todayChange) || 0;
+                        const changeClass = change >= 0 ? 'up' : 'down';
+                        const changeText = change >= 0 ? '+' : '';
+                        const formattedChange = changeText + Math.abs(change).toFixed(2) + '%';
+                        
+                        // 格式化显示名称（SWAP合约显示为 symbol-SWAP）
+                        const displaySymbol = formatSymbolForDisplay(item.symbol, item.marketType);
+                        
+                        // 格式化价格
+                        const price = item.currentPrice || 0;
+                        const formattedPrice = price > 0 ? '$' + price.toFixed(2) : '-';
+                        
+                        // 格式化24h统计
+                        const todayHigh = item.todayHigh || 0;
+                        const todayLow = item.todayLow || 0;
+                        const todayVolume = item.todayVolume || 0;
+                        const formattedHigh = todayHigh > 0 ? '$' + todayHigh.toFixed(2) : '-';
+                        const formattedLow = todayLow > 0 ? '$' + todayLow.toFixed(2) : '-';
+                        const formattedVolume = todayVolume > 0 ? formatVolume(todayVolume) : '-';
+                        
+                        div.innerHTML = `
+                            <div class="symbol-item-row">
+                                <span class="symbol-name">${displaySymbol}</span>
+                                <span class="symbol-price">${formattedPrice}</span>
+                            </div>
+                            <div class="symbol-item-row">
+                            <span class="symbol-change ${changeClass}">${formattedChange}</span>
+                            </div>
+                            <div class="symbol-stats">
+                                <div class="symbol-stat-item">
+                                    <span class="symbol-stat-label">24h High</span>
+                                    <span class="symbol-stat-value up">${formattedHigh}</span>
+                                </div>
+                                <div class="symbol-stat-item">
+                                    <span class="symbol-stat-label">24h Low</span>
+                                    <span class="symbol-stat-value down">${formattedLow}</span>
+                                </div>
+                                <div class="symbol-stat-item">
+                                    <span class="symbol-stat-label">24h Vol</span>
+                                    <span class="symbol-stat-value">${formattedVolume}</span>
+                                </div>
+                            </div>
+                        `;
+                        
+                        div.onclick = function() {
+                            selectSymbol(item.symbol, item.marketType);
+                        };
+                        
+                        symbolList.appendChild(div);
+                    });
+                    
+                    // 默认选择第一个
+                    if (res.data.length > 0) {
+                        selectSymbol(res.data[0].symbol, res.data[0].marketType);
+                    }
+                } else {
+                    document.getElementById('symbolList').innerHTML = '<div class="empty-state">暂无交易对</div>';
+                }
+            }).catch(function(err) {
+                console.error('加载交易对列表失败:', err);
+                document.getElementById('symbolList').innerHTML = '<div class="empty-state">加载失败</div>';
+            });
+        }
+
+        // 选择交易对
+        function selectSymbol(symbol, marketType) {
+            // 如果没有传入marketType，从symbolInfoMap获取
+            if (!marketType && symbolInfoMap[symbol]) {
+                marketType = symbolInfoMap[symbol].marketType;
+            } else if (!marketType) {
+                marketType = 'SPOT';  // 默认值
+            }
+            
+            // 更新UI
+            document.querySelectorAll('.symbol-item').forEach(function(el) {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.symbol-item').forEach(function(el) {
+                if (el.dataset.symbol === symbol) {
+                    el.classList.add('active');
+                }
+            });
+            
+            activeSymbol = symbol;
+            activeMarketType = marketType;
+            
+            // 格式化显示符号（SWAP合约显示为 symbol-SWAP）
+            const displaySymbol = formatSymbolForDisplay(symbol, marketType);
+            document.getElementById('currentSymbol').innerText = displaySymbol;
+            document.getElementById('statusSymbol').innerText = displaySymbol;
+            
+            // 格式化API调用符号（SWAP合约使用 symbol-SWAP）
+            const apiSymbol = formatSymbolForApi(symbol, marketType);
+            
+            // 断开旧的WebSocket连接
+            disconnectWebSocket();
+            
+            // 显示Loading
+            showChartLoading(true);
+            
+            // 重置数据窗口（切换交易对或周期时）
+            dataWindow.reset();
+            isAutoScrollEnabled = true;
+            
+            // 初始化图表（如果还未初始化）
+            if (!tvChart) {
+                initTradingViewChart();
+            }
+            
+            // 加载K线数据（使用API格式的symbol）
+            loadKlines(apiSymbol, activeTimeframe);
+            
+            // 加载今日统计（使用API格式的symbol）
+            loadTodayStats(apiSymbol);
+            
+            // 连接WebSocket（使用原始symbol，根据实际WebSocket协议可能需要调整）
+            connectWebSocket(apiSymbol);
+        }
+
+        // 周期选择
+        document.querySelectorAll('.timeframe-btn').forEach(function(el) {
+            el.addEventListener('click', function() {
+                document.querySelectorAll('.timeframe-btn').forEach(function(e) {
+                    e.classList.remove('active');
+                });
+                el.classList.add('active');
+                activeTimeframe = el.dataset.tf;
+                
+                document.getElementById('statusTimeframe').innerText = activeTimeframe;
+                
+                if (activeSymbol) {
+                    showChartLoading(true);
+                    // 使用API格式的symbol
+                    const apiSymbol = formatSymbolForApi(activeSymbol, activeMarketType);
+                    loadKlines(apiSymbol, activeTimeframe);
+                }
+            });
+        });
+
+        // ========== 系统级重构：K线数据加载策略 ==========
+        // 核心原则：
+        // 1. 进入页面时初始化查询最新的200根K线
+        // 2. 用户拖动超出范围时，按需加载更多数据
+        // 3. 保证数据连续性：从最旧时间点-1分钟开始查询200根
+        
+        const INITIAL_KLINE_LIMIT = 200;  // 初始加载200根K线
+        const LOAD_MORE_LIMIT = 200;      // 每次加载更多时也加载200根
+        
+        /**
+         * 初始化加载K线数据（页面首次加载或切换交易对/周期时调用）
+         * 查询最新的200根K线
+         */
+        function loadKlines(symbol, timeframe) {
+            const now = Date.now();
+            
+            // 构建查询参数：查询最新的200根K线（不需要from，后端会返回最新的）
+            const params = new URLSearchParams();
+            params.append('symbol', symbol);
+            params.append('interval', timeframe);
+            params.append('to', now);
+            params.append('limit', INITIAL_KLINE_LIMIT);
+            
+            request({
+                url: '/api/market/kline?' + params.toString(),
+                method: 'GET'
+            }).then(function(res) {
+                showChartLoading(false);
+                if (res.data && res.data.length > 0) {
+                    // 重置数据窗口
+                    dataWindow.reset();
+                    
+                    // 绘制K线数据（初始加载，自动适配视图）
+                    drawKlines(res.data, true);
+                    
+                    // 设置历史数据加载监听器（用户拖动时触发）
+                    if (tvChart) {
+                        setupHistoricalDataLoading();
+                    }
+                    
+                    // 更新当前价格和涨跌
+                    const lastKline = klinesData[klinesData.length - 1];
+                    updatePriceDisplay(lastKline.close);
+                    
+                    // 直接使用后端返回的timeString
+                    const timeStr = lastKline.timeString || '';
+                    document.getElementById('statusTime').innerText = timeStr;
+                } else {
+                    if (candlestickSeries) {
+                        candlestickSeries.setData([]);
+                    }
+                    dataWindow.reset();
+                }
+            }).catch(function(err) {
+                showChartLoading(false);
+                console.error('加载K线失败:', err);
+                layui.layer.msg('加载K线失败', {icon: 2});
+            });
+        }
+
+        // 更新价格显示
+        function updatePriceDisplay(price) {
+            const priceEl = document.getElementById('currentPrice');
+            const changeEl = document.getElementById('currentChange');
+            
+            priceEl.innerText = '$' + price.toFixed(2);
+            
+            // 根据涨跌设置颜色
+            if (klinesData.length >= 2) {
+                const prevClose = klinesData[klinesData.length - 2].close;
+                const change = ((price - prevClose) / prevClose) * 100;
+                currentChange = change;
+                
+                const changeText = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+                changeEl.innerText = changeText;
+                
+                // 更新样式
+                priceEl.className = 'chart-price ' + (change >= 0 ? 'up' : 'down');
+                changeEl.className = 'chart-change ' + (change >= 0 ? 'up' : 'down');
+            }
+        }
+
+        // ========== 绘制K线数据 ==========
+        /**
+         * 绘制K线数据到图表
+         * 
+         * @param {Array} data K线数据数组（后端返回的数据，应该已经按时间升序排列）
+         * @param {boolean} shouldFitContent 是否自动适配视图（默认true，初始加载时使用）
+         */
+        function drawKlines(data, shouldFitContent) {
+            if (!data || data.length === 0) {
+                if (candlestickSeries) {
+                    candlestickSeries.setData([]);
+                }
+                // 重置数据窗口
+                dataWindow.reset();
+                return;
+            }
+            
+            // ========== 系统级重构：简化前端数据处理 ==========
+            // 后端保证返回升序数据（从旧到新），前端直接使用，不做任何排序操作
+            // 图表显示：左侧是旧数据，右侧是新数据（时间从左到右递增）
+            
+            // 直接使用后端返回的数据（已经按时间升序排列）
+            klinesData = data;
+            
+            // 更新数据窗口边界
+            dataWindow.updateBoundaries(data);
+            
+            // 确保图表已初始化
+            if (!tvChart) {
+                initTradingViewChart();
+            }
+            
+            if (!candlestickSeries) {
+                return;
+            }
+            
+            // 转换数据格式为 TradingView 格式
+            // 注意：后端返回的timestamp是UTC时间戳（毫秒级），TradingView需要秒级时间戳
+            const chartData = data.map(function(k) {
+                return {
+                    time: Math.floor(k.timestamp / 1000), // 后端返回的是毫秒级UTC时间戳，转换为秒级
+                    open: k.open,
+                    high: k.high,
+                    low: k.low,
+                    close: k.close
+                };
+            });
+            
+            // 设置K线数据
+            candlestickSeries.setData(chartData);
+            
+            // 如果有成交量数据，也更新成交量系列
+            // if (volumeSeries && sortedData[0].volume !== undefined) {
+            //     const volumeData = sortedData.map(function(k) {
+            //         return {
+            //             time: Math.floor(k.timestamp / 1000),
+            //             value: k.volume,
+            //             color: k.close >= k.open ? '#0ecb81' : '#f6465d'
+            //         };
+            //     });
+            //     volumeSeries.setData(volumeData);
+            // }
+            
+            // 根据参数决定是否自动适配视图
+            if (shouldFitContent !== false) {
+                // 先适配内容以显示所有数据
+                tvChart.timeScale().fitContent();
+                // 然后滚动到最新位置（右侧），确保最新K线在右侧可见
+                // scrollToPosition(-1, false) 表示滚动到最新位置（-1表示最后一个位置）
+                setTimeout(function() {
+                    if (tvChart) {
+                        tvChart.timeScale().scrollToPosition(-1, false);
+                    }
+                }, 100);
+                // 启用自动滚动（实时模式）
+                enableAutoScroll();
+            }
+        }
+
+        // 加载今日统计
+        function loadTodayStats(symbol) {
+            request({
+                url: '/api/market/kline/today-stats?symbol=' + symbol
+            }).then(function(res) {
+                if (res.data) {
+                    const stats = res.data;
+                    
+                    // 更新Header统计
+                    document.getElementById('headerVolume').innerText = formatVolume(stats.todayVolume || 0);
+                    
+                    // 更新右侧统计
+                    document.getElementById('statTodayHigh').innerText = '$' + (stats.todayHigh || 0).toFixed(2);
+                    document.getElementById('statTodayLow').innerText = '$' + (stats.todayLow || 0).toFixed(2);
+                    
+                    const change = stats.todayChange || 0;
+                    const changeText = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+                    const changeEl = document.getElementById('statTodayChange');
+                    changeEl.innerText = changeText;
+                    changeEl.className = 'market-stat-value ' + (change >= 0 ? 'up' : 'down');
+                    
+                    document.getElementById('statTodayVolume').innerText = formatVolume(stats.todayVolume || 0);
+                }
+            }).catch(function(err) {
+                console.error('加载今日统计失败:', err);
+            });
+        }
+
+        // 格式化成交量
+        function formatVolume(volume) {
+            if (volume >= 1000000000) {
+                return (volume / 1000000000).toFixed(2) + 'B';
+            } else if (volume >= 1000000) {
+                return (volume / 1000000).toFixed(2) + 'M';
+            } else if (volume >= 1000) {
+                return (volume / 1000).toFixed(2) + 'K';
+            }
+            return volume.toFixed(2);
+        }
+
+        // 连接WebSocket
+        function connectWebSocket(symbol) {
+            try {
+                socket = new SockJS('/ws/market');
+                stompClient = Stomp.over(socket);
+                
+                stompClient.connect({}, function(frame) {
+                    console.log('WebSocket连接成功');
+                    updateConnectionStatus(true);
+                    
+                    // 订阅K线数据
+                    stompClient.subscribe('/topic/kline/' + symbol, function(message) {
+                        const kline = JSON.parse(message.body);
+                        handleRealtimeKline(kline);
+                    });
+                }, function(error) {
+                    console.error('WebSocket连接失败:', error);
+                    updateConnectionStatus(false);
+                    setTimeout(function() {
+                        if (activeSymbol) {
+                            const apiSymbol = formatSymbolForApi(activeSymbol, activeMarketType);
+                            connectWebSocket(apiSymbol);
+                        }
+                    }, 3000);
+                });
+            } catch (err) {
+                console.error('WebSocket连接异常:', err);
+                updateConnectionStatus(false);
+            }
+        }
+
+        // 断开WebSocket
+        function disconnectWebSocket() {
+            if (stompClient) {
+                stompClient.disconnect();
+                stompClient = null;
+            }
+            if (socket) {
+                socket.close();
+                socket = null;
+            }
+        }
+
+        // ========== 实时K线处理 ==========
+        /**
+         * 处理实时K线数据
+         * 智能更新：仅在实时模式下自动滚动，历史模式下静默更新数据
+         */
+        function handleRealtimeKline(kline) {
+            // 获取API格式的symbol用于比较
+            const apiSymbol = formatSymbolForApi(activeSymbol, activeMarketType);
+            if (!activeSymbol || kline.symbol !== apiSymbol || kline.interval !== activeTimeframe) {
+                return;
+            }
+            
+            if (!candlestickSeries || !tvChart) return;
+            
+            // 后端返回的timestamp是UTC时间戳（毫秒级），转换为TradingView需要的秒级
+            const time = Math.floor(kline.timestamp / 1000);
+            const chartKline = {
+                time: time,
+                open: kline.open,
+                high: kline.high,
+                low: kline.low,
+                close: kline.close
+            };
+            
+            // 查找是否存在相同时间的K线
+            let updated = false;
+            let isNewKline = false;
+            
+            if (klinesData.length > 0) {
+                const lastKline = klinesData[klinesData.length - 1];
+                if (lastKline.timestamp === kline.timestamp) {
+                    // 更新最后一根K线（K线还未完成）
+                    klinesData[klinesData.length - 1] = kline;
+                    candlestickSeries.update(chartKline);
+                    updated = true;
+                } else if (kline.timestamp > lastKline.timestamp) {
+                    // 新增K线（新的一根K线开始）
+                    klinesData.push(kline);
+                    isNewKline = true;
+                    
+                    // 更新数据窗口边界
+                    dataWindow.updateBoundaries([kline]);
+                    
+                    // 限制数据量（保留最新的2000根，与初始加载和加载更多保持一致）
+                    const MAX_KLINES = 2000;
+                    if (klinesData.length > MAX_KLINES) {
+                        // 删除最旧的数据，保留最新的2000根
+                        const removeCount = klinesData.length - MAX_KLINES;
+                        klinesData = klinesData.slice(removeCount);
+                        // 更新左边界
+                        if (klinesData.length > 0) {
+                            dataWindow.leftBoundary = klinesData[0].timestamp;
+                        }
+                    }
+                    
+                    candlestickSeries.update(chartKline);
+                    updated = true;
+                }
+            } else {
+                // 首次数据
+                klinesData.push(kline);
+                dataWindow.updateBoundaries([kline]);
+                candlestickSeries.update(chartKline);
+                updated = true;
+                isNewKline = true;
+            }
+            
+            if (updated) {
+                // 更新价格显示
+            updatePriceDisplay(kline.close);
+                
+                // 直接使用后端返回的timeString（后端已经使用UtcTimeConverter转换好时间）
+                const timeStr = kline.timeString || (kline.timestamp ? formatTimeUTCFull(kline.timestamp) : '');
+                document.getElementById('statusTime').innerText = timeStr;
+                
+                // 如果启用自动滚动，且是新K线，自动滚动到最新位置
+                if (isAutoScrollEnabled && isNewKline) {
+                    // 延迟执行，确保数据已更新
+                    setTimeout(function() {
+                        if (tvChart && isAutoScrollEnabled) {
+                            // 滚动到最新数据
+                            tvChart.timeScale().scrollToPosition(-1, false);
+                        }
+                    }, 50);
+                }
+            }
+        }
+
+        // 更新连接状态
+        function updateConnectionStatus(connected) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusConnection');
+            
+            if (connected) {
+                indicator.className = 'status-dot connected';
+                statusText.innerText = 'Connected';
+                document.getElementById('headerStatus').innerText = '● Live';
+                document.getElementById('headerStatus').style.color = '#0ecb81';
+            } else {
+                indicator.className = 'status-dot disconnected';
+                statusText.innerText = 'Disconnected';
+                document.getElementById('headerStatus').innerText = '● Offline';
+                document.getElementById('headerStatus').style.color = '#f6465d';
+            }
+        }
+
+        // ========== 历史数据自动加载系统 ==========
+        /**
+         * 设置历史数据自动加载监听器
+         * 监听时间轴变化，智能加载历史数据
+         */
+        function setupHistoricalDataLoading() {
+            if (!tvChart) return;
+            
+            // 防抖：避免频繁触发
+            let debounceTimer = null;
+            const DEBOUNCE_DELAY = 300; // 300ms防抖
+            
+            // 监听时间轴可见范围变化
+            tvChart.timeScale().subscribeVisibleTimeRangeChange(function() {
+                // 清除之前的定时器
+                if (debounceTimer) {
+                    clearTimeout(debounceTimer);
+                }
+                
+                // 防抖处理
+                debounceTimer = setTimeout(function() {
+                    handleTimeScaleChange();
+                }, DEBOUNCE_DELAY);
+            });
+        }
+        
+        /**
+         * 处理时间轴变化事件
+         * 1. 检测是否需要加载历史数据
+         * 2. 检测是否应该恢复实时模式
+         */
+        function handleTimeScaleChange() {
+            if (!tvChart || !activeSymbol || isLoadingMore) return;
+            
+            try {
+                const visibleRange = tvChart.timeScale().getVisibleRange();
+                if (!visibleRange || !visibleRange.from === null || !visibleRange.to === null) {
+                    return;
+                }
+                
+                // 转换为毫秒级时间戳
+                const visibleStartTimeMs = Math.floor(visibleRange.from) * 1000;
+                const visibleEndTimeMs = Math.floor(visibleRange.to) * 1000;
+                
+                // 1. 检查是否需要加载更早的历史数据
+                // 阈值：当距离左边界还有5根K线时，开始加载
+                const LOAD_THRESHOLD_BARS = 5;
+                if (dataWindow.shouldLoadEarlier(visibleStartTimeMs, LOAD_THRESHOLD_BARS)) {
+                    loadEarlierKlines(visibleStartTimeMs);
+                }
+                
+                // 2. 检查是否应该恢复实时模式（Auto-Scroll）
+                // 阈值：当接近最新数据时，启用Auto-Scroll
+                const REALTIME_THRESHOLD_BARS = 3;
+                const shouldEnableAutoScroll = dataWindow.isNearRealtime(visibleEndTimeMs, REALTIME_THRESHOLD_BARS);
+                
+                if (shouldEnableAutoScroll && !isAutoScrollEnabled) {
+                    enableAutoScroll();
+                } else if (!shouldEnableAutoScroll && isAutoScrollEnabled) {
+                    disableAutoScroll();
+                }
+            } catch (error) {
+                console.error('处理时间轴变化失败:', error);
+            }
+        }
+        
+        /**
+         * 启用自动滚动（实时模式）
+         * 图表自动跟随最新数据
+         */
+        function enableAutoScroll() {
+            isAutoScrollEnabled = true;
+            console.log('切换到实时模式：启用Auto-Scroll');
+        }
+        
+        /**
+         * 禁用自动滚动（历史模式）
+         * 用户正在查看历史数据，不自动滚动
+         */
+        function disableAutoScroll() {
+            isAutoScrollEnabled = false;
+            console.log('切换到历史模式：禁用Auto-Scroll');
+        }
+        
+        // ========== 历史数据加载 ==========
+        let isLoadingMore = false;
+        let lastLoadRequestId = 0;
+        
+        /**
+         * 加载更早的K线数据（用户拖动超出当前数据范围时调用）
+         * 
+         * 逻辑：
+         * 1. 从当前最旧的时间点往前推1分钟作为起始点
+         * 2. 查询200根K线（升序）
+         * 3. 确保数据连续性：新数据的最晚时间应该等于现有数据最早时间-1分钟
+         * 
+         * @param {number} visibleStartTimeMs 当前可见范围的开始时间（毫秒）
+         */
+        function loadEarlierKlines(visibleStartTimeMs) {
+            if (klinesData.length === 0 || isLoadingMore) {
+                return;
+            }
+            
+            // 获取当前最旧的K线时间
+            const oldestKlineTime = klinesData[0].timestamp;
+            const timeframeMs = getTimeframeMs(activeTimeframe);
+            
+            // ========== 修复：历史数据加载时间计算（时区问题） ==========
+            // 后端存储的时间是UTC+8（本地时间），但前端使用的是UTC时间戳
+            // 第一次请求（初始加载）是对的，但历史数据加载需要将时间戳加8小时
+            // 逻辑：从最旧时间-1分钟开始，往前查询200根K线
+            // 然后在原有逻辑基础上，from和to都加1分钟
+            
+            const UTC_OFFSET_MS = 8 * 60 * 60 * 1000; // 8小时的毫秒数
+            const ONE_MINUTE_MS = 60 * 1000; // 1分钟的毫秒数
+            
+            // 计算UTC时间戳（原有逻辑）
+            const loadToUTC = oldestKlineTime - timeframeMs; // to = 最旧时间 - 1个周期（UTC时间戳）
+            const loadFromUTC = loadToUTC - (LOAD_MORE_LIMIT * timeframeMs); // from = to - 200个周期（UTC时间戳）
+            
+            // 转换为UTC+8时间戳（后端期望的时间戳格式）
+            const loadTo = loadToUTC + UTC_OFFSET_MS + ONE_MINUTE_MS; // 原有逻辑 + 8小时 + 1分钟
+            const loadFrom = loadFromUTC + UTC_OFFSET_MS + ONE_MINUTE_MS; // 原有逻辑 + 8小时 + 1分钟
+            
+            // 生成请求ID（基于时间范围），用于防重复
+            const requestId = `${Math.floor(loadFrom / 1000)}-${Math.floor(loadTo / 1000)}`;
+            if (dataWindow.pendingRequests.has(requestId)) {
+                console.log(`[加载更多] 跳过重复请求: from=${loadFrom}, to=${loadTo}`);
+                return;
+            }
+            
+            // 检查时间范围是否合理
+            if (loadFrom >= loadTo || loadFrom < 0) {
+                console.warn(`[加载更多] 时间范围不合理: from=${loadFrom}, to=${loadTo}`);
+                return;
+            }
+            
+            isLoadingMore = true;
+            dataWindow.pendingRequests.add(requestId);
+            
+            // 日志：显示UTC时间戳和转换后的UTC+8时间戳
+            console.log(`[加载更多] 时间计算（时区转换 + 1分钟）:`);
+            console.log(`  - 最旧K线时间戳(UTC): ${oldestKlineTime} (${new Date(oldestKlineTime).toISOString()})`);
+            console.log(`  - 查询参数 to(UTC): ${loadToUTC} -> to(UTC+8+1分钟): ${loadTo} (${new Date(loadTo).toISOString()})`);
+            console.log(`  - 查询参数 from(UTC): ${loadFromUTC} -> from(UTC+8+1分钟): ${loadFrom} (${new Date(loadFrom).toISOString()})`);
+            
+            // 使用API格式的symbol
+            const apiSymbol = formatSymbolForApi(activeSymbol, activeMarketType);
+            const params = new URLSearchParams();
+            params.append('symbol', apiSymbol);
+            params.append('interval', activeTimeframe);
+            params.append('from', loadFrom); // 发送UTC+8时间戳
+            params.append('to', loadTo);     // 发送UTC+8时间戳
+            params.append('limit', LOAD_MORE_LIMIT); // 加载200根K线
+            
+            request({
+                url: '/api/market/kline?' + params.toString(),
+                method: 'GET'
+            }).then(function(res) {
+                if (res.data && res.data.length > 0) {
+                    // 后端已经返回升序数据（从旧到新），直接使用
+                    const newData = res.data;
+                    
+                    // 简化日志：只使用UTC时间戳和UTC时间字符串
+                    if (newData.length > 0) {
+                        const firstTimestamp = newData[0].timestamp;
+                        const lastTimestamp = newData[newData.length - 1].timestamp;
+                        console.log(`[加载更多] 后端返回数据验证（UTC时间戳）:`);
+                        console.log(`  - 返回数量: ${newData.length} 根`);
+                        console.log(`  - 第一条时间戳: ${firstTimestamp} (${new Date(firstTimestamp).toISOString()})`);
+                        console.log(`  - 最后一条时间戳: ${lastTimestamp} (${new Date(lastTimestamp).toISOString()})`);
+                        
+                        // 检查数据连续性：新数据内部是否连续
+                        for (let i = 1; i < newData.length; i++) {
+                            const gap = newData[i].timestamp - newData[i-1].timestamp;
+                            if (Math.abs(gap - timeframeMs) > timeframeMs / 2) {
+                                console.warn(`  ⚠️ 新数据内部不连续：第${i-1}条到第${i}条间隔${gap}ms，期望${timeframeMs}ms`);
+                            }
+                        }
+                        
+                        // 检查与现有数据的连续性（UTC时间戳直接比较，仅用于日志）
+                        const lastTime = newData[newData.length - 1].timestamp;
+                        const timeGap = oldestKlineTime - lastTime;
+                        const expectedGap = timeframeMs; // 应该相差1个周期
+                        console.log(`  - 与现有数据的时间间隔: ${timeGap}ms (期望: ${expectedGap}ms，即1个周期)`);
+                    }
+                    
+                    // 数据连续性检查：新数据的最晚时间应该小于现有数据的最早时间
+                    // 如果新数据的最晚时间 >= 现有数据最早时间，说明有重叠，需要过滤
+                    const existingFirstTime = klinesData[0].timestamp;
+                    const lastNewDataTime = newData[newData.length - 1].timestamp;
+                    
+                    // 过滤掉时间大于等于existingFirstTime的数据（去重）
+                    const filteredNewData = newData.filter(function(k) {
+                        return k.timestamp < existingFirstTime;
+                    });
+                    
+                    if (filteredNewData.length > 0) {
+                        // 保存当前可见范围（用于保持滚动位置）
+                        const currentVisibleRange = tvChart.timeScale().getVisibleRange();
+                        const oldFirstTime = klinesData[0].timestamp;
+                        
+                        // 将新数据prepend到现有数据（新数据在前，因为时间更早）
+                        klinesData = filteredNewData.concat(klinesData);
+                        
+                        // 限制总数据量（最多保留2000根，避免内存问题）
+                        const MAX_KLINES = 2000;
+                        if (klinesData.length > MAX_KLINES) {
+                            // 保留最新的2000根（删除最旧的数据）
+                            const removeCount = klinesData.length - MAX_KLINES;
+                            klinesData = klinesData.slice(removeCount);
+                        }
+                        
+                        // 更新数据窗口边界
+                        dataWindow.updateBoundaries(filteredNewData);
+                        
+                        // 更新图表数据
+                        const chartData = klinesData.map(function(k) {
+                            return {
+                                time: Math.floor(k.timestamp / 1000), // TradingView使用秒级时间戳
+                                open: k.open,
+                                high: k.high,
+                                low: k.low,
+                                close: k.close
+                            };
+                        });
+                        
+                        if (candlestickSeries && tvChart) {
+                            // 使用setData更新全部数据（TradingView会自动优化渲染）
+                            candlestickSeries.setData(chartData);
+                            
+                            // 保持滚动位置：计算时间偏移并调整可见范围
+                            if (currentVisibleRange && oldFirstTime !== klinesData[0].timestamp) {
+                                const newFirstTime = Math.floor(klinesData[0].timestamp / 1000);
+                                const oldFirstTimeSec = Math.floor(oldFirstTime / 1000);
+                                const timeOffset = oldFirstTimeSec - newFirstTime;
+                                
+                                // 调整可见范围，保持用户当前查看的位置
+                                tvChart.timeScale().setVisibleRange({
+                                    from: currentVisibleRange.from + timeOffset,
+                                    to: currentVisibleRange.to + timeOffset
+                                });
+                            }
+                        }
+                        
+                        console.log(`[加载更多] 成功加载 ${filteredNewData.length} 根K线，当前总数: ${klinesData.length}`);
+                    }
+                }
+                
+                isLoadingMore = false;
+                dataWindow.pendingRequests.delete(requestId);
+            }).catch(function(err) {
+                console.error('[加载更多] 加载失败:', err);
+                isLoadingMore = false;
+                dataWindow.pendingRequests.delete(requestId);
+            });
+        }
+
+        // 实时更新行情信息的定时器
+        let marketDataRefreshTimer = null;
+        
+        // 启动实时行情更新
+        function startMarketDataRefresh() {
+            // 每5秒刷新一次行情数据
+            if (marketDataRefreshTimer) {
+                clearInterval(marketDataRefreshTimer);
+            }
+            marketDataRefreshTimer = setInterval(function() {
+                refreshSymbolListMarketData();
+            }, 5000);
+        }
+        
+        // 停止实时行情更新
+        function stopMarketDataRefresh() {
+            if (marketDataRefreshTimer) {
+                clearInterval(marketDataRefreshTimer);
+                marketDataRefreshTimer = null;
+            }
+        }
+        
+        // 刷新交易对列表的行情数据（只更新数据，不重新创建DOM）
+        function refreshSymbolListMarketData() {
+            request({
+                url: '/api/market-subscription/list?enabled=1'
+            }).then(function(res) {
+                if (res.data && res.data.length > 0) {
+                    res.data.forEach(function(item) {
+                        // 更新 symbolInfoMap
+                        symbolInfoMap[item.symbol] = {
+                            symbol: item.symbol,
+                            marketType: item.marketType || 'SPOT'
+                        };
+                        
+                        // 查找对应的DOM元素
+                        const symbolItem = document.querySelector(`.symbol-item[data-symbol="${item.symbol}"]`);
+                        if (!symbolItem) return;
+                        
+                        // 更新价格和涨跌幅
+                        const change = parseFloat(item.todayChange) || 0;
+                        const changeClass = change >= 0 ? 'up' : 'down';
+                        const changeText = (change >= 0 ? '+' : '') + Math.abs(change).toFixed(2) + '%';
+                        
+                        // 格式化显示名称
+                        const displaySymbol = formatSymbolForDisplay(item.symbol, item.marketType);
+                        
+                        // 格式化价格
+                        const price = item.currentPrice || 0;
+                        const formattedPrice = price > 0 ? '$' + price.toFixed(2) : '-';
+                        
+                        // 格式化24h统计
+                        const todayHigh = item.todayHigh || 0;
+                        const todayLow = item.todayLow || 0;
+                        const todayVolume = item.todayVolume || 0;
+                        const formattedHigh = todayHigh > 0 ? '$' + todayHigh.toFixed(2) : '-';
+                        const formattedLow = todayLow > 0 ? '$' + todayLow.toFixed(2) : '-';
+                        const formattedVolume = todayVolume > 0 ? formatVolume(todayVolume) : '-';
+                        
+                        // 更新DOM（保持选中状态）
+                        const isActive = symbolItem.classList.contains('active');
+                        symbolItem.innerHTML = `
+                            <div class="symbol-item-row">
+                                <span class="symbol-name">${displaySymbol}</span>
+                                <span class="symbol-price">${formattedPrice}</span>
+                            </div>
+                            <div class="symbol-item-row">
+                                <span class="symbol-change ${changeClass}">${changeText}</span>
+                            </div>
+                            <div class="symbol-stats">
+                                <div class="symbol-stat-item">
+                                    <span class="symbol-stat-label">24h High</span>
+                                    <span class="symbol-stat-value up">${formattedHigh}</span>
+                                </div>
+                                <div class="symbol-stat-item">
+                                    <span class="symbol-stat-label">24h Low</span>
+                                    <span class="symbol-stat-value down">${formattedLow}</span>
+                                </div>
+                                <div class="symbol-stat-item">
+                                    <span class="symbol-stat-label">24h Vol</span>
+                                    <span class="symbol-stat-value">${formattedVolume}</span>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // 恢复选中状态
+                        if (isActive) {
+                            symbolItem.classList.add('active');
+                        }
+                        
+                        // 重新绑定点击事件
+                        symbolItem.onclick = function() {
+                            selectSymbol(item.symbol, item.marketType);
+                        };
+                    });
+                }
+            }).catch(function(err) {
+                console.error('刷新行情数据失败:', err);
+            });
+        }
+        
+        // 等待页面和库完全加载后再初始化图表
+        function initializePage() {
+            // 检查必要的库是否已加载
+            if (typeof LightweightCharts === 'undefined') {
+                console.error('LightweightCharts 库未加载');
+                // 尝试延迟加载
+                setTimeout(function() {
+                    if (typeof LightweightCharts !== 'undefined') {
+                        initTradingViewChart();
+                        loadSymbolList().then(function() {
+                            startMarketDataRefresh();
+                        });
+                    } else {
+                        console.error('LightweightCharts 库加载超时');
+                        const container = document.getElementById('tv-chart-container');
+                        if (container) {
+                            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #f6465d; padding: 20px; text-align: center;"><div>图表库加载失败<br/>请检查网络连接后刷新页面</div></div>';
+                        }
+                    }
+                }, 1000);
+                return;
+            }
+            
+            // 库已加载，正常初始化
+            initTradingViewChart();
+            loadSymbolList().then(function() {
+                startMarketDataRefresh();
+            });
+        }
+        
+        // 页面加载完成后初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePage);
+        } else {
+            // DOM已经加载完成
+            initializePage();
+        }
+        
+        // 页面卸载时停止定时器
+        window.addEventListener('beforeunload', function() {
+            stopMarketDataRefresh();
+        });
+    </script>
+</body>
+</html>
