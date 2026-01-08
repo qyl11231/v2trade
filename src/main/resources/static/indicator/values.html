@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>指标结果 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; background: #f5f7fa; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+        .layui-body { background: #f5f7fa; }
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #e8eaed;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .filter-bar .layui-form { display: flex; align-items: center; gap: 12px; margin: 0; }
+        .filter-bar .layui-form-item { margin-bottom: 0; }
+        .filter-bar .layui-input { width: 150px; height: 36px; }
+        .filter-bar .layui-select { width: 120px; height: 36px; }
+        .view-switch { display: flex; align-items: center; gap: 10px; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item">
+                <a href="javascript:;">
+                    <i class="layui-icon layui-icon-username"></i>
+                    <span id="userName">用户</span>
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item"><a href="/index.html">首页</a></li>
+                <li class="layui-nav-item"><a href="/users.html">用户管理</a></li>
+                <li class="layui-nav-item"><a href="/trading-pair.html">交易对管理</a></li>
+                <li class="layui-nav-item"><a href="/signal-config.html">信号配置</a></li>
+                <li class="layui-nav-item"><a href="/strategy.html">策略管理</a></li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">指标管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/indicator/dashboard.html">仪表盘</a></dd>
+                        <dd><a href="/indicator/definitions.html">指标定义</a></dd>
+                        <dd><a href="/indicator/subscriptions.html">指标订阅</a></dd>
+                        <dd class="layui-this"><a href="/indicator/values.html">指标结果</a></dd>
+                        <dd><a href="/indicator/logs.html">计算日志</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <div class="layui-card">
+                <div class="layui-card-header">
+                    <strong>指标结果</strong> - 验证指标是否真的算出来了
+                    <div class="view-switch" style="float: right;">
+                        <span>视图:</span>
+                        <input type="radio" name="viewType" value="latest" title="Latest" checked>
+                        <input type="radio" name="viewType" value="history" title="History">
+                    </div>
+                </div>
+                <div class="layui-card-body">
+                    <!-- 筛选栏 -->
+                    <div class="filter-bar">
+                        <form class="layui-form" lay-filter="filterForm">
+                            <div class="layui-form-item">
+                                <input type="number" id="userIdFilter" placeholder="用户ID" class="layui-input">
+                            </div>
+                            <div class="layui-form-item">
+                                <input type="text" id="symbolFilter" placeholder="交易对符号" class="layui-input">
+                            </div>
+                            <div class="layui-form-item">
+                                <select id="timeframeFilter">
+                                    <option value="">全部周期</option>
+                                    <option value="5m">5m</option>
+                                    <option value="15m">15m</option>
+                                    <option value="30m">30m</option>
+                                    <option value="1h">1h</option>
+                                    <option value="4h">4h</option>
+                                </select>
+                            </div>
+                            <div class="layui-form-item">
+                                <button type="button" class="layui-btn" onclick="loadValues()">查询</button>
+                                <button type="button" class="layui-btn layui-btn-primary" onclick="resetFilter()">重置</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- 表格 -->
+                    <table class="layui-table" lay-filter="valueTable" id="valueTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form', 'table'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var table = layui.table;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    var currentViewType = 'latest'; // latest 或 history
+    var tableIns = null;
+    
+    // 表格列定义
+    var tableCols = [[
+        {field: 'barTime', title: 'Bar时间(UTC)', width: 180, templet: function(d){
+            return d.barTime ? d.barTime.replace('T', ' ') + ' UTC' : '-';
+        }},
+        {field: 'userId', title: '用户ID', width: 100},
+        {field: 'symbol', title: '交易对', width: 150},
+        {field: 'timeframe', title: '周期', width: 80},
+        {field: 'indicatorCode', title: '指标', width: 120, templet: function(d){
+            return d.indicatorCode + '@' + (d.indicatorVersion || 'v1');
+        }},
+        {field: 'value', title: '值', width: 120, templet: function(d){
+            return d.value != null ? d.value.toFixed(4) : '-';
+        }},
+        {field: 'extraValues', title: '额外值', width: 200, templet: function(d){
+            if (d.extraValues) {
+                var str = JSON.stringify(d.extraValues);
+                return str.length > 40 ? str.substring(0, 40) + '...' : str;
+            }
+            return '-';
+        }},
+        {field: 'dataQuality', title: '数据质量', width: 100, templet: function(d){
+            var cls = '#5FB878';
+            if (d.dataQuality === 'PARTIAL') cls = '#FFB800';
+            else if (d.dataQuality === 'INVALID') cls = '#FF5722';
+            return '<span style="color: ' + cls + ';">' + (d.dataQuality || 'OK') + '</span>';
+        }},
+        {field: 'calcEngine', title: '引擎', width: 100},
+        {field: 'createdAt', title: '创建时间', width: 180, templet: function(d){
+            return d.createdAt ? d.createdAt.replace('T', ' ') + ' UTC' : '-';
+        }},
+        {fixed: 'right', title: '操作', width: 100, align: 'center', templet: function(d){
+            return '<button class="layui-btn layui-btn-xs" onclick="viewDetail(' + d.id + ')">详情</button>';
+        }}
+    ]];
+    
+    // 初始化表格（Latest视图使用data方式，不设置url）
+    function initTable(){
+        var options = {
+            elem: '#valueTable',
+            cols: tableCols,
+            limit: 200,
+            limits: [50, 100, 200, 500]
+        };
+        
+        if (currentViewType === 'latest') {
+            // Latest视图：使用data方式，不设置url
+            options.data = [];
+            options.page = false;
+        } else {
+            // History视图：使用url方式，支持分页
+            options.url = '/api/indicator/values';
+            options.method = 'GET';
+            options.page = true;
+            options.request = {
+                pageName: 'page',
+                limitName: 'size'
+            };
+            options.parseData = function(res){
+                console.log('指标结果API返回数据:', res);
+                if (res.code === 200) {
+                    return {
+                        code: 0,
+                        msg: res.message || '操作成功',
+                        count: res.data ? (res.data.total || 0) : 0,
+                        data: res.data ? (res.data.records || []) : []
+                    };
+                } else {
+                    return {
+                        code: res.code || -1,
+                        msg: res.message || '查询失败',
+                        count: 0,
+                        data: []
+                    };
+                }
+            };
+            options.done = function(res, curr, count){
+                console.log('指标结果表格加载完成', res, '当前页:', curr, '总数:', count);
+                if (res.code !== 0) {
+                    layer.msg(res.msg || '加载失败', {icon: 2});
+                }
+            };
+            options.error = function(res, msg){
+                console.error('指标结果表格加载错误:', res, msg);
+                layer.msg('加载失败: ' + (msg || '网络错误'), {icon: 2});
+            };
+        }
+        
+        tableIns = table.render(options);
+    }
+    
+    // 加载Latest数据
+    function loadLatest(){
+        // Latest视图：每个订阅只显示最新一条
+        // 去重key = userId + tradingPairId + timeframe + indicatorCode + indicatorVersion
+        request({
+            url: '/api/indicator/values?page=1&size=100',
+            method: 'GET'
+        }).then(function(res){
+            console.log('Latest视图API返回:', res);
+            if (res.code === 200) {
+                var records = (res.data && res.data.records) ? res.data.records : [];
+                
+                // 去重，每个订阅只取最新的一条
+                var map = {};
+                records.forEach(function(item){
+                    var key = item.userId + '_' + item.tradingPairId + '_' + item.timeframe + '_' + item.indicatorCode + '_' + item.indicatorVersion;
+                    if (!map[key] || new Date(item.barTime) > new Date(map[key].barTime)) {
+                        map[key] = item;
+                    }
+                });
+                var latestData = Object.values(map);
+                console.log('去重后数据:', latestData.length, '条');
+                
+                // 直接设置data，不通过url加载
+                table.reload('valueTable', {
+                    url: '', // 清空url，使用data
+                    data: latestData,
+                    page: false
+                });
+            } else {
+                layer.msg(res.message || '加载失败', {icon: 2});
+            }
+        }).catch(function(err){
+            console.error('加载Latest数据失败:', err);
+            layer.msg('加载失败', {icon: 2});
+        });
+    }
+    
+    // 加载History数据（全部数据，不去重）
+    function loadHistory(){
+        var userId = $('#userIdFilter').val();
+        var symbolKeyword = $('#symbolFilter').val();
+        var timeframe = $('#timeframeFilter').val();
+        
+        table.reload('valueTable', {
+            url: '/api/indicator/values',
+            method: 'GET',
+            page: true,
+            where: {
+                userId: userId || undefined,
+                symbolKeyword: symbolKeyword || undefined,
+                timeframe: timeframe || undefined
+            },
+            request: {
+                pageName: 'page',
+                limitName: 'size'
+            },
+            parseData: function(res){
+                console.log('History视图API返回数据:', res);
+                if (res.code === 200) {
+                    return {
+                        code: 0,
+                        msg: res.message || '操作成功',
+                        count: res.data ? (res.data.total || 0) : 0,
+                        data: res.data ? (res.data.records || []) : []
+                    };
+                } else {
+                    return {
+                        code: res.code || -1,
+                        msg: res.message || '查询失败',
+                        count: 0,
+                        data: []
+                    };
+                }
+            },
+            done: function(res, curr, count){
+                console.log('History表格加载完成', res, '当前页:', curr, '总数:', count);
+                if (res.code !== 0) {
+                    layer.msg(res.msg || '加载失败', {icon: 2});
+                }
+            }
+        });
+    }
+    
+    // 加载数据
+    window.loadValues = function(){
+        if (currentViewType === 'latest') {
+            loadLatest();
+        } else {
+            loadHistory();
+        }
+    };
+    
+    window.resetFilter = function(){
+        $('#userIdFilter').val('');
+        $('#symbolFilter').val('');
+        $('#timeframeFilter').val('');
+        form.render('select');
+        loadValues();
+    };
+    
+    // 查看详情
+    window.viewDetail = function(id){
+        var data = currentViewType === 'latest' ? table.cache.valueTable : table.cache.valueTable;
+        var value = data.find(function(item){ return item.id == id; });
+        
+        if (!value) {
+            layer.msg('数据不存在', {icon: 2});
+            return;
+        }
+        
+        var content = '<div style="padding: 20px; font-size: 13px;">';
+        content += '<pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; max-height: 500px; overflow-y: auto;">';
+        content += JSON.stringify(value, null, 2);
+        content += '</pre>';
+        content += '</div>';
+        
+        layer.open({
+            type: 1,
+            title: '指标值详情',
+            area: ['700px', '600px'],
+            content: content,
+            btn: ['关闭'],
+            yes: function(index){
+                layer.close(index);
+            }
+        });
+    };
+    
+    // 视图切换（使用change事件）
+    $('input[name="viewType"]').on('change', function(){
+        currentViewType = $(this).val();
+        initTable();
+        loadValues();
+    });
+    
+    // 渲染表单（初始化radio）
+    form.render();
+    
+    // 初始加载
+    initTable();
+    loadValues();
+});
+</script>
+</body>
+</html>
+

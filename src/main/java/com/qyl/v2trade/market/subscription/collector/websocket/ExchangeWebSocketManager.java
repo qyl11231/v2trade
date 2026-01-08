@@ -550,14 +550,10 @@ public class ExchangeWebSocketManager {
     }
 
     /**
-     * 发送订阅消息
+     * 发送订阅消息（K线频道）
      */
     private void sendSubscribeMessage(Set<String> symbols) {
-        // 获取 KLINE Channel（v1.0 只支持 KLINE）
-        // 这里简化处理，直接构建订阅消息
-        // 实际应该从 ChannelRouter 获取对应的 Channel
-        
-        // 构建订阅消息
+        // 构建K线订阅消息
         StringBuilder args = new StringBuilder();
         for (String symbol : symbols) {
             if (args.length() > 0) {
@@ -567,26 +563,32 @@ public class ExchangeWebSocketManager {
         }
 
         String message = String.format("{\"op\":\"subscribe\",\"args\":[%s]}", args.toString());
-        
+        sendWebSocketMessage(message, symbols, "K线订阅");
+    }
+
+    /**
+     * 发送WebSocket消息（通用方法）
+     */
+    private void sendWebSocketMessage(String message, Set<String> symbols, String type) {
         try {
             if (webSocket != null) {
                 boolean sent = webSocket.send(message);
                 if (sent) {
-                    log.info("发送订阅消息成功: symbols={}", symbols);
+                    log.info("发送{}消息成功: symbols={}", type, symbols);
                 } else {
-                    log.error("发送订阅消息失败：WebSocket 可能已关闭");
+                    log.error("发送{}消息失败：WebSocket 可能已关闭", type);
                 }
             }
         } catch (Exception e) {
-            log.error("发送订阅消息异常: symbols={}", symbols, e);
+            log.error("发送{}消息异常: symbols={}", type, symbols, e);
         }
     }
 
     /**
-     * 发送取消订阅消息
+     * 发送取消订阅消息（K线频道）
      */
     private void sendUnsubscribeMessage(Set<String> symbols) {
-        // 构建取消订阅消息
+        // 构建取消K线订阅消息
         StringBuilder args = new StringBuilder();
         for (String symbol : symbols) {
             if (args.length() > 0) {
@@ -596,19 +598,7 @@ public class ExchangeWebSocketManager {
         }
 
         String message = String.format("{\"op\":\"unsubscribe\",\"args\":[%s]}", args.toString());
-        
-        try {
-            if (webSocket != null) {
-                boolean sent = webSocket.send(message);
-                if (sent) {
-                    log.info("发送取消订阅消息成功: symbols={}", symbols);
-                } else {
-                    log.error("发送取消订阅消息失败：WebSocket 可能已关闭");
-                }
-            }
-        } catch (Exception e) {
-            log.error("发送取消订阅消息异常: symbols={}", symbols, e);
-        }
+        sendWebSocketMessage(message, symbols, "取消K线订阅");
     }
 
     /**

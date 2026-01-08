@@ -1,0 +1,1644 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>V2-Trade 指标模块 - 可交互原型</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#111a33;
+      --panel2:#0f1730;
+      --text:#e9eefc;
+      --muted:#9aa6c8;
+      --line:#22305a;
+      --accent:#6aa9ff;
+      --good:#35d07f;
+      --bad:#ff5c5c;
+      --warn:#ffcc66;
+      --chip:#182552;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+      --radius2: 12px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--font);
+      background: radial-gradient(1200px 800px at 20% 0%, #141f44 0%, var(--bg) 55%) fixed;
+      color:var(--text);
+    }
+    a{color:inherit}
+    .app{display:flex; min-height:100vh;}
+    .sidebar{
+      width:260px;
+      padding:18px 14px;
+      border-right:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(17,26,51,.95), rgba(11,16,32,.95));
+      position:sticky; top:0; height:100vh;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 10px 14px;
+      margin-bottom:8px;
+    }
+    .logo{
+      width:34px; height:34px; border-radius:10px;
+      background: conic-gradient(from 160deg, #6aa9ff, #35d07f, #ffcc66, #ff5c5c, #6aa9ff);
+      box-shadow: var(--shadow);
+    }
+    .brand h1{font-size:14px; margin:0; line-height:1.2}
+    .brand .sub{font-size:12px; color:var(--muted)}
+    .nav{
+      display:flex; flex-direction:column; gap:6px;
+      padding:6px;
+    }
+    .nav button{
+      all:unset;
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      color:var(--muted);
+      display:flex; align-items:center; justify-content:space-between;
+      border:1px solid transparent;
+    }
+    .nav button:hover{background:rgba(106,169,255,.08); color:var(--text)}
+    .nav button.active{
+      background: rgba(106,169,255,.16);
+      border-color: rgba(106,169,255,.35);
+      color:var(--text);
+    }
+    .nav .tag{
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+      color:var(--muted);
+    }
+    .sidebar .hint{
+      margin-top:14px;
+      padding:12px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      border-radius:14px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+    .sidebar .hint b{color:var(--text)}
+    .content{
+      flex:1;
+      padding:22px 24px 30px;
+    }
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .title h2{margin:0; font-size:18px}
+    .title .desc{margin:4px 0 0; color:var(--muted); font-size:12px}
+    .actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .btn{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.05);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      transition:.15s transform ease, .15s background ease, .15s border-color ease;
+      user-select:none;
+    }
+    .btn:hover{background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.18)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{
+      background: rgba(106,169,255,.20);
+      border-color: rgba(106,169,255,.45);
+    }
+    .btn.good{
+      background: rgba(53,208,127,.16);
+      border-color: rgba(53,208,127,.35);
+    }
+    .btn.warn{
+      background: rgba(255,204,102,.14);
+      border-color: rgba(255,204,102,.30);
+    }
+    .btn.danger{
+      background: rgba(255,92,92,.14);
+      border-color: rgba(255,92,92,.30);
+    }
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:12px;
+      display:flex; gap:8px; align-items:center;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap:14px;
+    }
+    .card{
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(17,26,51,.85), rgba(15,23,48,.85));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 14px 10px;
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .card .hd .k{font-size:12px; color:var(--muted)}
+    .card .hd .v{font-size:18px; font-weight:700; margin-top:2px}
+    .card .bd{padding:14px}
+    .col-12{grid-column: span 12}
+    .col-8{grid-column: span 8}
+    .col-7{grid-column: span 7}
+    .col-6{grid-column: span 6}
+    .col-5{grid-column: span 5}
+    .col-4{grid-column: span 4}
+    .col-3{grid-column: span 3}
+    .col-2{grid-column: span 2}
+    @media (max-width: 1100px){
+      .sidebar{display:none}
+      .content{padding:16px}
+      .col-8,.col-7,.col-6,.col-5,.col-4,.col-3,.col-2{grid-column: span 12}
+    }
+    .filters{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      margin:12px 0 0;
+    }
+    .input, select, textarea{
+      width:auto;
+      padding:9px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+      font-family:var(--font);
+    }
+    .input::placeholder, textarea::placeholder{color:rgba(154,166,200,.7)}
+    textarea{min-width: 360px; min-height: 120px; resize:vertical}
+    .table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+    .table th, .table td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      vertical-align:top;
+    }
+    .table th{
+      color:var(--muted);
+      font-weight:600;
+      text-align:left;
+      font-size:12px;
+    }
+    .row-actions{display:flex; gap:8px; flex-wrap:wrap}
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .status{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-weight:700;
+      font-size:12px;
+    }
+    .dot{width:8px; height:8px; border-radius:999px; background:var(--muted)}
+    .status.success{color:var(--good)}
+    .status.success .dot{background:var(--good)}
+    .status.failed{color:var(--bad)}
+    .status.failed .dot{background:var(--bad)}
+    .status.conflict{color:var(--warn)}
+    .status.conflict .dot{background:var(--warn)}
+    .muted{color:var(--muted)}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
+    .right{display:flex; justify-content:flex-end}
+    .hidden{display:none !important}
+
+    /* Modal */
+    .overlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(3px);
+      display:none;
+      align-items:center; justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modal{
+      width:min(880px, 100%);
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(17,26,51,.96), rgba(11,16,32,.96));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal .mh{
+      padding:14px 14px;
+      display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .modal .mh h3{margin:0; font-size:15px}
+    .modal .mb{padding:14px}
+    .modal .mf{
+      padding:12px 14px;
+      display:flex; justify-content:flex-end; gap:10px;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+    .x{
+      all:unset;
+      cursor:pointer;
+      padding:6px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+    }
+    .x:hover{background:rgba(255,255,255,.08)}
+    .formgrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    .formgrid .full{grid-column: span 2}
+    .kv{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .kv label{font-size:12px; color:var(--muted)}
+    .switch{
+      display:inline-flex; align-items:center; gap:10px;
+      font-size:12px; color:var(--muted);
+    }
+    .switch input{transform: scale(1.2);}
+
+    /* Drawer */
+    .drawerOverlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.35);
+      display:none;
+      z-index:60;
+    }
+    .drawer{
+      position:fixed; top:0; right:-520px; height:100vh; width:520px;
+      background: linear-gradient(180deg, rgba(17,26,51,.98), rgba(11,16,32,.98));
+      border-left:1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow);
+      transition:right .22s ease;
+      z-index:61;
+      overflow:auto;
+    }
+    .drawer.open{right:0}
+    .drawer .dh{
+      position:sticky; top:0;
+      background: linear-gradient(180deg, rgba(17,26,51,.98), rgba(11,16,32,.98));
+      padding:14px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .drawer .dh h3{margin:0; font-size:15px}
+    .drawer .db{padding:14px}
+    .kvrow{display:flex; gap:10px; margin:10px 0}
+    .kvrow .k{width:160px; color:var(--muted); font-size:12px}
+    .kvrow .v{flex:1; font-size:12px}
+    .toast{
+      position:fixed; bottom:18px; left:18px;
+      display:flex; flex-direction:column; gap:10px;
+      z-index:99;
+    }
+    .toast .t{
+      max-width:520px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(17,26,51,.92);
+      box-shadow: var(--shadow);
+      font-size:12px;
+      color:var(--text);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .toast .t .m{color:var(--muted); margin-top:2px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>V2-Trade · 指标模块</h1>
+        <div class="sub">可交互原型（MVP 验证闭环）</div>
+      </div>
+    </div>
+
+    <div class="nav" id="nav">
+      <button data-page="dashboard" class="active">
+        <span>仪表盘</span><span class="tag">闭环</span>
+      </button>
+      <button data-page="definitions">
+        <span>指标定义</span><span class="tag">只读</span>
+      </button>
+      <button data-page="subscriptions">
+        <span>指标订阅</span><span class="tag">核心</span>
+      </button>
+      <button data-page="values">
+        <span>指标结果</span><span class="tag">验证</span>
+      </button>
+      <button data-page="logs">
+        <span>计算日志</span><span class="tag">审计</span>
+      </button>
+    </div>
+
+    <div class="hint">
+      <b>怎么验证闭环？</b><br/>
+      1) 去「指标订阅」创建订阅（例如 1h RSI）。<br/>
+      2) 点右上角「模拟 BarClosed」或开启自动模拟。<br/>
+      3) 去「计算日志」看 SUCCESS/FAILED/CONFLICT。<br/>
+      4) 去「指标结果」看最新值落库效果。
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div class="title">
+        <h2 id="pageTitle">仪表盘</h2>
+        <div class="desc" id="pageDesc">观察指标计算是否持续运行，并可下钻审计。</div>
+      </div>
+      <div class="actions">
+        <div class="pill" title="本原型使用本地模拟数据，不依赖后端">
+          <span class="mono">UTC</span>
+          <span class="muted">bar_close_time 驱动</span>
+        </div>
+        <button class="btn good" id="btnSimulate">⚡ 模拟 BarClosed</button>
+        <button class="btn" id="btnAutoSim">⏱️ 自动模拟：关</button>
+        <button class="btn primary" id="btnNewSub">＋ 新建订阅</button>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <section id="page-dashboard">
+      <div class="grid">
+        <div class="card col-3">
+          <div class="hd">
+            <div>
+              <div class="k">今日计算次数</div>
+              <div class="v" id="mCalcCount">0</div>
+            </div>
+            <span class="chip">calc_log</span>
+          </div>
+          <div class="bd muted">包含 SUCCESS/FAILED/CONFLICT</div>
+        </div>
+
+        <div class="card col-3">
+          <div class="hd">
+            <div>
+              <div class="k">成功率</div>
+              <div class="v" id="mSuccessRate">0%</div>
+            </div>
+            <span class="chip">SUCCESS</span>
+          </div>
+          <div class="bd muted">按近 200 条日志估算</div>
+        </div>
+
+        <div class="card col-3">
+          <div class="hd">
+            <div>
+              <div class="k">失败 / 冲突</div>
+              <div class="v"><span id="mFailed">0</span> / <span id="mConflict">0</span></div>
+            </div>
+            <span class="chip">FAILED/CONFLICT</span>
+          </div>
+          <div class="bd muted">用于快速定位异常</div>
+        </div>
+
+        <div class="card col-3">
+          <div class="hd">
+            <div>
+              <div class="k">平均耗时 (ms)</div>
+              <div class="v" id="mAvgCost">-</div>
+            </div>
+            <span class="chip">cost_ms</span>
+          </div>
+          <div class="bd muted">仅示意，模拟数据</div>
+        </div>
+
+        <div class="card col-12">
+          <div class="hd">
+            <div>
+              <div class="k">最近一次 BarClosedEvent</div>
+              <div class="v" style="font-size:14px; font-weight:700" id="mLastBar">-</div>
+            </div>
+            <div class="row-actions">
+              <span class="chip">仅聚合周期：5m/15m/30m/1h/4h</span>
+              <span class="chip">1m 不发布</span>
+            </div>
+          </div>
+          <div class="bd">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+              <div class="muted">最近 20 条计算日志（点击可查看详情抽屉）</div>
+              <div class="filters">
+                <select id="fDashStatus">
+                  <option value="">全部状态</option>
+                  <option value="SUCCESS">SUCCESS</option>
+                  <option value="FAILED">FAILED</option>
+                  <option value="CONFLICT">CONFLICT</option>
+                </select>
+                <input class="input" id="fDashSymbol" placeholder="symbol 包含…" />
+                <button class="btn" id="btnDashRefresh">🔄 刷新</button>
+              </div>
+            </div>
+
+            <div style="margin-top:10px; overflow:auto">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>bar_time(UTC close)</th>
+                    <th>user</th>
+                    <th>symbol</th>
+                    <th>tf</th>
+                    <th>indicator</th>
+                    <th>status</th>
+                    <th>cost</th>
+                    <th>error(摘要)</th>
+                  </tr>
+                </thead>
+                <tbody id="dashLogTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Definitions -->
+    <section id="page-definitions" class="hidden">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="k">指标定义（系统内置示意）</div>
+            <div class="v" style="font-size:14px">可供订阅的 code@version / schema / min_required_bars</div>
+          </div>
+          <div class="filters">
+            <input class="input" id="fDefKeyword" placeholder="code/name 关键字" />
+            <select id="fDefCategory">
+              <option value="">全部分类</option>
+              <option value="MOMENTUM">MOMENTUM</option>
+              <option value="TREND">TREND</option>
+              <option value="VOLATILITY">VOLATILITY</option>
+            </select>
+            <select id="fDefEngine">
+              <option value="">全部引擎</option>
+              <option value="ta4j">ta4j</option>
+              <option value="custom">custom</option>
+            </select>
+            <button class="btn" id="btnDefRefresh">🔄 刷新</button>
+          </div>
+        </div>
+        <div class="bd" style="overflow:auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>code</th>
+                <th>name</th>
+                <th>version</th>
+                <th>category</th>
+                <th>engine</th>
+                <th>minBars</th>
+                <th>supportedTF</th>
+                <th>schema</th>
+                <th>enabled</th>
+              </tr>
+            </thead>
+            <tbody id="defTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Subscriptions -->
+    <section id="page-subscriptions" class="hidden">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="k">指标订阅（MVP 核心）</div>
+            <div class="v" style="font-size:14px">订阅 = user + pair + timeframe + indicator + params（不支持 1m）</div>
+          </div>
+          <div class="filters">
+            <input class="input" id="fSubUser" placeholder="userId (如 1)" style="width:120px" />
+            <input class="input" id="fSubSymbol" placeholder="symbol 包含…" />
+            <select id="fSubTf">
+              <option value="">全部周期</option>
+              <option value="5m">5m</option>
+              <option value="15m">15m</option>
+              <option value="30m">30m</option>
+              <option value="1h">1h</option>
+              <option value="4h">4h</option>
+            </select>
+            <select id="fSubEnabled">
+              <option value="">全部状态</option>
+              <option value="1">启用</option>
+              <option value="0">停用</option>
+            </select>
+            <button class="btn" id="btnSubRefresh">🔄 刷新</button>
+          </div>
+        </div>
+        <div class="bd" style="overflow:auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>user</th>
+                <th>symbol</th>
+                <th>market_type</th>
+                <th>timeframe</th>
+                <th>indicator</th>
+                <th>params</th>
+                <th>enabled</th>
+                <th>created_at</th>
+                <th class="right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="subTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Values -->
+    <section id="page-values" class="hidden">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="k">指标结果（落库可视化）</div>
+            <div class="v" style="font-size:14px">默认 Latest Only（每个订阅只看最新）</div>
+          </div>
+          <div class="filters">
+            <input class="input" id="fValUser" placeholder="userId" style="width:120px" />
+            <input class="input" id="fValSymbol" placeholder="symbol 包含…" />
+            <select id="fValTf">
+              <option value="">全部周期</option>
+              <option value="5m">5m</option>
+              <option value="15m">15m</option>
+              <option value="30m">30m</option>
+              <option value="1h">1h</option>
+              <option value="4h">4h</option>
+            </select>
+            <select id="fValLatest">
+              <option value="1">Latest Only</option>
+              <option value="0">历史视图（近 200）</option>
+            </select>
+            <button class="btn" id="btnValRefresh">🔄 刷新</button>
+          </div>
+        </div>
+        <div class="bd" style="overflow:auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>bar_time(UTC close)</th>
+                <th>user</th>
+                <th>symbol</th>
+                <th>tf</th>
+                <th>indicator</th>
+                <th>value</th>
+                <th>extra_values</th>
+                <th>data_quality</th>
+                <th>fingerprint</th>
+                <th>created_at</th>
+              </tr>
+            </thead>
+            <tbody id="valTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Logs -->
+    <section id="page-logs" class="hidden">
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="k">指标计算日志（审计 / 排障）</div>
+            <div class="v" style="font-size:14px">支持筛选 SUCCESS/FAILED/CONFLICT，点击查看详情</div>
+          </div>
+          <div class="filters">
+            <input class="input" id="fLogUser" placeholder="userId" style="width:120px" />
+            <input class="input" id="fLogSymbol" placeholder="symbol 包含…" />
+            <select id="fLogTf">
+              <option value="">全部周期</option>
+              <option value="5m">5m</option>
+              <option value="15m">15m</option>
+              <option value="30m">30m</option>
+              <option value="1h">1h</option>
+              <option value="4h">4h</option>
+            </select>
+            <select id="fLogStatus">
+              <option value="">全部状态</option>
+              <option value="SUCCESS">SUCCESS</option>
+              <option value="FAILED">FAILED</option>
+              <option value="CONFLICT">CONFLICT</option>
+            </select>
+            <button class="btn" id="btnLogRefresh">🔄 刷新</button>
+          </div>
+        </div>
+        <div class="bd" style="overflow:auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>created_at</th>
+                <th>bar_time</th>
+                <th>user</th>
+                <th>symbol</th>
+                <th>tf</th>
+                <th>indicator</th>
+                <th>status</th>
+                <th>cost_ms</th>
+                <th>fingerprint</th>
+                <th>error_msg</th>
+              </tr>
+            </thead>
+            <tbody id="logTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- New Subscription Modal -->
+<div class="overlay" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="mh">
+      <h3 id="modalTitle">新建指标订阅</h3>
+      <button class="x" id="btnModalClose">✕</button>
+    </div>
+    <div class="mb">
+      <div class="formgrid">
+        <div class="kv">
+          <label>userId</label>
+          <input class="input" id="mUser" placeholder="例如：1" value="1" />
+        </div>
+        <div class="kv">
+          <label>交易对（symbol_on_exchange）</label>
+          <select id="mSymbol"></select>
+        </div>
+
+        <div class="kv">
+          <label>timeframe（不支持 1m）</label>
+          <select id="mTf">
+            <option value="5m">5m</option>
+            <option value="15m">15m</option>
+            <option value="30m">30m</option>
+            <option value="1h" selected>1h</option>
+            <option value="4h">4h</option>
+          </select>
+        </div>
+
+        <div class="kv">
+          <label>指标（code@version）</label>
+          <select id="mIndicator"></select>
+        </div>
+
+        <div class="kv full">
+          <label>params（JSON，按 param_schema）</label>
+          <textarea id="mParams" class="mono" placeholder='例如：{"period":14}'></textarea>
+        </div>
+
+        <div class="kv">
+          <label>enabled</label>
+          <div class="switch">
+            <input type="checkbox" id="mEnabled" checked />
+            <span>启用订阅（创建后等待下一根 bar close）</span>
+          </div>
+        </div>
+
+        <div class="kv">
+          <label>说明</label>
+          <div class="muted" style="font-size:12px; line-height:1.5">
+            创建订阅后，可用右上角「模拟 BarClosed」触发计算，随后在「计算日志/指标结果」查看闭环。
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn" id="btnModalCancel">取消</button>
+      <button class="btn primary" id="btnModalCreate">创建订阅</button>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawerOverlay" id="drawerOverlay"></div>
+<aside class="drawer" id="drawer">
+  <div class="dh">
+    <h3 id="drawerTitle">详情</h3>
+    <button class="x" id="btnDrawerClose">✕</button>
+  </div>
+  <div class="db" id="drawerBody"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /***********************
+   * Mock Data (In-Memory)
+   ***********************/
+  const timeframes = ["5m","15m","30m","1h","4h"];
+
+  const tradingPairs = [
+    { tradingPairId: 1, symbol: "BTC-USDT", marketType: "SWAP", symbolOnExchange: "BTC-USDT-SWAP" },
+    { tradingPairId: 2, symbol: "ETH-USDT", marketType: "SWAP", symbolOnExchange: "ETH-USDT-SWAP" },
+    { tradingPairId: 3, symbol: "SOL-USDT", marketType: "SWAP", symbolOnExchange: "SOL-USDT-SWAP" }
+  ];
+
+  const definitions = [
+    {
+      id: 101, userId: 0, code: "RSI", name: "Relative Strength Index", version: "v1",
+      category: "MOMENTUM", engine: "ta4j",
+      minRequiredBars: 100,
+      supportedTF: ["5m","15m","30m","1h","4h"],
+      paramSchema: { period: { type:"int", default:14, min:2, max:200 } },
+      returnSchema: { value: { type:"double" } },
+      enabled: true
+    },
+    {
+      id: 102, userId: 0, code: "MACD", name: "MACD", version: "v1",
+      category: "TREND", engine: "ta4j",
+      minRequiredBars: 150,
+      supportedTF: ["15m","30m","1h","4h"],
+      paramSchema: { fast: {type:"int",default:12}, slow:{type:"int",default:26}, signal:{type:"int",default:9} },
+      returnSchema: { value: { type:"double" }, extra_values:{ type:"json", keys:["macd","signal","histogram"] } },
+      enabled: true
+    },
+    {
+      id: 103, userId: 0, code: "BOLL", name: "Bollinger Bands", version: "v1",
+      category: "VOLATILITY", engine: "ta4j",
+      minRequiredBars: 120,
+      supportedTF: ["15m","30m","1h","4h"],
+      paramSchema: { period:{type:"int",default:20}, k:{type:"double",default:2.0} },
+      returnSchema: { extra_values:{ type:"json", keys:["upper","middle","lower"] } },
+      enabled: true
+    }
+  ];
+
+  let subscriptions = [
+    {
+      id: 1001,
+      userId: 1,
+      tradingPairId: 1,
+      symbolOnExchange: "BTC-USDT-SWAP",
+      symbol: "BTC-USDT",
+      marketType: "SWAP",
+      timeframe: "1h",
+      indicatorCode: "RSI",
+      indicatorVersion: "v1",
+      params: { period: 14 },
+      enabled: true,
+      createdAt: isoNow(),
+    }
+  ];
+
+  // indicator values table (simulated)
+  // key: userId|pairId|tf|code|ver|barTime
+  const indicatorValues = new Map();
+
+  // calc logs list (simulated)
+  // newest first
+  let calcLogs = [];
+
+  // event simulation
+  let lastBarClosed = null;
+  let autoSim = false;
+  let autoTimer = null;
+
+  /***********************
+   * Utilities
+   ***********************/
+  function isoNow(){
+    return new Date().toISOString().replace("T"," ").replace("Z"," UTC");
+  }
+  function utcCloseTime(tf){
+    // create aligned open time then add timeframe minutes to make close time
+    const now = new Date();
+    const minutes = tfToMinutes(tf);
+    // align to tf boundary (open time)
+    const aligned = new Date(now);
+    aligned.setUTCSeconds(0,0);
+    if (minutes >= 60){
+      aligned.setUTCMinutes(0);
+      // align hour boundary by minutes
+      const h = aligned.getUTCHours();
+      const stepH = minutes/60;
+      aligned.setUTCHours(Math.floor(h/stepH)*stepH);
+    } else {
+      const m = aligned.getUTCMinutes();
+      aligned.setUTCMinutes(Math.floor(m/minutes)*minutes);
+    }
+    // open time -> close time
+    const close = new Date(aligned.getTime() + minutes*60*1000);
+    return close.toISOString().replace("T"," ").replace("Z"," UTC");
+  }
+  function tfToMinutes(tf){
+    if (tf.endsWith("m")) return parseInt(tf,10);
+    if (tf.endsWith("h")) return parseInt(tf,10)*60;
+    return 60;
+  }
+  function safeJsonParse(s){
+    try{ return JSON.parse(s); }catch(e){ return null; }
+  }
+  function hashLike(str){
+    // quick pseudo fingerprint for prototype (not cryptographic)
+    let h = 2166136261;
+    for (let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return ("fp_" + (h>>>0).toString(16).padStart(8,"0") + Math.random().toString(16).slice(2,10));
+  }
+  function toast(msg, sub=""){
+    const wrap = document.getElementById("toast");
+    const el = document.createElement("div");
+    el.className = "t";
+    el.innerHTML = `
+      <div>
+        <div style="font-weight:700">${escapeHtml(msg)}</div>
+        ${sub ? `<div class="m">${escapeHtml(sub)}</div>` : ``}
+      </div>
+      <button class="x" aria-label="close">✕</button>
+    `;
+    el.querySelector("button").onclick = ()=> el.remove();
+    wrap.appendChild(el);
+    setTimeout(()=>{ if (el.isConnected) el.remove(); }, 4200);
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  /***********************
+   * Navigation
+   ***********************/
+  const pages = [
+    { id:"dashboard", title:"仪表盘", desc:"观察指标计算是否持续运行，并可下钻审计。" },
+    { id:"definitions", title:"指标定义", desc:"查看系统支持的指标、参数 schema、min_required_bars。" },
+    { id:"subscriptions", title:"指标订阅", desc:"创建/启停订阅：pair + timeframe + indicator + params。" },
+    { id:"values", title:"指标结果", desc:"查看指标落库结果（默认 Latest Only）。" },
+    { id:"logs", title:"计算日志", desc:"查看 SUCCESS/FAILED/CONFLICT，定位 error 与 fingerprint。" }
+  ];
+
+  function setPage(pageId){
+    pages.forEach(p=>{
+      document.getElementById("page-"+p.id).classList.toggle("hidden", p.id!==pageId);
+    });
+    document.querySelectorAll("#nav button").forEach(b=>{
+      b.classList.toggle("active", b.dataset.page === pageId);
+    });
+    const p = pages.find(x=>x.id===pageId);
+    document.getElementById("pageTitle").textContent = p?.title ?? "";
+    document.getElementById("pageDesc").textContent = p?.desc ?? "";
+    // refresh that page
+    renderAll();
+  }
+
+  document.getElementById("nav").addEventListener("click", (e)=>{
+    const btn = e.target.closest("button[data-page]");
+    if (!btn) return;
+    setPage(btn.dataset.page);
+  });
+
+  /***********************
+   * Modal / Drawer
+   ***********************/
+  const modalOverlay = document.getElementById("modalOverlay");
+  function openModal(){
+    modalOverlay.style.display = "flex";
+    // defaults
+    const d = definitions.find(x=>x.enabled) || definitions[0];
+    const defaultParams = JSON.stringify(Object.fromEntries(Object.entries(d.paramSchema||{}).map(([k,v])=>[k, v.default])), null, 2);
+    document.getElementById("mParams").value = defaultParams || `{"period":14}`;
+  }
+  function closeModal(){ modalOverlay.style.display = "none"; }
+  document.getElementById("btnNewSub").onclick = openModal;
+  document.getElementById("btnModalClose").onclick = closeModal;
+  document.getElementById("btnModalCancel").onclick = closeModal;
+  modalOverlay.addEventListener("click",(e)=>{ if (e.target===modalOverlay) closeModal(); });
+
+  const drawerOverlay = document.getElementById("drawerOverlay");
+  const drawer = document.getElementById("drawer");
+  function openDrawer(title, html){
+    document.getElementById("drawerTitle").textContent = title;
+    document.getElementById("drawerBody").innerHTML = html;
+    drawerOverlay.style.display = "block";
+    drawer.classList.add("open");
+  }
+  function closeDrawer(){
+    drawer.classList.remove("open");
+    drawerOverlay.style.display = "none";
+  }
+  document.getElementById("btnDrawerClose").onclick = closeDrawer;
+  drawerOverlay.onclick = closeDrawer;
+
+  /***********************
+   * Populate modal selects
+   ***********************/
+  function refreshModalOptions(){
+    const sSymbol = document.getElementById("mSymbol");
+    sSymbol.innerHTML = tradingPairs.map(p=>`<option value="${p.tradingPairId}">${p.symbolOnExchange}</option>`).join("");
+    const sInd = document.getElementById("mIndicator");
+    sInd.innerHTML = definitions.filter(d=>d.enabled).map(d=>`<option value="${d.id}">${d.code}@${d.version}</option>`).join("");
+    sInd.onchange = ()=>{
+      const def = definitions.find(x=>String(x.id)===sInd.value);
+      const defaultParams = JSON.stringify(Object.fromEntries(Object.entries(def.paramSchema||{}).map(([k,v])=>[k, v.default])), null, 2);
+      document.getElementById("mParams").value = defaultParams || "{}";
+    };
+  }
+
+  /***********************
+   * Create subscription
+   ***********************/
+  document.getElementById("btnModalCreate").onclick = ()=>{
+    const userId = parseInt(document.getElementById("mUser").value || "0",10);
+    const tpId = parseInt(document.getElementById("mSymbol").value,10);
+    const tf = document.getElementById("mTf").value;
+    const defId = parseInt(document.getElementById("mIndicator").value,10);
+    const paramsStr = document.getElementById("mParams").value.trim();
+    const enabled = document.getElementById("mEnabled").checked;
+
+    if (!userId || !tpId) return toast("创建失败","userId / tradingPair 不能为空");
+    if (!timeframes.includes(tf)) return toast("创建失败","timeframe 不支持");
+    const params = safeJsonParse(paramsStr);
+    if (!params) return toast("创建失败","params JSON 不合法");
+
+    const tp = tradingPairs.find(x=>x.tradingPairId===tpId);
+    const def = definitions.find(x=>x.id===defId);
+    if (!tp || !def) return toast("创建失败","交易对/指标不存在");
+
+    // uniqueness (prototype): userId+pair+tf+code+ver
+    const exists = subscriptions.find(s=>
+      s.userId===userId && s.tradingPairId===tpId && s.timeframe===tf &&
+      s.indicatorCode===def.code && s.indicatorVersion===def.version
+    );
+    if (exists){
+      toast("已存在相同订阅","原型中按 (user,pair,tf,code,ver) 视为唯一");
+      closeModal();
+      setPage("subscriptions");
+      return;
+    }
+
+    const sub = {
+      id: Math.floor(1000 + Math.random()*9000),
+      userId,
+      tradingPairId: tpId,
+      symbolOnExchange: tp.symbolOnExchange,
+      symbol: tp.symbol,
+      marketType: tp.marketType,
+      timeframe: tf,
+      indicatorCode: def.code,
+      indicatorVersion: def.version,
+      params,
+      enabled,
+      createdAt: isoNow(),
+    };
+    subscriptions.unshift(sub);
+    toast("订阅已创建", `等待下一根 ${tf} bar close 后产出指标值（可点“模拟 BarClosed”）`);
+    closeModal();
+    setPage("subscriptions");
+    renderAll();
+  };
+
+  /***********************
+   * Simulation: BarClosed -> calc -> value
+   ***********************/
+  document.getElementById("btnSimulate").onclick = ()=> simulateBarClosed();
+
+  document.getElementById("btnAutoSim").onclick = ()=>{
+    autoSim = !autoSim;
+    document.getElementById("btnAutoSim").textContent = `⏱️ 自动模拟：${autoSim ? "开" : "关"}`;
+    if (autoSim){
+      autoTimer = setInterval(()=> simulateBarClosed(), 3500);
+      toast("自动模拟已开启","每 3.5 秒触发一次聚合周期 BarClosedEvent（示意）");
+    } else {
+      if (autoTimer) clearInterval(autoTimer);
+      autoTimer = null;
+      toast("自动模拟已关闭");
+    }
+  };
+
+  function pickTfForSimulation(){
+    // choose a timeframe that has at least one enabled subscription, otherwise random
+    const enabledSubs = subscriptions.filter(s=>s.enabled);
+    if (enabledSubs.length){
+      const s = enabledSubs[Math.floor(Math.random()*enabledSubs.length)];
+      return s.timeframe;
+    }
+    return timeframes[Math.floor(Math.random()*timeframes.length)];
+  }
+
+  function simulateBarClosed(){
+    const tf = pickTfForSimulation();
+    const closeTime = utcCloseTime(tf);
+    const tp = tradingPairs[Math.floor(Math.random()*tradingPairs.length)];
+    const open = +(Math.random()*1000 + 1000).toFixed(2);
+    const high = +(open + Math.random()*50).toFixed(2);
+    const low  = +(open - Math.random()*50).toFixed(2);
+    const close= +(low + Math.random()*(high-low)).toFixed(2);
+    const volume= +(Math.random()*100).toFixed(4);
+
+    const sourceCount = tfToMinutes(tf); // pretend complete
+    lastBarClosed = {
+      tradingPairId: tp.tradingPairId,
+      symbol: tp.symbolOnExchange,
+      timeframe: tf,
+      barCloseTime: closeTime,
+      open, high, low, close, volume,
+      sourceCount,
+      eventTime: isoNow()
+    };
+
+    // compute for matching subscriptions (same pair + timeframe)
+    const targets = subscriptions.filter(s=>s.enabled && s.tradingPairId===tp.tradingPairId && s.timeframe===tf);
+    if (!targets.length){
+      toast("BarClosedEvent 触发", `(${tp.symbolOnExchange} ${tf}) 但没有订阅，未计算`);
+      renderAll();
+      return;
+    }
+
+    targets.forEach(sub=>{
+      const def = definitions.find(d=>d.code===sub.indicatorCode && d.version===sub.indicatorVersion) || definitions[0];
+
+      // fingerprint (prototype)
+      const sortedParams = Object.keys(sub.params).sort().map(k=>`${k}=${sub.params[k]}`).join(",");
+      const fpInput = `${sub.indicatorCode}:${sub.indicatorVersion}:${sortedParams}:${def.engine}`;
+      const fingerprint = hashLike(fpInput);
+
+      // compute dummy value
+      const cost = Math.floor(10 + Math.random()*140);
+      let status = "SUCCESS";
+      let errorMsg = "";
+
+      // inject occasional failures/conflicts for demo
+      const r = Math.random();
+      if (r < 0.08){
+        status = "FAILED";
+        errorMsg = "ENGINE_ERROR: simulated exception (ta4j compute failed)";
+      } else if (r < 0.14){
+        status = "CONFLICT";
+        errorMsg = "CONFLICT: fingerprint mismatch (simulated)";
+      }
+
+      // data quality
+      let dataQuality = "OK";
+      // simulate partial data sometimes
+      if (Math.random() < 0.06){
+        dataQuality = "PARTIAL";
+      }
+      if (status === "FAILED") dataQuality = "INVALID";
+
+      // value write (idempotent-ish)
+      const barTime = closeTime; // close time semantics
+      const key = `${sub.userId}|${sub.tradingPairId}|${tf}|${sub.indicatorCode}|${sub.indicatorVersion}|${barTime}`;
+
+      const existing = indicatorValues.get(key);
+
+      if (existing){
+        // if already exists, treat as idempotent unless conflict
+        // in real system: compare fingerprint; here we demonstrate both
+        if (status === "CONFLICT"){
+          // do not overwrite
+        } else {
+          // idempotent - keep existing
+          status = (status === "FAILED") ? "FAILED" : "SUCCESS";
+          if (!errorMsg) errorMsg = "IDEMPOTENT: duplicate calculation (prototype)";
+        }
+      } else {
+        if (status !== "FAILED" && status !== "CONFLICT"){
+          // write value
+          const v = computeIndicatorDummy(sub.indicatorCode, sub.params);
+          const extra = computeExtraDummy(sub.indicatorCode, v, sub.params);
+          indicatorValues.set(key,{
+            id: Math.floor(100000 + Math.random()*900000),
+            userId: sub.userId,
+            tradingPairId: sub.tradingPairId,
+            symbol: sub.symbolOnExchange,
+            timeframe: tf,
+            barTime,
+            indicatorCode: sub.indicatorCode,
+            indicatorVersion: sub.indicatorVersion,
+            value: v,
+            extraValues: extra,
+            dataQuality,
+            calcEngine: def.engine,
+            calcFingerprint: fingerprint,
+            calcCostMs: cost,
+            source: "OKX",
+            createdAt: isoNow()
+          });
+        }
+      }
+
+      // log always
+      calcLogs.unshift({
+        id: Math.floor(100000 + Math.random()*900000),
+        userId: sub.userId,
+        tradingPairId: sub.tradingPairId,
+        symbol: sub.symbolOnExchange,
+        timeframe: tf,
+        barTime,
+        indicatorCode: sub.indicatorCode,
+        indicatorVersion: sub.indicatorVersion,
+        calcStatus: status,
+        calcFingerprint: fingerprint,
+        costMs: cost,
+        errorMsg,
+        createdAt: isoNow(),
+        params: sub.params,
+        engine: def.engine
+      });
+
+      // keep logs bounded
+      if (calcLogs.length > 500) calcLogs = calcLogs.slice(0,500);
+    });
+
+    toast("BarClosedEvent 已发布", `${tp.symbolOnExchange} / ${tf} / ${closeTime}（触发 ${targets.length} 个订阅计算）`);
+    renderAll();
+  }
+
+  function computeIndicatorDummy(code, params){
+    if (code === "RSI"){
+      const p = Number(params.period ?? 14);
+      return +((30 + Math.random()*40) + (14 - Math.min(50,p))/10).toFixed(4);
+    }
+    if (code === "MACD"){
+      return +((Math.random()*2 - 1)).toFixed(6);
+    }
+    if (code === "BOLL"){
+      return +((Math.random()*1000 + 1000)).toFixed(4);
+    }
+    return +((Math.random()*100)).toFixed(4);
+  }
+
+  function computeExtraDummy(code, base, params){
+    if (code === "MACD"){
+      const macd = base;
+      const signal = +(macd*0.6).toFixed(6);
+      const hist = +(macd - signal).toFixed(6);
+      return { macd, signal, histogram: hist };
+    }
+    if (code === "BOLL"){
+      const k = Number(params.k ?? 2);
+      const middle = base;
+      const upper = +(middle * (1 + 0.01*k)).toFixed(4);
+      const lower = +(middle * (1 - 0.01*k)).toFixed(4);
+      return { upper, middle, lower };
+    }
+    return null;
+  }
+
+  /***********************
+   * Renderers
+   ***********************/
+  function renderAll(){
+    renderDashboard();
+    renderDefinitions();
+    renderSubscriptions();
+    renderValues();
+    renderLogs();
+  }
+
+  function renderDashboard(){
+    // metrics (based on last 200 logs)
+    const recent = calcLogs.slice(0,200);
+    const total = recent.length;
+    const success = recent.filter(x=>x.calcStatus==="SUCCESS").length;
+    const failed = recent.filter(x=>x.calcStatus==="FAILED").length;
+    const conflict = recent.filter(x=>x.calcStatus==="CONFLICT").length;
+    const avgCost = total ? Math.round(recent.reduce((a,b)=>a+(b.costMs||0),0)/total) : null;
+
+    document.getElementById("mCalcCount").textContent = calcLogs.length;
+    document.getElementById("mSuccessRate").textContent = total ? Math.round(success/total*100)+"%" : "0%";
+    document.getElementById("mFailed").textContent = failed;
+    document.getElementById("mConflict").textContent = conflict;
+    document.getElementById("mAvgCost").textContent = avgCost==null ? "-" : String(avgCost);
+    document.getElementById("mLastBar").textContent = lastBarClosed
+      ? `${lastBarClosed.symbol} / ${lastBarClosed.timeframe} / ${lastBarClosed.barCloseTime}`
+      : "-";
+
+    // table (latest 20, with filters)
+    const fStatus = document.getElementById("fDashStatus").value;
+    const fSymbol = (document.getElementById("fDashSymbol").value||"").toLowerCase().trim();
+    let rows = calcLogs.slice(0,80);
+    if (fStatus) rows = rows.filter(x=>x.calcStatus===fStatus);
+    if (fSymbol) rows = rows.filter(x=>x.symbol.toLowerCase().includes(fSymbol));
+
+    const tbody = document.getElementById("dashLogTbody");
+    tbody.innerHTML = rows.slice(0,20).map(l=>`
+      <tr data-logid="${l.id}">
+        <td class="mono">${escapeHtml(l.barTime)}</td>
+        <td>${l.userId}</td>
+        <td>${escapeHtml(l.symbol)}</td>
+        <td><span class="chip">${l.timeframe}</span></td>
+        <td><span class="chip">${l.indicatorCode}@${l.indicatorVersion}</span></td>
+        <td>${statusBadge(l.calcStatus)}</td>
+        <td class="mono">${l.costMs}ms</td>
+        <td class="muted">${escapeHtml((l.errorMsg||"").slice(0,60))}${(l.errorMsg||"").length>60?"…":""}</td>
+      </tr>
+    `).join("");
+
+    tbody.querySelectorAll("tr").forEach(tr=>{
+      tr.onclick = ()=>{
+        const id = parseInt(tr.dataset.logid,10);
+        const log = calcLogs.find(x=>x.id===id);
+        openLogDrawer(log);
+      };
+    });
+  }
+
+  function statusBadge(status){
+    if (status==="SUCCESS") return `<span class="status success"><span class="dot"></span>SUCCESS</span>`;
+    if (status==="FAILED") return `<span class="status failed"><span class="dot"></span>FAILED</span>`;
+    if (status==="CONFLICT") return `<span class="status conflict"><span class="dot"></span>CONFLICT</span>`;
+    return `<span class="status"><span class="dot"></span>${escapeHtml(status)}</span>`;
+  }
+
+  document.getElementById("btnDashRefresh").onclick = renderDashboard;
+  document.getElementById("fDashStatus").onchange = renderDashboard;
+  document.getElementById("fDashSymbol").oninput = ()=>{ /* debounce-ish */ setTimeout(renderDashboard,120); };
+
+  function renderDefinitions(){
+    const kw = (document.getElementById("fDefKeyword").value||"").toLowerCase().trim();
+    const cat = document.getElementById("fDefCategory").value;
+    const eng = document.getElementById("fDefEngine").value;
+
+    let rows = definitions.slice();
+    if (kw) rows = rows.filter(d => (d.code+" "+d.name).toLowerCase().includes(kw));
+    if (cat) rows = rows.filter(d => d.category===cat);
+    if (eng) rows = rows.filter(d => d.engine===eng);
+
+    const tbody = document.getElementById("defTbody");
+    tbody.innerHTML = rows.map(d=>`
+      <tr data-defid="${d.id}">
+        <td class="mono">${d.code}</td>
+        <td>${escapeHtml(d.name)}</td>
+        <td><span class="chip">${d.version}</span></td>
+        <td><span class="chip">${d.category}</span></td>
+        <td><span class="chip">${d.engine}</span></td>
+        <td class="mono">${d.minRequiredBars}</td>
+        <td>${d.supportedTF.map(x=>`<span class="chip">${x}</span>`).join(" ")}</td>
+        <td><button class="btn" style="padding:6px 10px" data-action="schema">查看</button></td>
+        <td>${d.enabled ? `<span class="chip" style="color:var(--good)">enabled</span>` : `<span class="chip" style="color:var(--bad)">disabled</span>`}</td>
+      </tr>
+    `).join("");
+
+    tbody.querySelectorAll("button[data-action='schema']").forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        const tr = btn.closest("tr");
+        const def = definitions.find(x=>x.id===parseInt(tr.dataset.defid,10));
+        openDrawer(`${def.code}@${def.version} · Schema`, `
+          ${drawerRow("indicator", `<span class="chip">${def.code}@${def.version}</span>`)}
+          ${drawerRow("category / engine", `<span class="chip">${def.category}</span> <span class="chip">${def.engine}</span>`)}
+          ${drawerRow("min_required_bars", `<span class="mono">${def.minRequiredBars}</span>`)}
+          ${drawerRow("supported_timeframes", def.supportedTF.map(x=>`<span class="chip">${x}</span>`).join(" "))}
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin:14px 0">
+          <div class="muted" style="font-size:12px; margin-bottom:6px">param_schema</div>
+          <pre class="mono" style="white-space:pre-wrap; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.10); padding:10px; border-radius:12px">${escapeHtml(JSON.stringify(def.paramSchema,null,2))}</pre>
+          <div class="muted" style="font-size:12px; margin:10px 0 6px">return_schema</div>
+          <pre class="mono" style="white-space:pre-wrap; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.10); padding:10px; border-radius:12px">${escapeHtml(JSON.stringify(def.returnSchema,null,2))}</pre>
+        `);
+      };
+    });
+  }
+
+  document.getElementById("btnDefRefresh").onclick = renderDefinitions;
+  document.getElementById("fDefKeyword").oninput = ()=> setTimeout(renderDefinitions,120);
+  document.getElementById("fDefCategory").onchange = renderDefinitions;
+  document.getElementById("fDefEngine").onchange = renderDefinitions;
+
+  function renderSubscriptions(){
+    const fu = (document.getElementById("fSubUser").value||"").trim();
+    const fs = (document.getElementById("fSubSymbol").value||"").toLowerCase().trim();
+    const ft = document.getElementById("fSubTf").value;
+    const fe = document.getElementById("fSubEnabled").value;
+
+    let rows = subscriptions.slice();
+    if (fu) rows = rows.filter(s=>String(s.userId)===fu);
+    if (fs) rows = rows.filter(s=>s.symbolOnExchange.toLowerCase().includes(fs));
+    if (ft) rows = rows.filter(s=>s.timeframe===ft);
+    if (fe) rows = rows.filter(s=>String(Number(!!s.enabled))===fe);
+
+    const tbody = document.getElementById("subTbody");
+    tbody.innerHTML = rows.map(s=>`
+      <tr data-subid="${s.id}">
+        <td>${s.userId}</td>
+        <td>${escapeHtml(s.symbolOnExchange)}</td>
+        <td><span class="chip">${s.marketType}</span></td>
+        <td><span class="chip">${s.timeframe}</span></td>
+        <td><span class="chip">${s.indicatorCode}@${s.indicatorVersion}</span></td>
+        <td class="mono">${escapeHtml(JSON.stringify(s.params))}</td>
+        <td>${s.enabled ? `<span class="chip" style="color:var(--good)">enabled</span>` : `<span class="chip" style="color:var(--muted)">disabled</span>`}</td>
+        <td class="mono">${escapeHtml(s.createdAt)}</td>
+        <td class="right">
+          <div class="row-actions">
+            <button class="btn" style="padding:6px 10px" data-action="view">详情</button>
+            <button class="btn warn" style="padding:6px 10px" data-action="toggle">${s.enabled ? "停用" : "启用"}</button>
+            <button class="btn danger" style="padding:6px 10px" data-action="delete">删除</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+
+    tbody.querySelectorAll("button").forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        const tr = btn.closest("tr");
+        const id = parseInt(tr.dataset.subid,10);
+        const sub = subscriptions.find(x=>x.id===id);
+        const action = btn.dataset.action;
+        if (action==="view") return openSubDrawer(sub);
+        if (action==="toggle"){
+          sub.enabled = !sub.enabled;
+          toast("订阅状态已更新", `${sub.symbolOnExchange} ${sub.timeframe} ${sub.indicatorCode}@${sub.indicatorVersion} → ${sub.enabled ? "enabled":"disabled"}`);
+          renderAll();
+        }
+        if (action==="delete"){
+          subscriptions = subscriptions.filter(x=>x.id!==id);
+          toast("订阅已删除", `id=${id}`);
+          renderAll();
+        }
+      };
+    });
+  }
+
+  document.getElementById("btnSubRefresh").onclick = renderSubscriptions;
+  ["fSubUser","fSubSymbol"].forEach(id=>{
+    document.getElementById(id).oninput = ()=> setTimeout(renderSubscriptions,120);
+  });
+  ["fSubTf","fSubEnabled"].forEach(id=>{
+    document.getElementById(id).onchange = renderSubscriptions;
+  });
+
+  function renderValues(){
+    const fu = (document.getElementById("fValUser").value||"").trim();
+    const fs = (document.getElementById("fValSymbol").value||"").toLowerCase().trim();
+    const ft = document.getElementById("fValTf").value;
+    const latestOnly = document.getElementById("fValLatest").value === "1";
+
+    // collect values
+    let values = Array.from(indicatorValues.values());
+
+    if (fu) values = values.filter(v=>String(v.userId)===fu);
+    if (fs) values = values.filter(v=>v.symbol.toLowerCase().includes(fs));
+    if (ft) values = values.filter(v=>v.timeframe===ft);
+
+    // latest-only group by (user,pair,tf,code,ver)
+    if (latestOnly){
+      const map = new Map();
+      for (const v of values){
+        const k = `${v.userId}|${v.tradingPairId}|${v.timeframe}|${v.indicatorCode}|${v.indicatorVersion}`;
+        // compare by barTime string (works for ISO-like)
+        const cur = map.get(k);
+        if (!cur || v.barTime > cur.barTime) map.set(k, v);
+      }
+      values = Array.from(map.values());
+    } else {
+      values = values.sort((a,b)=> b.createdAt.localeCompare(a.createdAt)).slice(0,200);
+    }
+
+    // sort by barTime desc
+    values.sort((a,b)=> (b.barTime||"").localeCompare(a.barTime||""));
+
+    const tbody = document.getElementById("valTbody");
+    tbody.innerHTML = values.map(v=>`
+      <tr data-valkey="${escapeHtml(`${v.userId}|${v.tradingPairId}|${v.timeframe}|${v.indicatorCode}|${v.indicatorVersion}|${v.barTime}`)}">
+        <td class="mono">${escapeHtml(v.barTime)}</td>
+        <td>${v.userId}</td>
+        <td>${escapeHtml(v.symbol)}</td>
+        <td><span class="chip">${v.timeframe}</span></td>
+        <td><span class="chip">${v.indicatorCode}@${v.indicatorVersion}</span></td>
+        <td class="mono">${v.value ?? "-"}</td>
+        <td class="mono muted">${v.extraValues ? escapeHtml(JSON.stringify(v.extraValues)) : "-"}</td>
+        <td>${qualityBadge(v.dataQuality)}</td>
+        <td class="mono muted">${escapeHtml(v.calcFingerprint?.slice(0,16) || "-")}…</td>
+        <td class="mono">${escapeHtml(v.createdAt)}</td>
+      </tr>
+    `).join("");
+
+    tbody.querySelectorAll("tr").forEach(tr=>{
+      tr.onclick = ()=>{
+        const key = tr.dataset.valkey;
+        const [userId, tradingPairId, tf, code, ver, barTime] = key.split("|");
+        const fullKey = `${userId}|${tradingPairId}|${tf}|${code}|${ver}|${barTime}`;
+        const v = indicatorValues.get(fullKey);
+        openValueDrawer(v);
+      };
+    });
+  }
+
+  function qualityBadge(q){
+    if (q==="OK") return `<span class="chip" style="color:var(--good)">OK</span>`;
+    if (q==="PARTIAL") return `<span class="chip" style="color:var(--warn)">PARTIAL</span>`;
+    if (q==="INVALID") return `<span class="chip" style="color:var(--bad)">INVALID</span>`;
+    return `<span class="chip">${escapeHtml(q||"-")}</span>`;
+  }
+
+  document.getElementById("btnValRefresh").onclick = renderValues;
+  ["fValUser","fValSymbol"].forEach(id=>{
+    document.getElementById(id).oninput = ()=> setTimeout(renderValues,120);
+  });
+  ["fValTf","fValLatest"].forEach(id=>{
+    document.getElementById(id).onchange = renderValues;
+  });
+
+  function renderLogs(){
+    const fu = (document.getElementById("fLogUser").value||"").trim();
+    const fs = (document.getElementById("fLogSymbol").value||"").toLowerCase().trim();
+    const ft = document.getElementById("fLogTf").value;
+    const st = document.getElementById("fLogStatus").value;
+
+    let rows = calcLogs.slice();
+    if (fu) rows = rows.filter(l=>String(l.userId)===fu);
+    if (fs) rows = rows.filter(l=>l.symbol.toLowerCase().includes(fs));
+    if (ft) rows = rows.filter(l=>l.timeframe===ft);
+    if (st) rows = rows.filter(l=>l.calcStatus===st);
+
+    rows = rows.slice(0,200);
+
+    const tbody = document.getElementById("logTbody");
+    tbody.innerHTML = rows.map(l=>`
+      <tr data-logid="${l.id}">
+        <td class="mono">${escapeHtml(l.createdAt)}</td>
+        <td class="mono">${escapeHtml(l.barTime)}</td>
+        <td>${l.userId}</td>
+        <td>${escapeHtml(l.symbol)}</td>
+        <td><span class="chip">${l.timeframe}</span></td>
+        <td><span class="chip">${l.indicatorCode}@${l.indicatorVersion}</span></td>
+        <td>${statusBadge(l.calcStatus)}</td>
+        <td class="mono">${l.costMs}ms</td>
+        <td class="mono muted">${escapeHtml(l.calcFingerprint.slice(0,18))}…</td>
+        <td class="muted">${escapeHtml((l.errorMsg||"").slice(0,70))}${(l.errorMsg||"").length>70?"…":""}</td>
+      </tr>
+    `).join("");
+
+    tbody.querySelectorAll("tr").forEach(tr=>{
+      tr.onclick = ()=>{
+        const id = parseInt(tr.dataset.logid,10);
+        const log = calcLogs.find(x=>x.id===id);
+        openLogDrawer(log);
+      };
+    });
+  }
+
+  document.getElementById("btnLogRefresh").onclick = renderLogs;
+  ["fLogUser","fLogSymbol"].forEach(id=>{
+    document.getElementById(id).oninput = ()=> setTimeout(renderLogs,120);
+  });
+  ["fLogTf","fLogStatus"].forEach(id=>{
+    document.getElementById(id).onchange = renderLogs;
+  });
+
+  /***********************
+   * Drawer Content
+   ***********************/
+  function drawerRow(k,v){
+    return `<div class="kvrow"><div class="k">${escapeHtml(k)}</div><div class="v">${v}</div></div>`;
+  }
+
+  function openSubDrawer(sub){
+    if (!sub) return;
+    openDrawer("订阅详情", `
+      ${drawerRow("subscription_id", `<span class="mono">${sub.id}</span>`)}
+      ${drawerRow("userId", `<span class="chip">${sub.userId}</span>`)}
+      ${drawerRow("pair", `<span class="chip">${escapeHtml(sub.symbolOnExchange)}</span> <span class="chip">${sub.marketType}</span>`)}
+      ${drawerRow("timeframe", `<span class="chip">${sub.timeframe}</span>`)}
+      ${drawerRow("indicator", `<span class="chip">${sub.indicatorCode}@${sub.indicatorVersion}</span>`)}
+      ${drawerRow("enabled", sub.enabled ? `<span class="chip" style="color:var(--good)">true</span>` : `<span class="chip">false</span>`)}
+      ${drawerRow("created_at", `<span class="mono">${escapeHtml(sub.createdAt)}</span>`)}
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin:14px 0">
+      <div class="muted" style="font-size:12px; margin-bottom:6px">params (snapshot)</div>
+      <pre class="mono" style="white-space:pre-wrap; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.10); padding:10px; border-radius:12px">${escapeHtml(JSON.stringify(sub.params,null,2))}</pre>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
+        <button class="btn good" onclick="window.__gotoValues(${sub.userId}, '${sub.symbolOnExchange}', '${sub.timeframe}')">去看最新值</button>
+        <button class="btn" onclick="window.__gotoLogs(${sub.userId}, '${sub.symbolOnExchange}', '${sub.timeframe}')">去看计算日志</button>
+      </div>
+    `);
+  }
+
+  function openValueDrawer(v){
+    if (!v) return;
+    openDrawer("指标值详情", `
+      ${drawerRow("id", `<span class="mono">${v.id}</span>`)}
+      ${drawerRow("userId", `<span class="chip">${v.userId}</span>`)}
+      ${drawerRow("symbol", `<span class="chip">${escapeHtml(v.symbol)}</span>`)}
+      ${drawerRow("timeframe", `<span class="chip">${v.timeframe}</span>`)}
+      ${drawerRow("bar_time (close, UTC)", `<span class="mono">${escapeHtml(v.barTime)}</span>`)}
+      ${drawerRow("indicator", `<span class="chip">${v.indicatorCode}@${v.indicatorVersion}</span>`)}
+      ${drawerRow("value", `<span class="mono">${v.value ?? "-"}</span>`)}
+      ${drawerRow("extra_values", v.extraValues ? `<span class="mono">${escapeHtml(JSON.stringify(v.extraValues))}</span>` : `<span class="muted">-</span>`)}
+      ${drawerRow("data_quality", qualityBadge(v.dataQuality))}
+      ${drawerRow("calc_engine", `<span class="chip">${escapeHtml(v.calcEngine)}</span>`)}
+      ${drawerRow("calc_fingerprint", `<span class="mono">${escapeHtml(v.calcFingerprint)}</span>`)}
+      ${drawerRow("calc_cost_ms", `<span class="mono">${v.calcCostMs}ms</span>`)}
+      ${drawerRow("created_at", `<span class="mono">${escapeHtml(v.createdAt)}</span>`)}
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin:14px 0">
+      <button class="btn" onclick="window.__findLog('${escapeHtml(v.userId)}','${escapeHtml(v.symbol)}','${escapeHtml(v.timeframe)}','${escapeHtml(v.indicatorCode)}','${escapeHtml(v.indicatorVersion)}','${escapeHtml(v.barTime)}')">查找对应 calc_log</button>
+    `);
+  }
+
+  function openLogDrawer(l){
+    if (!l) return;
+    // attempt to locate value
+    const key = `${l.userId}|${l.tradingPairId}|${l.timeframe}|${l.indicatorCode}|${l.indicatorVersion}|${l.barTime}`;
+    const v = indicatorValues.get(key);
+
+    openDrawer("计算日志详情", `
+      ${drawerRow("log_id", `<span class="mono">${l.id}</span>`)}
+      ${drawerRow("created_at", `<span class="mono">${escapeHtml(l.createdAt)}</span>`)}
+      ${drawerRow("bar_time (close, UTC)", `<span class="mono">${escapeHtml(l.barTime)}</span>`)}
+      ${drawerRow("userId", `<span class="chip">${l.userId}</span>`)}
+      ${drawerRow("symbol", `<span class="chip">${escapeHtml(l.symbol)}</span>`)}
+      ${drawerRow("timeframe", `<span class="chip">${l.timeframe}</span>`)}
+      ${drawerRow("indicator", `<span class="chip">${l.indicatorCode}@${l.indicatorVersion}</span>`)}
+      ${drawerRow("status", statusBadge(l.calcStatus))}
+      ${drawerRow("cost_ms", `<span class="mono">${l.costMs}ms</span>`)}
+      ${drawerRow("fingerprint", `<span class="mono">${escapeHtml(l.calcFingerprint)}</span>`)}
+      ${drawerRow("engine", `<span class="chip">${escapeHtml(l.engine)}</span>`)}
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin:14px 0">
+      <div class="muted" style="font-size:12px; margin-bottom:6px">params (snapshot)</div>
+      <pre class="mono" style="white-space:pre-wrap; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.10); padding:10px; border-radius:12px">${escapeHtml(JSON.stringify(l.params,null,2))}</pre>
+      <div class="muted" style="font-size:12px; margin:10px 0 6px">error_msg</div>
+      <pre class="mono" style="white-space:pre-wrap; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.10); padding:10px; border-radius:12px">${escapeHtml(l.errorMsg || "-")}</pre>
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin:14px 0">
+      <div class="muted" style="font-size:12px; margin-bottom:8px">关联 indicator_value（同 key）</div>
+      ${
+        v ? `
+          ${drawerRow("value_id", `<span class="mono">${v.id}</span>`)}
+          ${drawerRow("data_quality", qualityBadge(v.dataQuality))}
+          ${drawerRow("value", `<span class="mono">${v.value ?? "-"}</span>`)}
+          <button class="btn good" onclick="window.__gotoValues(${l.userId}, '${escapeHtml(l.symbol)}', '${escapeHtml(l.timeframe)}')">在结果页查看</button>
+        ` : `
+          <div class="muted">未找到对应 indicator_value（可能 FAILED/CONFLICT，或尚未落库）</div>
+        `
+      }
+    `);
+  }
+
+  // helper actions callable from drawer html
+  window.__gotoValues = (userId, symbol, tf)=>{
+    // set filters then go
+    document.getElementById("fValUser").value = String(userId);
+    document.getElementById("fValSymbol").value = String(symbol);
+    document.getElementById("fValTf").value = String(tf);
+    document.getElementById("fValLatest").value = "1";
+    setPage("values");
+    closeDrawer();
+  };
+
+  window.__gotoLogs = (userId, symbol, tf)=>{
+    document.getElementById("fLogUser").value = String(userId);
+    document.getElementById("fLogSymbol").value = String(symbol);
+    document.getElementById("fLogTf").value = String(tf);
+    document.getElementById("fLogStatus").value = "";
+    setPage("logs");
+    closeDrawer();
+  };
+
+  window.__findLog = (userId, symbol, tf, code, ver, barTime)=>{
+    // jump to logs page and try to focus
+    document.getElementById("fLogUser").value = String(userId);
+    document.getElementById("fLogSymbol").value = String(symbol);
+    document.getElementById("fLogTf").value = String(tf);
+    document.getElementById("fLogStatus").value = "";
+    setPage("logs");
+    closeDrawer();
+    toast("已跳转到计算日志", "可继续筛选 indicator 或查看最新日志");
+  };
+
+  /***********************
+   * Init
+   ***********************/
+  refreshModalOptions();
+  document.getElementById("btnDefRefresh").click(); // initial render
+  renderAll();
+  setPage("dashboard");
+</script>
+</body>
+</html>

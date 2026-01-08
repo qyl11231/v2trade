@@ -89,9 +89,12 @@ public class ChannelRouter {
             // 路由到对应的 Channel
             MarketChannel channel = channels.get(channelType);
             if (channel == null) {
-                log.warn("未找到对应的 Channel: channelType={}, message={}", channelType, rawMessage);
+                log.warn("未找到对应的 Channel: channelType={}, 已注册的Channel类型={}, message={}", 
+                        channelType, channels.keySet(), rawMessage.length() > 200 ? rawMessage.substring(0, 200) + "..." : rawMessage);
                 return;
             }
+            
+            log.debug("路由消息到Channel: channelType={}", channelType);
 
             // 调用 Channel 的 onMessage（异常隔离）
             try {
@@ -162,8 +165,10 @@ public class ChannelRouter {
         // 根据 channel 前缀判断频道类型
         if (channel.startsWith("candle")) {
             return MarketChannel.CHANNEL_TYPE_KLINE;
-        } else if ("ticker".equals(channel)) {
-            return MarketChannel.CHANNEL_TYPE_TICKER;
+        } else if ("ticker".equals(channel) || "tickers".equals(channel)) {
+            // ticker: 现货频道（/ws/v5/public端点）
+            // tickers: 合约频道（/ws/v5/business端点）
+            return MarketChannel.CHANNEL_TYPE_PRICE;
         } else if ("trades".equals(channel)) {
             return MarketChannel.CHANNEL_TYPE_TRADE;
         } else if (channel.startsWith("books")) {

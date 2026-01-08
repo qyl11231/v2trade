@@ -1,9 +1,9 @@
 package com.qyl.v2trade.market.aggregation.core.impl;
 
-import com.qyl.v2trade.business.model.entity.MarketSubscriptionConfig;
-import com.qyl.v2trade.business.model.entity.TradingPair;
-import com.qyl.v2trade.business.service.MarketSubscriptionConfigService;
-import com.qyl.v2trade.business.service.TradingPairService;
+import com.qyl.v2trade.business.system.model.entity.MarketSubscriptionConfig;
+import com.qyl.v2trade.business.system.model.entity.TradingPair;
+import com.qyl.v2trade.business.system.service.MarketSubscriptionConfigService;
+import com.qyl.v2trade.business.system.service.TradingPairService;
 import com.qyl.v2trade.market.aggregation.config.AggregationProperties;
 import com.qyl.v2trade.market.aggregation.config.SupportedPeriod;
 import com.qyl.v2trade.market.aggregation.core.AggregationBucket;
@@ -23,7 +23,6 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;

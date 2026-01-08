@@ -11,7 +11,15 @@ import org.springframework.context.annotation.Configuration;
  * 配置业务数据访问层使用MySQL数据源
  */
 @Configuration
-@MapperScan({"com.qyl.v2trade.business.mapper", "com.qyl.v2trade.market.calibration.config.mapper", "com.qyl.v2trade.market.calibration.log.mapper"})
+@MapperScan({
+    "com.qyl.v2trade.business.mapper",
+    "com.qyl.v2trade.business.system.mapper",
+    "com.qyl.v2trade.business.signal.mapper",
+    "com.qyl.v2trade.business.strategy.mapper",
+    "com.qyl.v2trade.market.calibration.config.mapper",
+    "com.qyl.v2trade.market.calibration.log.mapper",
+    "com.qyl.v2trade.indicator.repository.mapper"
+})
 public class MybatisPlusConfig {
 
     /**

@@ -16,6 +16,7 @@ public interface MarketChannel {
      * 频道类型常量
      */
     String CHANNEL_TYPE_KLINE = "KLINE";
+    String CHANNEL_TYPE_PRICE = "PRICE";
     String CHANNEL_TYPE_TICKER = "TICKER";
     String CHANNEL_TYPE_TRADE = "TRADE";
     String CHANNEL_TYPE_ORDERBOOK = "ORDERBOOK";

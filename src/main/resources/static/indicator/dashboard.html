@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>指标仪表盘 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; background: #f5f7fa; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+        .layui-body { background: #f5f7fa; }
+        .stats-box {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: #fff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-left: 4px solid #1a73e8;
+            min-width: 180px;
+            flex: 1;
+        }
+        .stat-card:nth-child(1) { border-left-color: #1a73e8; }
+        .stat-card:nth-child(2) { border-left-color: #5FB878; }
+        .stat-card:nth-child(3) { border-left-color: #FFB800; }
+        .stat-card:nth-child(4) { border-left-color: #1E9FFF; }
+        .stat-card .num {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a73e8;
+            line-height: 1.2;
+            margin-bottom: 8px;
+        }
+        .stat-card:nth-child(1) .num { color: #1a73e8; }
+        .stat-card:nth-child(2) .num { color: #5FB878; }
+        .stat-card:nth-child(3) .num { color: #FFB800; }
+        .stat-card:nth-child(4) .num { color: #1E9FFF; }
+        .stat-card .label {
+            color: #8c8c8c;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item">
+                <a href="javascript:;">
+                    <i class="layui-icon layui-icon-username"></i>
+                    <span id="userName">用户</span>
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item"><a href="/index.html">首页</a></li>
+                <li class="layui-nav-item"><a href="/users.html">用户管理</a></li>
+                <li class="layui-nav-item"><a href="/trading-pair.html">交易对管理</a></li>
+                <li class="layui-nav-item"><a href="/signal-config.html">信号配置</a></li>
+                <li class="layui-nav-item"><a href="/strategy.html">策略管理</a></li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">指标管理</a>
+                    <dl class="layui-nav-child">
+                        <dd class="layui-this"><a href="/indicator/dashboard.html">仪表盘</a></dd>
+                        <dd><a href="/indicator/definitions.html">指标定义</a></dd>
+                        <dd><a href="/indicator/subscriptions.html">指标订阅</a></dd>
+                        <dd><a href="/indicator/values.html">指标结果</a></dd>
+                        <dd><a href="/indicator/logs.html">计算日志</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <!-- 统计卡片 -->
+            <div class="stats-box">
+                <div class="stat-card">
+                    <div class="num" id="totalCount">0</div>
+                    <div class="label">今日计算次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num" id="successRate">0%</div>
+                    <div class="label">成功率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num" id="failCount">0</div>
+                    <div class="label">失败/冲突数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num" id="avgCost">0</div>
+                    <div class="label">平均耗时(ms)</div>
+                </div>
+            </div>
+            
+            <!-- 最近日志 -->
+            <div class="layui-card">
+                <div class="layui-card-header">
+                    <strong>最近20条计算日志</strong>
+                    <button class="layui-btn layui-btn-sm" style="float: right;" onclick="loadDashboard()">刷新</button>
+                </div>
+                <div class="layui-card-body">
+                    <table class="layui-table" lay-filter="logTable" id="logTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'table'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var table = layui.table;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    // 初始化表格
+    var tableIns = table.render({
+        elem: '#logTable',
+        url: '/api/indicator/calc-logs?page=1&size=20',
+        method: 'GET',
+        page: false,
+        cols: [[
+            {field: 'createdAt', title: '创建时间', width: 180, templet: function(d){
+                return d.createdAt ? d.createdAt.replace('T', ' ') + ' UTC' : '-';
+            }},
+            {field: 'barTime', title: 'Bar时间(UTC)', width: 180, templet: function(d){
+                return d.barTime ? d.barTime.replace('T', ' ') + ' UTC' : '-';
+            }},
+            {field: 'userId', title: '用户', width: 80},
+            {field: 'symbol', title: '交易对', width: 150},
+            {field: 'timeframe', title: '周期', width: 80},
+            {field: 'indicatorCode', title: '指标', width: 120, templet: function(d){
+                return d.indicatorCode + '@' + (d.indicatorVersion || 'v1');
+            }},
+            {field: 'status', title: '状态', width: 100, templet: function(d){
+                var cls = 'color: #5FB878;';
+                if (d.status === 'FAILED') cls = 'color: #FF5722;';
+                else if (d.status === 'CONFLICT') cls = 'color: #FFB800;';
+                return '<span style="' + cls + '">● ' + d.status + '</span>';
+            }},
+            {field: 'costMs', title: '耗时(ms)', width: 100},
+            {field: 'errorMsg', title: '错误', width: 200, templet: function(d){
+                if (d.errorMsg) {
+                    return d.errorMsg.length > 40 ? d.errorMsg.substring(0, 40) + '...' : d.errorMsg;
+                }
+                return '-';
+            }}
+        ]],
+        parseData: function(res){
+            return {
+                code: res.code,
+                msg: res.message,
+                count: 0,
+                data: res.data ? res.data.records : []
+            };
+        }
+    });
+    
+    // 加载统计数据
+    function loadStats(){
+        request({
+            url: '/api/indicator/calc-logs?page=1&size=1000',
+            method: 'GET'
+        }).then(function(res){
+            if (res.code === 200 && res.data && res.data.records) {
+                var logs = res.data.records;
+                var total = logs.length;
+                var success = logs.filter(function(l){ return l.status === 'SUCCESS'; }).length;
+                var failed = logs.filter(function(l){ return l.status === 'FAILED' || l.status === 'CONFLICT'; }).length;
+                var successRate = total > 0 ? ((success / total) * 100).toFixed(1) : 0;
+                var totalCost = logs.reduce(function(sum, l){ return sum + (l.costMs || 0); }, 0);
+                var avgCost = total > 0 ? Math.round(totalCost / total) : 0;
+                
+                $('#totalCount').text(total);
+                $('#successRate').text(successRate + '%');
+                $('#failCount').text(failed);
+                $('#avgCost').text(avgCost);
+            }
+        });
+    }
+    
+    // 加载仪表盘
+    window.loadDashboard = function(){
+        loadStats();
+        tableIns.reload({
+            url: '/api/indicator/calc-logs?page=1&size=20'
+        });
+    };
+    
+    // 初始加载
+    loadDashboard();
+});
+</script>
+</body>
+</html>
+

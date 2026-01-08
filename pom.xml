@@ -132,6 +132,25 @@
             <version>4.12.0</version>
         </dependency>
 
+        <!-- Ta4j 技术分析库 -->
+        <dependency>
+            <groupId>org.ta4j</groupId>
+            <artifactId>ta4j-core</artifactId>
+            <version>0.16</version>
+        </dependency>
+
+        <!-- Spring Boot Actuator (用于Metrics) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Micrometer Prometheus (用于Prometheus metrics导出) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

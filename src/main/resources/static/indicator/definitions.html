@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>指标定义 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; background: #f5f7fa; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+        .layui-body { background: #f5f7fa; }
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #e8eaed;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .filter-bar .layui-form { display: flex; align-items: center; gap: 12px; margin: 0; }
+        .filter-bar .layui-form-item { margin-bottom: 0; }
+        .filter-bar .layui-input { width: 200px; height: 36px; }
+        .filter-bar .layui-select { width: 150px; height: 36px; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item">
+                <a href="javascript:;">
+                    <i class="layui-icon layui-icon-username"></i>
+                    <span id="userName">用户</span>
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item"><a href="/index.html">首页</a></li>
+                <li class="layui-nav-item"><a href="/users.html">用户管理</a></li>
+                <li class="layui-nav-item"><a href="/trading-pair.html">交易对管理</a></li>
+                <li class="layui-nav-item"><a href="/signal-config.html">信号配置</a></li>
+                <li class="layui-nav-item"><a href="/strategy.html">策略管理</a></li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">指标管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/indicator/dashboard.html">仪表盘</a></dd>
+                        <dd class="layui-this"><a href="/indicator/definitions.html">指标定义</a></dd>
+                        <dd><a href="/indicator/subscriptions.html">指标订阅</a></dd>
+                        <dd><a href="/indicator/values.html">指标结果</a></dd>
+                        <dd><a href="/indicator/logs.html">计算日志</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <div class="layui-card">
+                <div class="layui-card-header">
+                    <strong>指标定义</strong> - 查看系统支持的指标
+                </div>
+                <div class="layui-card-body">
+                    <!-- 筛选栏 -->
+                    <div class="filter-bar">
+                        <form class="layui-form" lay-filter="filterForm">
+                            <div class="layui-form-item">
+                                <input type="text" id="keywordFilter" placeholder="搜索指标编码/名称" class="layui-input">
+                            </div>
+                            <div class="layui-form-item">
+                                <select id="categoryFilter">
+                                    <option value="">全部分类</option>
+                                    <option value="MOMENTUM">动量</option>
+                                    <option value="TREND">趋势</option>
+                                    <option value="VOLATILITY">波动率</option>
+                                </select>
+                            </div>
+                            <div class="layui-form-item">
+                                <select id="engineFilter">
+                                    <option value="">全部引擎</option>
+                                    <option value="ta4j">ta4j</option>
+                                    <option value="custom">custom</option>
+                                </select>
+                            </div>
+                            <div class="layui-form-item">
+                                <button type="button" class="layui-btn" onclick="loadDefinitions()">查询</button>
+                                <button type="button" class="layui-btn layui-btn-primary" onclick="resetFilter()">重置</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- 表格 -->
+                    <table class="layui-table" lay-filter="defTable" id="defTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form', 'table'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var table = layui.table;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    // 初始化表格
+    var tableIns = table.render({
+        elem: '#defTable',
+        url: '/api/indicator/definitions',
+        method: 'GET',
+        page: true,
+        limit: 50,
+        limits: [20, 50, 100],
+        height: 'full-200',
+        cols: [[
+            {field: 'indicatorCode', title: '编码', width: 120},
+            {field: 'indicatorName', title: '名称', width: 150},
+            {field: 'indicatorVersion', title: '版本', width: 80},
+            {field: 'category', title: '分类', width: 100},
+            {field: 'engine', title: '引擎', width: 100},
+            {field: 'minRequiredBars', title: '最小K线数', width: 100},
+            {field: 'supportedTimeframes', title: '支持周期', width: 200, templet: function(d){
+                if (d.supportedTimeframes && Array.isArray(d.supportedTimeframes)) {
+                    return d.supportedTimeframes.join(', ');
+                }
+                return '-';
+            }},
+            {field: 'enabled', title: '状态', width: 80, templet: function(d){
+                return d.enabled === 1 ? '<span style="color: #5FB878;">启用</span>' : '<span style="color: #999;">禁用</span>';
+            }},
+            {fixed: 'right', title: '操作', width: 100, align: 'center', templet: function(d){
+                return '<button class="layui-btn layui-btn-xs" onclick="viewSchema(' + d.id + ')">查看Schema</button>';
+            }}
+        ]],
+        request: {
+            pageName: 'page',
+            limitName: 'size'
+        },
+        parseData: function(res){
+            console.log('API返回数据:', res);
+            if (res.code === 200 && res.data) {
+                return {
+                    code: 0,
+                    msg: res.message || '操作成功',
+                    count: res.data.total || 0,
+                    data: res.data.records || []
+                };
+            } else {
+                return {
+                    code: res.code || -1,
+                    msg: res.message || '查询失败',
+                    count: 0,
+                    data: []
+                };
+            }
+        },
+        done: function(res, curr, count){
+            console.log('表格加载完成', res, '当前页:', curr, '总数:', count);
+            if (res.code !== 0) {
+                layer.msg(res.msg || '加载失败', {icon: 2});
+            }
+        },
+        error: function(res, msg){
+            console.error('表格加载错误:', res, msg);
+            layer.msg('加载失败: ' + msg, {icon: 2});
+        }
+    });
+    
+    // 加载数据
+    window.loadDefinitions = function(){
+        var keyword = $('#keywordFilter').val();
+        var category = $('#categoryFilter').val();
+        var engine = $('#engineFilter').val();
+        
+        tableIns.reload({
+            where: {
+                keyword: keyword || undefined,
+                category: category || undefined,
+                engine: engine || undefined,
+                enabled: 1
+            },
+            page: {curr: 1}
+        });
+    };
+    
+    window.resetFilter = function(){
+        $('#keywordFilter').val('');
+        $('#categoryFilter').val('');
+        $('#engineFilter').val('');
+        form.render('select');
+        loadDefinitions();
+    };
+    
+    // 查看Schema
+    window.viewSchema = function(id){
+        // 从表格数据中获取指标定义
+        var data = table.cache.defTable;
+        var def = data.find(function(item){ return item.id == id; });
+        
+        if (!def) {
+            layer.msg('数据不存在', {icon: 2});
+            return;
+        }
+        
+        var content = '<div style="padding: 20px;">';
+        content += '<h3>' + def.indicatorName + ' (' + def.indicatorCode + ')</h3>';
+        content += '<div style="margin-top: 20px;"><strong>参数Schema:</strong></div>';
+        content += '<pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto;">';
+        content += JSON.stringify(def.paramSchema || {}, null, 2);
+        content += '</pre>';
+        content += '<div style="margin-top: 20px;"><strong>返回Schema:</strong></div>';
+        content += '<pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto;">';
+        content += JSON.stringify(def.returnSchema || {}, null, 2);
+        content += '</pre>';
+        content += '</div>';
+        
+        layer.open({
+            type: 1,
+            title: '指标Schema详情',
+            area: ['600px', '80%'],
+            content: content,
+            btn: ['关闭'],
+            yes: function(index){
+                layer.close(index);
+            }
+        });
+    };
+    
+    // 初始加载
+    loadDefinitions();
+});
+</script>
+</body>
+</html>
+

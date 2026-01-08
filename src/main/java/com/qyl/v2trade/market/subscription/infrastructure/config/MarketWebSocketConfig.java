@@ -1,6 +1,7 @@
 package com.qyl.v2trade.market.subscription.infrastructure.config;
 
 import com.qyl.v2trade.market.subscription.collector.channel.impl.KlineChannel;
+import com.qyl.v2trade.market.subscription.collector.channel.impl.PriceChannel;
 import com.qyl.v2trade.market.subscription.collector.eventbus.MarketEventBus;
 import com.qyl.v2trade.market.subscription.collector.eventbus.impl.SimpleMarketEventBus;
 import com.qyl.v2trade.market.subscription.collector.router.ChannelRouter;
@@ -61,12 +62,16 @@ public class MarketWebSocketConfig {
     @Bean
     public ExchangeWebSocketManager exchangeWebSocketManager(
             ChannelRouter channelRouter,
-            KlineChannel klineChannel) {
+            KlineChannel klineChannel,
+            PriceChannel priceChannel) {
         log.info("创建 ExchangeWebSocketManager Bean");
 
         // 注册 Channel 到 Router
         channelRouter.registerChannel(klineChannel);
         log.info("已注册 Channel: {}", klineChannel.channelType());
+
+        channelRouter.registerChannel(priceChannel);
+        log.info("已注册 Channel: {}", priceChannel.channelType());
 
         return new ExchangeWebSocketManager();
     }

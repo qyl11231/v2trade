@@ -9,7 +9,7 @@ import java.util.concurrent.Executor;
 
 /**
  * 异步任务配置
- * 为WebSocket重连等异步任务提供Spring管理的线程池
+ * 为WebSocket重连、指标计算等异步任务提供Spring管理的线程池
  */
 @Configuration
 @EnableAsync
@@ -28,6 +28,23 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("WebSocket-Reconnect-");
         executor.setWaitForTasksToCompleteOnShutdown(true); // 关闭时等待任务完成
         executor.setAwaitTerminationSeconds(5); // 最多等待5秒
+        executor.initialize();
+        return executor;
+    }
+    
+    /**
+     * 指标计算线程池
+     * 用于IndicatorCalculator的异步事件处理
+     */
+    @Bean(name = "indicatorCalculatorExecutor")
+    public Executor indicatorCalculatorExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("indicator-calculator-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
         executor.initialize();
         return executor;
     }

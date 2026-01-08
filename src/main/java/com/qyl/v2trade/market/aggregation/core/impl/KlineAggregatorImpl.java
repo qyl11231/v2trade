@@ -8,9 +8,14 @@ import com.qyl.v2trade.market.aggregation.core.KlineAggregator;
 import com.qyl.v2trade.market.aggregation.core.PeriodCalculator;
 import com.qyl.v2trade.market.aggregation.event.AggregatedKLine;
 import com.qyl.v2trade.market.aggregation.persistence.AggregatedKLineStorageService;
+import com.qyl.v2trade.market.model.NormalizedKline;
 import com.qyl.v2trade.market.model.event.KlineEvent;
+import com.qyl.v2trade.market.web.query.MarketQueryService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +46,13 @@ public class KlineAggregatorImpl implements KlineAggregator {
      * 存储服务（可选，如果为null则不写入数据库）
      */
     private AggregatedKLineStorageService storageService;
+    
+    /**
+     * 市场查询服务（用于查询QuestDB中的历史1m K线数据）
+     */
+    @Autowired(required = false)
+    @Qualifier("questDbMarketQueryService")
+    private MarketQueryService marketQueryService;
     
     /**
      * 异步写入线程池（用于不阻塞聚合流程）
@@ -185,9 +197,20 @@ public class KlineAggregatorImpl implements KlineAggregator {
 
             
             // 5. 找到或创建Bucket
+            // 使用computeIfAbsent确保线程安全，同时判断是否是新创建的Bucket
             AggregationBucket bucket = buckets.computeIfAbsent(bucketKey, key -> {
                 log.debug("创建新Bucket: key={}", key);
-                return new AggregationBucket(event.symbol(), period.getPeriod(), windowStart, windowEnd);
+                AggregationBucket newBucket = new AggregationBucket(event.symbol(), period.getPeriod(), windowStart, windowEnd);
+                
+                // 5.1 如果是新创建的Bucket，且当前K线时间不是窗口开始时间，说明可能有缺失的历史数据
+                // 例如：5分钟窗口[10:00, 10:05)，在10:03启动，收到的第一根K线是10:03的
+                // 此时需要从QuestDB查询10:00、10:01、10:02的1m K线数据
+                if (event.openTime() > windowStart && marketQueryService != null) {
+                    // 在创建Bucket后立即补齐缺失的数据
+                    backfillMissingKlines(event, period, windowStart, newBucket);
+                }
+                
+                return newBucket;
             });
             
             // 6. 更新Bucket状态
@@ -208,6 +231,101 @@ public class KlineAggregatorImpl implements KlineAggregator {
             log.error("处理K线事件异常: symbol={}, period={}, openTime={}", 
                     event.symbol(), period.getPeriod(), event.openTime(), e);
         }
+    }
+    
+    /**
+     * 补齐缺失的1m K线数据
+     * 
+     * <p>当系统在窗口中间启动时（例如5分钟窗口的03分钟），需要从QuestDB查询窗口开始到当前时间之间的所有1m K线数据
+     * 
+     * <p>例如：5分钟窗口[10:00, 10:05)，在10:03启动，收到的第一根K线是10:03的
+     * 此时需要从QuestDB查询10:00、10:01、10:02的1m K线数据
+     * 
+     * @param event 当前收到的K线事件
+     * @param period 聚合周期
+     * @param windowStart 窗口起始时间戳
+     * @param bucket 聚合Bucket
+     */
+    private void backfillMissingKlines(KlineEvent event, SupportedPeriod period, 
+                                      long windowStart, AggregationBucket bucket) {
+        try {
+            // 计算需要查询的时间范围：[windowStart, event.openTime())
+            long queryEndTime = event.openTime(); // 不包含当前K线，因为当前K线会在后面处理
+            
+            // 从QuestDB查询该时间范围内的所有1m K线数据
+            List<NormalizedKline> missingKlines = marketQueryService.queryKlines(
+                    event.symbol(), 
+                    "1m", 
+                    windowStart, 
+                    queryEndTime, 
+                    null // 不限制数量，查询所有
+            );
+            
+            if (missingKlines == null || missingKlines.isEmpty()) {
+                log.debug("QuestDB中无缺失的1m K线数据: symbol={}, period={}, windowStart={}, queryEndTime={}", 
+                        event.symbol(), period.getPeriod(), windowStart, queryEndTime);
+                return;
+            }
+            
+            log.info("从QuestDB补齐缺失的1m K线数据: symbol={}, period={}, windowStart={}, missingCount={}", 
+                    event.symbol(), period.getPeriod(), windowStart, missingKlines.size());
+            
+            // 将查询到的历史K线数据转换为KlineEvent并聚合到Bucket中
+            for (NormalizedKline kline : missingKlines) {
+                // 检查是否已处理过（去重）
+                String klineKey = generateKlineKey(event.symbol(), period.getPeriod(), windowStart, kline.getTimestamp());
+                if (processedKlines.containsKey(klineKey)) {
+                    log.debug("跳过已处理的1m K线: symbol={}, timestamp={}", 
+                            event.symbol(), kline.getTimestamp());
+                    continue;
+                }
+                
+                // 转换为KlineEvent
+                KlineEvent historicalEvent = convertToKlineEvent(kline, event.exchange());
+                
+                // 更新Bucket（不检查窗口完成，因为这是历史数据）
+                bucket.update(historicalEvent);
+                
+                // 标记已处理（去重）
+                processedKlines.put(klineKey, Boolean.TRUE);
+                
+                log.debug("补齐历史1m K线: symbol={}, timestamp={}, open={}, high={}, low={}, close={}, volume={}", 
+                        event.symbol(), kline.getTimestamp(), 
+                        kline.getOpen(), kline.getHigh(), kline.getLow(), kline.getClose(), kline.getVolume());
+            }
+            
+        } catch (Exception e) {
+            log.error("补齐缺失的1m K线数据异常: symbol={}, period={}, windowStart={}", 
+                    event.symbol(), period.getPeriod(), windowStart, e);
+            // 不抛出异常，继续处理当前K线事件
+        }
+    }
+    
+    /**
+     * 将NormalizedKline转换为KlineEvent
+     * 
+     * @param kline NormalizedKline
+     * @param exchange 交易所名称
+     * @return KlineEvent
+     */
+    private KlineEvent convertToKlineEvent(NormalizedKline kline, String exchange) {
+        long openTime = kline.getTimestamp();
+        long closeTime = openTime + 60000; // 1分钟K线
+        
+        return KlineEvent.of(
+                kline.getSymbol(),
+                exchange,
+                openTime,
+                closeTime,
+                kline.getInterval(),
+                BigDecimal.valueOf(kline.getOpen()),
+                BigDecimal.valueOf(kline.getHigh()),
+                BigDecimal.valueOf(kline.getLow()),
+                BigDecimal.valueOf(kline.getClose()),
+                BigDecimal.valueOf(kline.getVolume()),
+                true, // 历史数据都是已完成的
+                System.currentTimeMillis()
+        );
     }
     
     /**

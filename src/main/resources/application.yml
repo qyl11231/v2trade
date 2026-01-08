@@ -57,7 +57,6 @@ spring:
 logging:
   level:
     root: INFO
-    com.qyl.v2trade: DEBUG
   # Log4j2详细配置在src/main/resources/log4j2.xml中
 
 # 应用配置
@@ -82,6 +81,17 @@ mybatis-plus:
 okx:
   api:
     base-url: https://www.okx.com
+
+# Actuator配置（用于Metrics）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
     timeout: 5000
   websocket:
     url: wss://ws.okx.com:8443/ws/v5/business
