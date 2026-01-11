@@ -52,7 +52,7 @@ public class MarketCalibrationScheduler {
      * 数据核对定时任务
      * 每1小时执行一次
      */
-    @Scheduled(fixedRate = 3600000) // 3600000ms = 1小时
+    //@Scheduled(fixedRate = 3600000) // 3600000ms = 1小时
     public void scheduleDataVerify() {
         log.info("开始执行数据核对定时任务");
         
@@ -82,7 +82,7 @@ public class MarketCalibrationScheduler {
      * 缺失数据检测定时任务
      * 每2小时执行一次
      */
-    @Scheduled(fixedRate = 7200000) // 7200000ms = 2小时
+ //   @Scheduled(fixedRate = 7200000) // 7200000ms = 2小时
     public void scheduleMissingData() {
         log.info("开始执行缺失数据检测定时任务");
         

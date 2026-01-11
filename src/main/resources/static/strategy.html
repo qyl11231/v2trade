@@ -406,6 +406,186 @@
             outline: none;
         }
 
+        /* ==================== 条件构建器样式（可视化规则编辑器） ==================== */
+        .condition-builder {
+            background: #ffffff;
+            border: 1px solid #e8eaed;
+            border-radius: 6px;
+            padding: 16px;
+            min-height: 200px;
+        }
+
+        .condition-group {
+            background: #f8f9fa;
+            border: 1px dashed #d0d4d8;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .condition-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e8eaed;
+        }
+
+        .condition-group-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #262626;
+        }
+
+        .condition-group-title .mode-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .condition-group-title .mode-badge.ALL {
+            background: #1890ff;
+        }
+
+        .condition-group-title .mode-badge.ANY {
+            background: #52c41a;
+        }
+
+        .condition-group-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .condition-rule {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #e8eaed;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .condition-rule:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 2px 8px rgba(30, 159, 255, 0.1);
+        }
+
+        .condition-rule.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+
+        .condition-rule-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .rule-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .rule-item label {
+            font-size: 12px;
+            color: #8c8c8c;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .rule-item select,
+        .rule-item input {
+            height: 32px;
+            line-height: 32px;
+            border-radius: 4px;
+            border: 1px solid #e8eaed;
+            font-size: 13px;
+            padding: 0 10px;
+        }
+
+        .rule-item select {
+            min-width: 150px;
+        }
+
+        .rule-item input {
+            min-width: 120px;
+        }
+
+        .rule-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .add-rule-btn,
+        .add-group-btn {
+            width: 100%;
+            height: 36px;
+            line-height: 36px;
+            border: 1px dashed #d0d4d8;
+            border-radius: 6px;
+            background: #fafbfc;
+            color: #595959;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .add-rule-btn:hover,
+        .add-group-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: #f0f7ff;
+        }
+
+        .empty-condition {
+            text-align: center;
+            padding: 40px 20px;
+            color: #8c8c8c;
+            font-size: 13px;
+        }
+
+        .empty-condition i {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 8px;
+            opacity: 0.4;
+        }
+
+        .drag-handle {
+            cursor: move;
+            color: #8c8c8c;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .drag-handle:hover {
+            color: var(--primary-color);
+        }
+
+        .nested-group {
+            margin-left: 20px;
+            margin-top: 8px;
+            border-left: 2px solid var(--primary-color);
+            padding-left: 16px;
+        }
+
         /* ==================== 表格容器（精致化） ==================== */
         .table-container {
             max-height: 280px;
@@ -922,14 +1102,20 @@
                     <input type="number" name="stopLossRatio" placeholder="0.02" class="layui-input" step="0.01">
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-field">
-                    <label>入场条件（JSON）</label>
-                    <textarea name="entryCondition" class="layui-textarea json-editor" rows="6" placeholder='{"mode":"ANY","rules":[]}'>{"mode":"ANY","rules":[]}</textarea>
+            <div class="form-row" style="flex-direction: column;">
+                <div class="form-field" style="width: 100%;">
+                    <label>入场条件</label>
+                    <div class="condition-builder" id="entryConditionBuilder">
+                        <!-- 可视化规则构建器 -->
+                    </div>
+                    <textarea name="entryCondition" class="layui-textarea json-editor" rows="4" style="display: none;" id="entryConditionJson">{"version":"1.0","mode":"ALL","rules":[],"groups":[]}</textarea>
                 </div>
-                <div class="form-field">
-                    <label>退出条件（JSON）</label>
-                    <textarea name="exitCondition" class="layui-textarea json-editor" rows="6" placeholder='{"mode":"ANY","rules":[]}'>{"mode":"ANY","rules":[]}</textarea>
+                <div class="form-field" style="width: 100%;">
+                    <label>退出条件</label>
+                    <div class="condition-builder" id="exitConditionBuilder">
+                        <!-- 可视化规则构建器 -->
+                    </div>
+                    <textarea name="exitCondition" class="layui-textarea json-editor" rows="4" style="display: none;" id="exitConditionJson">{"version":"1.0","mode":"ALL","rules":[],"groups":[]}</textarea>
                 </div>
             </div>
         </div>
@@ -1178,14 +1364,20 @@
                     <input type="number" name="stopLossRatio" placeholder="0.02" class="layui-input" step="0.01">
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-field">
-                    <label>入场条件（JSON）</label>
-                    <textarea name="entryCondition" class="layui-textarea json-editor" rows="6" placeholder='{"mode":"ANY","rules":[]}'>{"mode":"ANY","rules":[]}</textarea>
+            <div class="form-row" style="flex-direction: column;">
+                <div class="form-field" style="width: 100%;">
+                    <label>入场条件</label>
+                    <div class="condition-builder" id="editEntryConditionBuilder">
+                        <!-- 可视化规则构建器 -->
+                    </div>
+                    <textarea name="entryCondition" class="layui-textarea json-editor" rows="4" style="display: none;" id="editEntryConditionJson">{"version":"1.0","mode":"ALL","rules":[],"groups":[]}</textarea>
                 </div>
-                <div class="form-field">
-                    <label>退出条件（JSON）</label>
-                    <textarea name="exitCondition" class="layui-textarea json-editor" rows="6" placeholder='{"mode":"ANY","rules":[]}'>{"mode":"ANY","rules":[]}</textarea>
+                <div class="form-field" style="width: 100%;">
+                    <label>退出条件</label>
+                    <div class="condition-builder" id="editExitConditionBuilder">
+                        <!-- 可视化规则构建器 -->
+                    </div>
+                    <textarea name="exitCondition" class="layui-textarea json-editor" rows="4" style="display: none;" id="editExitConditionJson">{"version":"1.0","mode":"ALL","rules":[],"groups":[]}</textarea>
                 </div>
             </div>
         </div>

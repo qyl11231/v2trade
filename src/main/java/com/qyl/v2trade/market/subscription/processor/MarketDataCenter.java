@@ -18,6 +18,7 @@ import com.qyl.v2trade.market.model.event.KlineEvent;
 import com.qyl.v2trade.market.subscription.infrastructure.monitor.MarketDataMonitor;
 // import com.qyl.v2trade.market.web.query.MarketQueryService; // 暂时未使用
 import com.qyl.v2trade.market.subscription.persistence.storage.MarketStorageService;
+import com.qyl.v2trade.market.calibration.gap.GapDetector;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
@@ -84,6 +85,9 @@ public class MarketDataCenter implements ApplicationRunner {
 
     @Autowired
     private MarketDataMonitor marketDataMonitor;
+
+    @Autowired
+    private GapDetector gapDetector;
 
     private volatile boolean running = false;
 
@@ -409,6 +413,24 @@ public class MarketDataCenter implements ApplicationRunner {
 
             // 3. 推送给所有订阅的 WebSocket 客户端
             marketDistributor.broadcastKline(kline);
+
+            // 4. 缺口检测（只处理1m K线）
+            if ("1m".equals(kline.getInterval())) {
+                try {
+                    // 获取 tradingPairId
+                    TradingPair tradingPair = tradingPairService.getBySymbolAndMarketType(
+                            kline.getSymbol(), "SWAP");
+                    if (tradingPair != null) {
+                        gapDetector.detectGap(tradingPair.getId(), kline.getSymbol(), kline.getTimestamp());
+                    } else {
+                        log.debug("未找到交易对，跳过缺口检测: symbol={}", kline.getSymbol());
+                    }
+                } catch (Exception e) {
+                    log.warn("缺口检测异常: symbol={}, timestamp={}", 
+                            kline.getSymbol(), kline.getTimestamp(), e);
+                    // 不抛出异常，避免影响主流程
+                }
+            }
 
             log.debug("K 线处理完成: symbol={}, timestamp={}", kline.getSymbol(), kline.getTimestamp());
         } catch (Exception e) {

@@ -134,3 +134,20 @@ market:
       default-duration-minutes: 60
       # 缓存key前缀
       key-prefix: "market:kline:"
+
+# 校准补拉配置
+calibration:
+  backfill:
+    # cooldown时间（秒），同一个tradingPairId在配置时间内最多触发一次
+    cooldownSeconds: 300
+    # 回看时间（分钟），默认60分钟
+    lookbackMinutes: 60
+    # 异步线程池大小，默认4
+    asyncPoolSize: 4
+    # 最大等待时间（毫秒），用于聚合链路第三次读取，默认500ms
+    maxWaitMillis: 500
+  gap:
+    # 窗口大小（分钟），检测最近N分钟的K线连续性，默认60分钟
+    windowMinutes: 60
+    # 清理过期数据的间隔（毫秒），默认10分钟
+    cleanupIntervalMs: 600000

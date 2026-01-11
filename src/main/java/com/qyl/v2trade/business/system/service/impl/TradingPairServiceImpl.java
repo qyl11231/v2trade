@@ -29,7 +29,7 @@ import java.util.Map;
  * 交易对服务实现类
  */
 @Service
-public class TradingPairServiceImpl extends ServiceImpl<TradingPairMapper, TradingPair> 
+public class TradingPairServiceImpl extends ServiceImpl<TradingPairMapper, TradingPair>
         implements TradingPairService {
 
     private static final Logger logger = LoggerFactory.getLogger(TradingPairServiceImpl.class);
@@ -46,7 +46,11 @@ public class TradingPairServiceImpl extends ServiceImpl<TradingPairMapper, Tradi
     @Override
     public TradingPair getBySymbolAndMarketType(String symbol, String marketType) {
         logger.debug("查询交易对: symbol={}, marketType={}", symbol, marketType);
-        
+
+        if (symbol.endsWith("-SWAP")) {
+            symbol = symbol.replaceAll("-SWAP", "");
+        }
+
         return getOne(new LambdaQueryWrapper<TradingPair>()
                 .eq(TradingPair::getSymbol, symbol)
                 .eq(TradingPair::getMarketType, marketType));
@@ -55,7 +59,7 @@ public class TradingPairServiceImpl extends ServiceImpl<TradingPairMapper, Tradi
     @Override
     public List<TradingPair> listEnabled() {
         logger.debug("查询所有启用的交易对");
-        
+
         return list(new LambdaQueryWrapper<TradingPair>()
                 .eq(TradingPair::getEnabled, EnabledStatus.ENABLED)
                 .orderByAsc(TradingPair::getSymbol));
@@ -64,7 +68,7 @@ public class TradingPairServiceImpl extends ServiceImpl<TradingPairMapper, Tradi
     @Override
     public List<TradingPair> listByMarketType(String marketType) {
         logger.debug("查询交易对列表: marketType={}", marketType);
-        
+
         return list(new LambdaQueryWrapper<TradingPair>()
                 .eq(TradingPair::getMarketType, marketType)
                 .orderByAsc(TradingPair::getSymbol));
@@ -73,7 +77,7 @@ public class TradingPairServiceImpl extends ServiceImpl<TradingPairMapper, Tradi
     @Override
     public List<TradingPair> listEnabledByMarketType(String marketType) {
         logger.debug("查询启用的交易对列表: marketType={}", marketType);
-        
+
         return list(new LambdaQueryWrapper<TradingPair>()
                 .eq(TradingPair::getMarketType, marketType)
                 .eq(TradingPair::getEnabled, EnabledStatus.ENABLED)
@@ -100,11 +104,11 @@ public class TradingPairServiceImpl extends ServiceImpl<TradingPairMapper, Tradi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TradingPair saveOrUpdateBySymbol(TradingPair tradingPair) {
-        logger.info("保存或更新交易对: symbol={}, marketType={}", 
+        logger.info("保存或更新交易对: symbol={}, marketType={}",
                 tradingPair.getSymbol(), tradingPair.getMarketType());
 
         TradingPair existing = getBySymbolAndMarketType(
-                tradingPair.getSymbol(), 
+                tradingPair.getSymbol(),
                 tradingPair.getMarketType());
 
         if (existing != null) {
@@ -180,32 +184,33 @@ public class TradingPairServiceImpl extends ServiceImpl<TradingPairMapper, Tradi
                     exchangeMarketPair.setTradingPairId(tradingPair.getId());
                     exchangeMarketPair.setSymbolOnExchange(instId);
                     exchangeMarketPair.setStatus("live".equals(state) ? TradingStatus.TRADING : TradingStatus.SUSPENDED);
-                    
+
                     // 解析精度
                     String tickSz = item.path("tickSz").asText("0");
                     String lotSz = item.path("lotSz").asText("0");
                     exchangeMarketPair.setPricePrecision(getPrecision(tickSz));
                     exchangeMarketPair.setQuantityPrecision(getPrecision(lotSz));
-                    
+
                     // 解析下单限制
                     String minSz = item.path("minSz").asText("0");
                     exchangeMarketPair.setMinOrderQty(new BigDecimal(minSz));
                     exchangeMarketPair.setMinOrderAmount(BigDecimal.ZERO); // OKX不直接提供
-                    
+
                     String maxMktSz = item.path("maxMktSz").asText();
                     if (!maxMktSz.isEmpty()) {
                         exchangeMarketPair.setMaxOrderQty(new BigDecimal(maxMktSz));
                     }
-                    
+
                     String lever = item.path("lever").asText();
                     if (!lever.isEmpty()) {
                         try {
                             exchangeMarketPair.setMaxLeverage(Integer.parseInt(lever));
-                        } catch (NumberFormatException ignored) {}
+                        } catch (NumberFormatException ignored) {
+                        }
                     }
 
                     // 保存原始数据
-                    Map<String, Object> rawPayload = objectMapper.convertValue(item, 
+                    Map<String, Object> rawPayload = objectMapper.convertValue(item,
                             objectMapper.getTypeFactory().constructMapType(HashMap.class, String.class, Object.class));
                     exchangeMarketPair.setRawPayload(rawPayload);
 

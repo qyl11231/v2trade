@@ -289,39 +289,7 @@ layui.use(['element', 'layer', 'form'], function(){
         }
     });
     
-    // 打开创建策略表单
-    window.openCreateStrategy = function(){
-        // 重置已选列表
-        selectedTradingPairs = [];
-        selectedSignalConfigs = [];
-        
-        // 清空strategyId（创建模式）
-        $('#createStrategyId').val('');
-        
-        loadTradingPairSelect();
-        loadSignalConfigSelect();
-        renderSelectedTradingPairs();
-        renderSelectedSignalConfigs();
-        
-        layer.open({
-            type: 1,
-            title: '创建策略',
-            area: ['1400px', '95%'],
-            content: $('#createStrategyForm'),
-            success: function(layero, index){
-                // 重置表单
-                $('form[lay-filter="createStrategyForm"]')[0].reset();
-                // 清空strategyId
-                $('#createStrategyId').val('');
-                // 重新渲染所有表单元素，确保下拉框正常显示
-                form.render();
-                // 延迟一下确保渲染完成
-                setTimeout(function(){
-                    form.render('select');
-                }, 50);
-            }
-        });
-    };
+    // 打开创建策略表单（已移动到规则构建器初始化部分）
     
     // 编辑策略（调用详情接口，复用创建策略表单）
     window.editStrategy = function(id, enabled){
@@ -358,8 +326,12 @@ layui.use(['element', 'layer', 'form'], function(){
                     $('input[name="baseOrderRatio"]', '#createStrategyForm').val(detail.param.baseOrderRatio);
                     $('input[name="takeProfitRatio"]', '#createStrategyForm').val(detail.param.takeProfitRatio || '');
                     $('input[name="stopLossRatio"]', '#createStrategyForm').val(detail.param.stopLossRatio || '');
-                    $('textarea[name="entryCondition"]', '#createStrategyForm').val(detail.param.entryCondition || '{"mode":"ANY","rules":[]}');
-                    $('textarea[name="exitCondition"]', '#createStrategyForm').val(detail.param.exitCondition || '{"mode":"ANY","rules":[]}');
+                    
+                    // 设置条件JSON并初始化构建器
+                    var entryCondition = detail.param.entryCondition || '{"version":"1.0","mode":"ALL","rules":[],"groups":[]}';
+                    var exitCondition = detail.param.exitCondition || '{"version":"1.0","mode":"ALL","rules":[],"groups":[]}';
+                    $('#entryConditionJson').val(entryCondition);
+                    $('#exitConditionJson').val(exitCondition);
                 }
                 
                 // 填充交易对列表
@@ -395,6 +367,10 @@ layui.use(['element', 'layer', 'form'], function(){
                 loadSignalConfigSelect();
                 renderSelectedTradingPairs();
                 renderSelectedSignalConfigs();
+                
+                // 初始化条件构建器
+                initConditionBuilder('entryConditionBuilder', 'entryConditionJson');
+                initConditionBuilder('exitConditionBuilder', 'exitConditionJson');
                 
                 // 打开编辑弹窗（复用创建策略表单）
                 layer.open({
@@ -710,6 +686,480 @@ layui.use(['element', 'layer', 'form'], function(){
         }).catch(function(err){
             layer.close(loading);
             layer.msg('获取策略详情失败: ' + (err.message || '未知错误'), {icon: 2});
+        });
+    };
+    
+    // ==================== 条件构建器逻辑 ====================
+    
+    // 因子选项
+    var FACTOR_OPTIONS = {
+        'SIG.DIRECTION': '信号方向',
+        'SIG.INTENT_ID': '信号意图ID',
+        'IND.RSI_14': 'RSI指标',
+        'IND.MACD': 'MACD指标',
+        'IND.MACD.SIGNAL': 'MACD信号线',
+        'BAR.OPEN': 'K线开盘价',
+        'BAR.HIGH': 'K线最高价',
+        'BAR.LOW': 'K线最低价',
+        'BAR.CLOSE': 'K线收盘价',
+        'BAR.VOLUME': 'K线成交量',
+        'PX.LAST': '最新价格',
+        'STATE.POSITION_SIDE': '持仓方向',
+        'STATE.POSITION_QTY': '持仓数量',
+        'STATE.STOP_LOSS_PRICE': '止损价格'
+    };
+    
+    // 操作符选项
+    var OPERATOR_OPTIONS = {
+        'GT': '大于 (>)',
+        'LT': '小于 (<)',
+        'GTE': '大于等于 (>=)',
+        'LTE': '小于等于 (<=)',
+        'EQ': '等于 (=)',
+        'NEQ': '不等于 (!=)',
+        'CONTAINS': '包含',
+        'STARTS_WITH': '以...开头',
+        'ENDS_WITH': '以...结尾'
+    };
+    
+    // 类型选项
+    var TYPE_OPTIONS = {
+        'NUMBER': '数值',
+        'STRING': '字符串',
+        'BOOLEAN': '布尔值'
+    };
+    
+    // 初始化条件构建器
+    function initConditionBuilder(builderId, jsonId) {
+        var $builder = $('#' + builderId);
+        var $json = $('#' + jsonId);
+        
+        // 从JSON解析并渲染
+        try {
+            var conditionJson = $json.val() || '{"version":"1.0","mode":"ALL","rules":[],"groups":[]}';
+            var condition = JSON.parse(conditionJson);
+            renderConditionBuilder($builder, condition, jsonId);
+        } catch (e) {
+            console.error('解析条件JSON失败:', e);
+            var defaultCondition = {version: "1.0", mode: "ALL", rules: [], groups: []};
+            renderConditionBuilder($builder, defaultCondition, jsonId);
+        }
+    }
+    
+    // 渲染条件构建器
+    function renderConditionBuilder($container, condition, jsonId) {
+        var html = '<div class="condition-group" data-group-index="0">';
+        html += '<div class="condition-group-header">';
+        html += '<div class="condition-group-title">';
+        html += '<span class="mode-badge ' + (condition.mode || 'ALL') + '">' + (condition.mode || 'ALL') + '</span>';
+        html += '<span>组合模式</span>';
+        html += '</div>';
+        html += '<div class="condition-group-actions">';
+        html += '<select class="mode-select" onchange="updateConditionMode(this, \'' + jsonId + '\')">';
+        html += '<option value="ALL"' + ((condition.mode || 'ALL') === 'ALL' ? ' selected' : '') + '>ALL（全部满足）</option>';
+        html += '<option value="ANY"' + ((condition.mode || 'ALL') === 'ANY' ? ' selected' : '') + '>ANY（任一满足）</option>';
+        html += '</select>';
+        html += '<button type="button" class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteConditionGroup(this, \'' + jsonId + '\')"><i class="layui-icon layui-icon-delete"></i> 删除组</button>';
+        html += '</div>';
+        html += '</div>';
+        
+        // 渲染规则
+        html += '<div class="condition-rules-container">';
+        if (condition.rules && condition.rules.length > 0) {
+            condition.rules.forEach(function(rule, index) {
+                html += renderConditionRule(rule, index, jsonId);
+            });
+        } else {
+            html += '<div class="empty-condition"><i class="layui-icon layui-icon-add-circle"></i><div>暂无规则，点击下方按钮添加</div></div>';
+        }
+        html += '</div>';
+        
+        // 渲染嵌套组
+        if (condition.groups && condition.groups.length > 0) {
+            condition.groups.forEach(function(group, index) {
+                html += renderConditionGroup(group, index, jsonId, true);
+            });
+        }
+        
+        // 添加规则和组按钮
+        html += '<button type="button" class="add-rule-btn" onclick="addConditionRule(this, \'' + jsonId + '\')"><i class="layui-icon layui-icon-add-1"></i> 添加规则</button>';
+        html += '<button type="button" class="add-group-btn" onclick="addConditionGroup(this, \'' + jsonId + '\')"><i class="layui-icon layui-icon-add-1"></i> 添加嵌套组</button>';
+        
+        html += '</div>';
+        
+        $container.html(html);
+        
+        // 渲染下拉框
+        form.render('select');
+    }
+    
+    // 渲染单个规则
+    function renderConditionRule(rule, index, jsonId) {
+        var html = '<div class="condition-rule" data-rule-index="' + index + '">';
+        html += '<div class="drag-handle"><i class="layui-icon layui-icon-drag"></i></div>';
+        html += '<div class="condition-rule-content">';
+        
+        // 因子选择
+        html += '<div class="rule-item">';
+        html += '<label>因子：</label>';
+        html += '<select class="rule-factor" onchange="updateConditionJson(\'' + jsonId + '\')">';
+        for (var factor in FACTOR_OPTIONS) {
+            html += '<option value="' + factor + '"' + (rule.factor === factor ? ' selected' : '') + '>' + FACTOR_OPTIONS[factor] + ' (' + factor + ')</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+        
+        // 操作符选择
+        html += '<div class="rule-item">';
+        html += '<label>操作符：</label>';
+        html += '<select class="rule-operator" onchange="updateConditionJson(\'' + jsonId + '\')">';
+        for (var op in OPERATOR_OPTIONS) {
+            html += '<option value="' + op + '"' + (rule.operator === op ? ' selected' : '') + '>' + OPERATOR_OPTIONS[op] + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+        
+        // 比较值输入
+        html += '<div class="rule-item">';
+        html += '<label>值：</label>';
+        html += '<input type="text" class="rule-value" value="' + (rule.value || '') + '" onchange="updateConditionJson(\'' + jsonId + '\')" placeholder="输入比较值">';
+        html += '</div>';
+        
+        // 类型选择
+        html += '<div class="rule-item">';
+        html += '<label>类型：</label>';
+        html += '<select class="rule-type" onchange="updateConditionJson(\'' + jsonId + '\')">';
+        for (var type in TYPE_OPTIONS) {
+            html += '<option value="' + type + '"' + ((rule.type || 'NUMBER') === type ? ' selected' : '') + '>' + TYPE_OPTIONS[type] + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+        
+        // 是否允许为空
+        html += '<div class="rule-item">';
+        html += '<label><input type="checkbox" class="rule-nullable"' + (rule.nullable === true ? ' checked' : '') + ' onchange="updateConditionJson(\'' + jsonId + '\')"> 允许为空</label>';
+        html += '</div>';
+        
+        html += '</div>';
+        html += '<div class="rule-actions">';
+        html += '<button type="button" class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteConditionRule(this, \'' + jsonId + '\')"><i class="layui-icon layui-icon-delete"></i></button>';
+        html += '</div>';
+        html += '</div>';
+        
+        return html;
+    }
+    
+    // 渲染嵌套组
+    function renderConditionGroup(group, index, jsonId, isNested) {
+        var html = '<div class="condition-group' + (isNested ? ' nested-group' : '') + '" data-group-index="' + index + '">';
+        html += '<div class="condition-group-header">';
+        html += '<div class="condition-group-title">';
+        html += '<span class="mode-badge ' + (group.mode || 'ALL') + '">' + (group.mode || 'ALL') + '</span>';
+        html += '<span>嵌套组</span>';
+        html += '</div>';
+        html += '<div class="condition-group-actions">';
+        html += '<select class="mode-select" onchange="updateConditionMode(this, \'' + jsonId + '\', true, ' + index + ')">';
+        html += '<option value="ALL"' + ((group.mode || 'ALL') === 'ALL' ? ' selected' : '') + '>ALL</option>';
+        html += '<option value="ANY"' + ((group.mode || 'ALL') === 'ANY' ? ' selected' : '') + '>ANY</option>';
+        html += '</select>';
+        html += '<button type="button" class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteConditionGroup(this, \'' + jsonId + '\', ' + index + ')"><i class="layui-icon layui-icon-delete"></i></button>';
+        html += '</div>';
+        html += '</div>';
+        
+        // 渲染组的规则
+        html += '<div class="condition-rules-container">';
+        if (group.rules && group.rules.length > 0) {
+            group.rules.forEach(function(rule, ruleIndex) {
+                html += renderConditionRule(rule, ruleIndex, jsonId);
+            });
+        }
+        html += '</div>';
+        
+        // 添加规则按钮
+        html += '<button type="button" class="add-rule-btn" onclick="addConditionRuleToGroup(this, \'' + jsonId + '\', ' + index + ')"><i class="layui-icon layui-icon-add-1"></i> 添加规则</button>';
+        
+        html += '</div>';
+        
+        return html;
+    }
+    
+    // 添加规则
+    window.addConditionRule = function(btn, jsonId) {
+        var $builder = $('#' + jsonId.replace('Json', 'Builder'));
+        var condition = parseConditionFromBuilder($builder);
+        if (!condition.rules) condition.rules = [];
+        
+        condition.rules.push({
+            factor: 'IND.RSI_14',
+            operator: 'LT',
+            value: '',
+            type: 'NUMBER',
+            nullable: false
+        });
+        
+        renderConditionBuilder($builder, condition, jsonId);
+        updateConditionJson(jsonId);
+    };
+    
+    // 添加规则到嵌套组
+    window.addConditionRuleToGroup = function(btn, jsonId, groupIndex) {
+        var $builder = $('#' + jsonId.replace('Json', 'Builder'));
+        var condition = parseConditionFromBuilder($builder);
+        if (!condition.groups) condition.groups = [];
+        if (!condition.groups[groupIndex].rules) condition.groups[groupIndex].rules = [];
+        
+        condition.groups[groupIndex].rules.push({
+            factor: 'IND.RSI_14',
+            operator: 'LT',
+            value: '',
+            type: 'NUMBER',
+            nullable: false
+        });
+        
+        renderConditionBuilder($builder, condition, jsonId);
+        updateConditionJson(jsonId);
+    };
+    
+    // 添加嵌套组
+    window.addConditionGroup = function(btn, jsonId) {
+        var $builder = $('#' + jsonId.replace('Json', 'Builder'));
+        var condition = parseConditionFromBuilder($builder);
+        if (!condition.groups) condition.groups = [];
+        
+        condition.groups.push({
+            mode: 'ALL',
+            rules: [],
+            groups: []
+        });
+        
+        renderConditionBuilder($builder, condition, jsonId);
+        updateConditionJson(jsonId);
+    };
+    
+    // 删除规则
+    window.deleteConditionRule = function(btn, jsonId) {
+        var $rule = $(btn).closest('.condition-rule');
+        var ruleIndex = $rule.data('rule-index');
+        var $group = $rule.closest('.condition-group');
+        var isNested = $group.hasClass('nested-group');
+        var groupIndex = isNested ? $group.data('group-index') : null;
+        
+        var $builder = $('#' + jsonId.replace('Json', 'Builder'));
+        var condition = parseConditionFromBuilder($builder);
+        
+        if (isNested && groupIndex !== null && condition.groups && condition.groups[groupIndex]) {
+            condition.groups[groupIndex].rules.splice(ruleIndex, 1);
+        } else {
+            condition.rules.splice(ruleIndex, 1);
+        }
+        
+        renderConditionBuilder($builder, condition, jsonId);
+        updateConditionJson(jsonId);
+    };
+    
+    // 删除组
+    window.deleteConditionGroup = function(btn, jsonId, groupIndex) {
+        if (confirm('确定要删除这个组吗？')) {
+            var $builder = $('#' + jsonId.replace('Json', 'Builder'));
+            var condition = parseConditionFromBuilder($builder);
+            
+            if (groupIndex !== undefined && condition.groups && condition.groups[groupIndex]) {
+                condition.groups.splice(groupIndex, 1);
+            } else {
+                // 删除主组时，重置为默认条件
+                condition = {version: "1.0", mode: "ALL", rules: [], groups: []};
+            }
+            
+            renderConditionBuilder($builder, condition, jsonId);
+            updateConditionJson(jsonId);
+        }
+    };
+    
+    // 更新组合模式
+    window.updateConditionMode = function(select, jsonId, isNested, groupIndex) {
+        var mode = $(select).val();
+        var $builder = $('#' + jsonId.replace('Json', 'Builder'));
+        var condition = parseConditionFromBuilder($builder);
+        
+        if (isNested && groupIndex !== undefined && condition.groups && condition.groups[groupIndex]) {
+            condition.groups[groupIndex].mode = mode;
+        } else {
+            condition.mode = mode;
+        }
+        
+        renderConditionBuilder($builder, condition, jsonId);
+        updateConditionJson(jsonId);
+    };
+    
+    // 从构建器解析条件对象
+    function parseConditionFromBuilder($builder) {
+        var $mainGroup = $builder.find('.condition-group').first();
+        var condition = {
+            version: "1.0",
+            mode: $mainGroup.find('.mode-select').first().val() || "ALL",
+            rules: [],
+            groups: []
+        };
+        
+        // 解析主组规则
+        $mainGroup.find('.condition-rule').each(function() {
+            var $rule = $(this);
+            condition.rules.push({
+                factor: $rule.find('.rule-factor').val(),
+                operator: $rule.find('.rule-operator').val(),
+                value: $rule.find('.rule-value').val(),
+                type: $rule.find('.rule-type').val(),
+                nullable: $rule.find('.rule-nullable').is(':checked')
+            });
+        });
+        
+        // 解析嵌套组
+        $builder.find('.nested-group').each(function() {
+            var $group = $(this);
+            var groupIndex = $group.data('group-index');
+            var group = {
+                mode: $group.find('.mode-select').val() || "ALL",
+                rules: [],
+                groups: []
+            };
+            
+            $group.find('.condition-rule').each(function() {
+                var $rule = $(this);
+                group.rules.push({
+                    factor: $rule.find('.rule-factor').val(),
+                    operator: $rule.find('.rule-operator').val(),
+                    value: $rule.find('.rule-value').val(),
+                    type: $rule.find('.rule-type').val(),
+                    nullable: $rule.find('.rule-nullable').is(':checked')
+                });
+            });
+            
+            condition.groups.push(group);
+        });
+        
+        return condition;
+    }
+    
+    // 更新JSON
+    window.updateConditionJson = function(jsonId) {
+        var $builder = $('#' + jsonId.replace('Json', 'Builder'));
+        var $json = $('#' + jsonId);
+        var condition = parseConditionFromBuilder($builder);
+        $json.val(JSON.stringify(condition, null, 2));
+    };
+    
+    // 打开创建策略弹窗时初始化条件构建器
+    window.openCreateStrategy = function() {
+        // 重置已选列表
+        selectedTradingPairs = [];
+        selectedSignalConfigs = [];
+        
+        // 清空strategyId（创建模式）
+        $('#createStrategyId').val('');
+        
+        // 重置表单
+        $('#createStrategyForm form')[0].reset();
+        $('#createStrategyId').val('');
+        
+        // 加载下拉框选项
+        if (typeof loadTradingPairSelect === 'function') {
+            loadTradingPairSelect();
+        }
+        if (typeof loadSignalConfigSelect === 'function') {
+            loadSignalConfigSelect();
+        }
+        
+        // 渲染已选列表
+        if (typeof renderSelectedTradingPairs === 'function') {
+            renderSelectedTradingPairs();
+        }
+        if (typeof renderSelectedSignalConfigs === 'function') {
+            renderSelectedSignalConfigs();
+        }
+        
+        // 初始化条件构建器
+        initConditionBuilder('entryConditionBuilder', 'entryConditionJson');
+        initConditionBuilder('exitConditionBuilder', 'exitConditionJson');
+        
+        form.render();
+        
+        layer.open({
+            type: 1,
+            title: '创建策略',
+            area: ['1400px', '95%'],
+            content: $('#createStrategyForm'),
+            success: function(layero, index) {
+                // 重新渲染所有表单元素，确保下拉框正常显示
+                form.render();
+                // 延迟一下确保渲染完成
+                setTimeout(function(){
+                    form.render('select');
+                }, 50);
+            }
+        });
+    };
+    
+    // 编辑策略时初始化条件构建器
+    window.editStrategy = function(strategyId, enabled) {
+        if (enabled == 1) {
+            layer.msg('启用中的策略不可编辑', {icon: 0});
+            return;
+        }
+        
+        var loading = layer.load(1);
+        $.ajax({
+            url: '/api/strategy/detail',
+            method: 'GET',
+            data: {strategyId: strategyId},
+            success: function(res) {
+                layer.close(loading);
+                if (res.success && res.data) {
+                    var strategy = res.data;
+                    $('#editStrategyId').val(strategy.id);
+                    $('#editStrategyForm input[name="strategyName"]').val(strategy.strategyName);
+                    $('#editStrategyForm select[name="strategyType"]').val(strategy.strategyType);
+                    $('#editStrategyForm select[name="decisionMode"]').val(strategy.decisionMode || '');
+                    
+                    if (strategy.param) {
+                        $('#editStrategyForm input[name="initialCapital"]').val(strategy.param.initialCapital);
+                        $('#editStrategyForm input[name="baseOrderRatio"]').val(strategy.param.baseOrderRatio);
+                        $('#editStrategyForm input[name="takeProfitRatio"]').val(strategy.param.takeProfitRatio || '');
+                        $('#editStrategyForm input[name="stopLossRatio"]').val(strategy.param.stopLossRatio || '');
+                        
+                        // 初始化条件构建器
+                        if (strategy.param.entryCondition) {
+                            $('#editEntryConditionJson').val(strategy.param.entryCondition);
+                        }
+                        if (strategy.param.exitCondition) {
+                            $('#editExitConditionJson').val(strategy.param.exitCondition);
+                        }
+                        initConditionBuilder('editEntryConditionBuilder', 'editEntryConditionJson');
+                        initConditionBuilder('editExitConditionBuilder', 'editExitConditionJson');
+                    }
+                    
+                    // 加载交易对和信号配置
+                    loadEditStrategySymbols(strategyId);
+                    loadEditStrategySignals(strategyId);
+                    
+                    form.render();
+                    
+                    layer.open({
+                        type: 1,
+                        title: '编辑策略',
+                        area: ['1400px', '95%'],
+                        content: $('#editStrategyForm'),
+                        success: function(layero, index) {
+                            form.render();
+                        }
+                    });
+                } else {
+                    layer.msg('获取策略详情失败', {icon: 2});
+                }
+            },
+            error: function() {
+                layer.close(loading);
+                layer.msg('获取策略详情失败', {icon: 2});
+            }
         });
     };
     
