@@ -161,8 +161,9 @@ public class DedupGate implements Gate {
         if (bar == null || bar.getBarCloseTime() == null) {
             return null;
         }
-        return String.format("%s:%s", bar.getTimeframe(),
-            bar.getBarCloseTime().format(DATE_TIME_FORMATTER));
+        // 重构：bar.getBarCloseTime() 现在是 Instant，使用 TimeUtil 格式化
+        String timeStr = com.qyl.v2trade.common.util.TimeUtil.formatAsUtcString(bar.getBarCloseTime());
+        return String.format("%s:%s", bar.getTimeframe(), timeStr);
     }
 
     /**

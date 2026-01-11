@@ -2,7 +2,7 @@ package com.qyl.v2trade.market.web.controller;
 
 import com.qyl.v2trade.common.Result;
 import com.qyl.v2trade.common.constants.KlineInterval;
-import com.qyl.v2trade.common.util.UtcTimeConverter;
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.model.NormalizedKline;
 import com.qyl.v2trade.market.model.dto.KlineQueryRequest;
 import com.qyl.v2trade.market.model.dto.KlineResponse;
@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -208,10 +209,21 @@ public class MarketDataController {
 
     /**
      * 转换为响应DTO
+     * 
+     * <p>在系统边界（Controller层）进行时区转换：
+     * - timestamp: 保留 Instant 类型（UTC），用于内部使用和 JSON 序列化
+     * - time: 转换为上海时区字符串，用于前端展示
      */
     private KlineResponse convertToResponse(NormalizedKline kline) {
-        // 使用 UtcTimeConverter 将UTC时间戳转换为时间字符串（本地时间，默认UTC+8）
-        String timeString = UtcTimeConverter.utcTimestampToLocalString(kline.getTimestamp());
+        // 获取 Instant 类型的时间戳
+        Instant timestamp = kline.getTimestampInstant();
+        if (timestamp == null && kline.getTimestamp() != null) {
+            // 兼容旧代码：如果没有 Instant，从 Long 转换
+            timestamp = TimeUtil.fromEpochMilli(kline.getTimestamp());
+        }
+        
+        // 在边界进行时区转换：Instant -> 上海时区字符串
+        String timeString = timestamp != null ? TimeUtil.formatAsShanghaiString(timestamp) : null;
         
         return KlineResponse.builder()
                 .symbol(kline.getSymbol())
@@ -221,8 +233,8 @@ public class MarketDataController {
                 .low(kline.getLow())
                 .close(kline.getClose())
                 .volume(kline.getVolume())
-                .timestamp(kline.getTimestamp())
-                .timeString(timeString)
+                .timestamp(timestamp)  // Instant 类型（UTC）
+                .time(timeString)       // String 类型（上海时区）
                 .build();
     }
 }

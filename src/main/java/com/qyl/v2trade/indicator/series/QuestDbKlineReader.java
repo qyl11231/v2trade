@@ -171,7 +171,7 @@ public class QuestDbKlineReader {
         Timestamp ts = rs.getTimestamp("ts");
         long timestampMillis = ts != null ? ts.toInstant().toEpochMilli() : 0;
         
-        return NormalizedKline.builder()
+        NormalizedKline normalizedKline = NormalizedKline.builder()
                 .symbol(rs.getString("symbol"))
                 .interval(timeframe)
                 .open(rs.getDouble("open"))
@@ -179,8 +179,10 @@ public class QuestDbKlineReader {
                 .low(rs.getDouble("low"))
                 .close(rs.getDouble("close"))
                 .volume(rs.getDouble("volume"))
-                .timestamp(timestampMillis)
                 .build();
+        // 使用兼容性方法设置时间戳（long -> Instant）
+        normalizedKline.setTimestamp(timestampMillis);
+        return normalizedKline;
     }
     
     /**

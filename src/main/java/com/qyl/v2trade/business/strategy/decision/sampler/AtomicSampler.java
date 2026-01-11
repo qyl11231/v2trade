@@ -388,16 +388,23 @@ public class AtomicSampler {
      * 构建K线快照
      */
     private BarSnapshot buildBarSnapshot(BarClosedEvent event) {
+        // BarClosedEvent.barCloseTime 是 LocalDateTime (UTC)，需要转换为 Instant
+        java.time.Instant barCloseTime = event.barCloseTime().atZone(java.time.ZoneId.of("UTC")).toInstant();
+        // BarClosedEvent.eventTime 是 LocalDateTime，需要转换为 Instant
+        java.time.Instant eventTime = event.eventTime() != null 
+            ? event.eventTime().atZone(java.time.ZoneId.of("UTC")).toInstant() 
+            : java.time.Instant.now();
+        
         return BarSnapshot.builder()
             .timeframe(event.timeframe())
-            .barCloseTime(event.barCloseTime())
+            .barCloseTime(barCloseTime)
             .open(event.open())
             .high(event.high())
             .low(event.low())
             .close(event.close())
             .volume(event.volume())
             .sourceCount(event.sourceCount())
-            .eventTime(event.eventTime())
+            .eventTime(eventTime)
             .build();
     }
 }

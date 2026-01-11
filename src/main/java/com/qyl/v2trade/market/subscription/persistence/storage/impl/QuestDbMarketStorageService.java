@@ -1,5 +1,6 @@
 package com.qyl.v2trade.market.subscription.persistence.storage.impl;
 
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.model.NormalizedKline;
 import com.qyl.v2trade.market.subscription.persistence.storage.MarketStorageService;
 import lombok.extern.slf4j.Slf4j;
@@ -10,9 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -66,11 +64,26 @@ public class QuestDbMarketStorageService implements MarketStorageService {
                 }
 
                 // 插入新的K线数据
-                // 时间戳语义：epoch millis (UTC)，转换为Instant后写入QuestDB TIMESTAMP (UTC)
-                Instant timestampInstant = Instant.ofEpochMilli(kline.getTimestamp());
-                Timestamp timestamp = Timestamp.from(timestampInstant);
+                // 时间戳语义：从 NormalizedKline 获取 Instant，写入QuestDB TIMESTAMP (UTC)
+                Instant openTime = kline.getTimestampInstant();
+                if (openTime == null) {
+                    // 兼容旧代码：如果没有 Instant，从 Long 转换
+                    Long timestampLong = kline.getTimestamp();
+                    if (timestampLong == null) {
+                        log.error("K线时间戳为null: symbol={}", kline.getSymbol());
+                        return false;
+                    }
+                    openTime = TimeUtil.fromEpochMilli(timestampLong);
+                }
+                Timestamp timestamp = Timestamp.from(openTime);
 
-                long exchangeTs = kline.getExchangeTimestamp() != null ? kline.getExchangeTimestamp() : kline.getTimestamp();
+                Instant exchangeTsInstant = kline.getExchangeTimestampInstant();
+                if (exchangeTsInstant == null) {
+                    // 兼容旧代码：如果没有 Instant，从 Long 转换
+                    Long exchangeTsLong = kline.getExchangeTimestamp();
+                    exchangeTsInstant = exchangeTsLong != null ? TimeUtil.fromEpochMilli(exchangeTsLong) : openTime;
+                }
+                long exchangeTs = TimeUtil.toEpochMilli(exchangeTsInstant);
 
                 int rows = questDbJdbcTemplate.update(INSERT_SQL,
                     kline.getSymbol(),
@@ -84,22 +97,24 @@ public class QuestDbMarketStorageService implements MarketStorageService {
                 );
 
                 if (rows > 0) {
-                    // 日志同时打印UTC和本地时间（Asia/Shanghai）
-                    ZonedDateTime utcTime = timestampInstant.atZone(ZoneId.of("UTC"));
-                    ZonedDateTime localTime = timestampInstant.atZone(ZoneId.of("Asia/Shanghai"));
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    log.debug("K线已保存到QuestDB: symbol={}, timestamp={} (UTC: {}, CST: {}), open={}, high={}, low={}, close={}, volume={}",
-                            kline.getSymbol(), kline.getTimestamp(),
-                            utcTime.format(formatter), localTime.format(formatter),
+                    // 日志同时打印UTC和本地时间（使用 TimeUtil）
+                    log.debug("K线已保存到QuestDB: symbol={}, timestamp={}, open={}, high={}, low={}, close={}, volume={}",
+                            kline.getSymbol(), TimeUtil.formatWithBothTimezones(openTime),
                             kline.getOpen(), kline.getHigh(), kline.getLow(), kline.getClose(), kline.getVolume());
                 } else {
                     log.warn("K线保存失败（返回0行）: symbol={}, timestamp={}",
-                            kline.getSymbol(), kline.getTimestamp());
+                            kline.getSymbol(), TimeUtil.formatWithBothTimezones(openTime));
                 }
 
                 return rows > 0;
             } catch (Exception e) {
-                log.error("保存K线失败: symbol={}, timestamp={}", kline.getSymbol(), kline.getTimestamp(), e);
+                Instant openTimeForLog = kline.getTimestampInstant() != null 
+                    ? kline.getTimestampInstant() 
+                    : (kline.getTimestamp() != null ? TimeUtil.fromEpochMilli(kline.getTimestamp()) : null);
+                log.error("保存K线失败: symbol={}, timestamp={}", 
+                        kline.getSymbol(), 
+                        openTimeForLog != null ? TimeUtil.formatWithBothTimezones(openTimeForLog) : "null", 
+                        e);
                 return false;
             }
         }
@@ -126,7 +141,7 @@ public class QuestDbMarketStorageService implements MarketStorageService {
     public boolean exists(String symbol, long timestamp) {
         try {
             // 时间戳语义：epoch millis (UTC)，转换为Instant后写入QuestDB TIMESTAMP (UTC)
-            Instant timestampInstant = Instant.ofEpochMilli(timestamp);
+            Instant timestampInstant = TimeUtil.fromEpochMilli(timestamp);
             Timestamp ts = Timestamp.from(timestampInstant);
             
             Integer count = questDbJdbcTemplate.queryForObject(
@@ -137,7 +152,7 @@ public class QuestDbMarketStorageService implements MarketStorageService {
             );
             return count != null && count > 0;
         } catch (Exception e) {
-            log.error("检查K线是否存在失败: symbol={}, timestamp={}", symbol, timestamp, e);
+            log.error("检查K线是否存在失败: symbol={}, timestamp={}", symbol, TimeUtil.formatWithBothTimezones(TimeUtil.fromEpochMilli(timestamp)), e);
             return false;
         }
     }

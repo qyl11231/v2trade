@@ -1,5 +1,6 @@
 package com.qyl.v2trade.market.subscription.collector.ingestor.impl;
 
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.subscription.collector.eventbus.MarketEventBus;
 import com.qyl.v2trade.market.subscription.collector.ingestor.MarketIngestor;
 import com.qyl.v2trade.market.model.NormalizedKline;
@@ -140,7 +141,7 @@ public class OkxMarketIngestor implements MarketIngestor {
     private void handleKlineEvent(KlineEvent event) {
         try {
             log.debug("收到 KlineEvent: symbol={}, timestamp={}, close={}", 
-                    event.symbol(), event.openTime(), event.close());
+                    event.symbol(), TimeUtil.formatWithBothTimezones(event.openTime()), event.close());
 
             // 转换为 NormalizedKline（保持向后兼容）
             // 注意：这里只是记录日志，实际处理由 MarketDataCenter 负责
@@ -148,7 +149,7 @@ public class OkxMarketIngestor implements MarketIngestor {
             
         } catch (Exception e) {
             log.error("处理 KlineEvent 失败: symbol={}, timestamp={}", 
-                    event.symbol(), event.openTime(), e);
+                    event.symbol(), TimeUtil.formatWithBothTimezones(event.openTime()), e);
         }
     }
 
@@ -161,7 +162,7 @@ public class OkxMarketIngestor implements MarketIngestor {
      * @return NormalizedKline
      */
     public static NormalizedKline convertToNormalizedKline(KlineEvent event) {
-        return NormalizedKline.builder()
+        NormalizedKline kline = NormalizedKline.builder()
                 .symbol(event.symbol())
                 .interval(event.interval())
                 .open(event.open().doubleValue())
@@ -169,8 +170,10 @@ public class OkxMarketIngestor implements MarketIngestor {
                 .low(event.low().doubleValue())
                 .close(event.close().doubleValue())
                 .volume(event.volume().doubleValue())
-                .timestamp(event.openTime())
-                .exchangeTimestamp(event.openTime())
                 .build();
+        // 使用 setter 方法设置 Instant 类型的时间戳
+        kline.setTimestampInstant(event.openTime());
+        kline.setExchangeTimestampInstant(event.openTime());
+        return kline;
     }
 }

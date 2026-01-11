@@ -33,8 +33,10 @@ public class HistoricalKlineFetcherImpl implements HistoricalKlineFetcher {
         if (timestamps == null || timestamps.isEmpty()) {
             return new ArrayList<>();
         }
-        Long endTimeStamp = timestamps.get(timestamps.size() - 1)+60000+60000*60*8;
-        Long startTimestamp = timestamps.get(0)+60000*60*8;
+        // 重构：移除硬编码时区偏移，假设传入的 timestamps 已经是正确的 UTC 时间戳
+        // 如果上游时间戳有问题，应该修复上游，而不是在这里"打补丁"
+        Long endTimeStamp = timestamps.get(timestamps.size() - 1) + 60000; // 仅添加1分钟，用于查询边界
+        Long startTimestamp = timestamps.get(0);
         // 使用Map存储，时间戳为key保证唯一性，最后转成List
         Map<Long, NormalizedKline> klineMap = new HashMap<>();
         try {
@@ -220,9 +222,10 @@ public class HistoricalKlineFetcherImpl implements HistoricalKlineFetcher {
                                 .low(low)
                                 .close(close)
                                 .volume(volume)
-                                .timestamp(timestamp)
-                                .exchangeTimestamp(timestamp)
                                 .build();
+                        // 使用兼容性方法设置时间戳（long -> Instant）
+                        kline.setTimestamp(timestamp);
+                        kline.setExchangeTimestamp(timestamp);
 
                         klines.add(kline);
                     } catch (Exception e) {
@@ -347,9 +350,10 @@ public class HistoricalKlineFetcherImpl implements HistoricalKlineFetcher {
                                 .low(low)
                                 .close(close)
                                 .volume(volume)
-                                .timestamp(timestamp)
-                                .exchangeTimestamp(timestamp)
                                 .build();
+                        // 使用兼容性方法设置时间戳（long -> Instant）
+                        kline.setTimestamp(timestamp);
+                        kline.setExchangeTimestamp(timestamp);
 
                         klines.add(kline);
                     } catch (Exception e) {
@@ -428,9 +432,10 @@ public class HistoricalKlineFetcherImpl implements HistoricalKlineFetcher {
                                 .low(low)
                                 .close(close)
                                 .volume(volume)
-                                .timestamp(timestamp)
-                                .exchangeTimestamp(timestamp)
                                 .build();
+                        // 使用兼容性方法设置时间戳（long -> Instant）
+                        kline.setTimestamp(timestamp);
+                        kline.setExchangeTimestamp(timestamp);
 
                         klines.add(kline);
                     } catch (Exception e) {
@@ -509,10 +514,10 @@ public class HistoricalKlineFetcherImpl implements HistoricalKlineFetcher {
                                 .low(low)
                                 .close(close)
                                 .volume(volume)
-                                .timestamp(timestamp)
-                                .exchangeTimestamp(timestamp)
                                 .build();
-
+                        // 使用兼容性方法设置时间戳（long -> Instant）
+                        kline.setTimestamp(timestamp);
+                        kline.setExchangeTimestamp(timestamp);
                         klines.add(kline);
                     } catch (Exception e) {
                         log.warn("解析K线数据失败: candle={}", candle, e);

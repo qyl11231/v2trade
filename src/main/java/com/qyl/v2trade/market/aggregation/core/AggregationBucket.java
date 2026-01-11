@@ -137,8 +137,9 @@ public class AggregationBucket {
         klineCount++;
         
         // 判断窗口是否结束
-        // 规则：如果 kline.openTime >= windowEnd，窗口结束
-        boolean windowComplete = event.closeTime() >= windowEnd;
+        // 规则：如果 kline.closeTime >= windowEnd，窗口结束
+        // 重构：event.closeTime() 返回 Instant，需要转换为 long
+        boolean windowComplete = event.closeTime().toEpochMilli() >= windowEnd;
         if (windowComplete) {
             isComplete = true;
         }

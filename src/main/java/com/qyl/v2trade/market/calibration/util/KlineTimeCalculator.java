@@ -19,6 +19,9 @@ public class KlineTimeCalculator {
      * 
      * <p>时间边界：左闭右开区间 [startTimestamp, endTimestamp)
      * 
+     * <p>重构说明：移除硬编码时区偏移，假设传入的参数已经是正确的 UTC 时间戳。
+     * 如果上游时间戳有问题，应该修复上游，而不是在这里"打补丁"。
+     * 
      * @param ostartTimestamp 开始时间戳（毫秒，UTC epoch millis，包含）
      * @param oendTimestamp 结束时间戳（毫秒，UTC epoch millis，不包含）
      * @return 时间戳列表（毫秒，UTC epoch millis，分钟起始点）
@@ -26,8 +29,9 @@ public class KlineTimeCalculator {
     public static List<Long> calculateExpectedTimestamps(long ostartTimestamp, long oendTimestamp) {
         List<Long> timestamps = new ArrayList<>();
 
-        Long startTimestamp =ostartTimestamp -60000 * 60 * 8;
-        Long endTimestamp =oendTimestamp -60000 * 60 * 8;
+        // 重构：直接使用传入的 UTC 时间戳，不进行任何时区偏移计算
+        Long startTimestamp = ostartTimestamp;
+        Long endTimestamp = oendTimestamp;
 
         if (startTimestamp <= 0 || endTimestamp <= 0 || startTimestamp >= endTimestamp) {
             return timestamps;

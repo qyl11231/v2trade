@@ -343,11 +343,15 @@ public class KlineAggregatorInitializer {
         long openTime = kline.getTimestamp();
         long closeTime = openTime + 60000; // 1分钟
         
+        // 转换 long 为 Instant
+        java.time.Instant openTimeInstant = com.qyl.v2trade.common.util.TimeUtil.fromEpochMilli(openTime);
+        java.time.Instant closeTimeInstant = com.qyl.v2trade.common.util.TimeUtil.fromEpochMilli(closeTime);
+        
         return KlineEvent.of(
                 kline.getSymbol(),
                 "OKX", // 默认交易所
-                openTime,
-                closeTime,
+                openTimeInstant,
+                closeTimeInstant,
                 kline.getInterval(),
                 BigDecimal.valueOf(kline.getOpen()),
                 BigDecimal.valueOf(kline.getHigh()),
@@ -355,7 +359,7 @@ public class KlineAggregatorInitializer {
                 BigDecimal.valueOf(kline.getClose()),
                 BigDecimal.valueOf(kline.getVolume()),
                 true, // 历史数据都是已完成的
-                System.currentTimeMillis()
+                java.time.Instant.now()  // eventTime (UTC Instant)
         );
     }
 }

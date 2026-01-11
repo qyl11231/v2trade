@@ -7,6 +7,7 @@ import com.qyl.v2trade.business.system.service.ExchangeMarketPairService;
 import com.qyl.v2trade.business.system.service.MarketSubscriptionConfigService;
 import com.qyl.v2trade.business.system.service.TradingPairService;
 import com.qyl.v2trade.common.constants.ExchangeCode;
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.subscription.persistence.cache.MarketCacheService;
 import com.qyl.v2trade.market.subscription.persistence.cache.impl.RedisMarketCacheService;
 import com.qyl.v2trade.market.subscription.delivery.distributor.MarketDistributor;
@@ -26,9 +27,6 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -275,14 +273,14 @@ public class MarketDataCenter implements ApplicationRunner {
         try {
             // 1. 内存去重（防止EventBus异步导致的并发插入）
             // 对齐时间戳到分钟（确保同一根K线的时间戳一致）
-            long alignedTimestamp = alignTimestampToMinute(event.openTime());
+            long alignedTimestamp = alignTimestampToMinute(TimeUtil.toEpochMilli(event.openTime()));
             String dedupKey = event.symbol() + ":" + alignedTimestamp;
             
             // 检查是否已处理过
             Long processedTime = deduplicationCache.get(dedupKey);
             if (processedTime != null) {
                 log.debug("K线事件已处理（内存去重）: symbol={}, timestamp={}, alignedTimestamp={}", 
-                        event.symbol(), event.openTime(), alignedTimestamp);
+                        event.symbol(), TimeUtil.formatWithBothTimezones(event.openTime()), alignedTimestamp);
                 return;
             }
             
@@ -291,7 +289,7 @@ public class MarketDataCenter implements ApplicationRunner {
                 event.high().equals(event.low()) && 
                 event.low().equals(event.close())) {
                 log.warn("跳过开高低收价格相同的K线: symbol={}, timestamp={}, price={}", 
-                        event.symbol(), event.openTime(), event.open());
+                        event.symbol(), TimeUtil.formatWithBothTimezones(event.openTime()), event.open());
                 return;
             }
 
@@ -311,13 +309,8 @@ public class MarketDataCenter implements ApplicationRunner {
 
         } catch (Exception e) {
             // 日志同时打印UTC和本地时间
-            Instant eventTime = Instant.ofEpochMilli(event.openTime());
-            ZonedDateTime utcTime = eventTime.atZone(ZoneId.of("UTC"));
-            ZonedDateTime localTime = eventTime.atZone(ZoneId.of("Asia/Shanghai"));
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            log.error("处理 KlineEvent 失败: symbol={}, timestamp={} (UTC: {}, CST: {})", 
-                    event.symbol(), event.openTime(), 
-                    utcTime.format(formatter), localTime.format(formatter), e);
+            log.error("处理 KlineEvent 失败: symbol={}, timestamp={}", 
+                    event.symbol(), TimeUtil.formatWithBothTimezones(event.openTime()), e);
         }
     }
     
@@ -379,13 +372,13 @@ public class MarketDataCenter implements ApplicationRunner {
     private void handleKline(NormalizedKline kline) {
         try {
             // 日志同时打印UTC和本地时间
-            Instant klineTime = Instant.ofEpochMilli(kline.getTimestamp());
-            ZonedDateTime utcTime = klineTime.atZone(ZoneId.of("UTC"));
-            ZonedDateTime localTime = klineTime.atZone(ZoneId.of("Asia/Shanghai"));
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            log.debug("开始处理 K 线: symbol={}, timestamp={} (UTC: {}, CST: {}), close={}", 
-                    kline.getSymbol(), kline.getTimestamp(), 
-                    utcTime.format(formatter), localTime.format(formatter),
+            Instant klineTime = kline.getTimestampInstant();
+            if (klineTime == null && kline.getTimestamp() != null) {
+                klineTime = TimeUtil.fromEpochMilli(kline.getTimestamp());
+            }
+            log.debug("开始处理 K 线: symbol={}, timestamp={}, close={}", 
+                    kline.getSymbol(), 
+                    klineTime != null ? TimeUtil.formatWithBothTimezones(klineTime) : "null",
                     kline.getClose());
 
             // 记录收到 K 线
@@ -394,15 +387,17 @@ public class MarketDataCenter implements ApplicationRunner {
             // 1. 保存到 QuestDB（存储层会处理相同时间戳的去重，保证同一时间戳只保留一条数据）
             // 时间戳语义：UTC epoch millis，对齐到分钟起始点
             boolean saved = marketStorageService.saveKline(kline);
+            
+            // 复用之前定义的 klineTime 变量
             if (saved) {
                 marketDataMonitor.recordKlineSaved();
-                log.debug("K 线已保存: symbol={}, timestamp={} (UTC: {}, CST: {})", 
-                        kline.getSymbol(), kline.getTimestamp(),
-                        utcTime.format(formatter), localTime.format(formatter));
+                log.debug("K 线已保存: symbol={}, timestamp={}", 
+                        kline.getSymbol(), 
+                        klineTime != null ? TimeUtil.formatWithBothTimezones(klineTime) : "null");
             } else {
-                log.debug("K 线已存在或保存失败: symbol={}, timestamp={} (UTC: {}, CST: {})", 
-                        kline.getSymbol(), kline.getTimestamp(),
-                        utcTime.format(formatter), localTime.format(formatter));
+                log.debug("K 线已存在或保存失败: symbol={}, timestamp={}", 
+                        kline.getSymbol(), 
+                        klineTime != null ? TimeUtil.formatWithBothTimezones(klineTime) : "null");
             }
 
             // 2. 检查 Redis 连接并缓存到 Redis（获取缓存时长配置）
@@ -432,16 +427,19 @@ public class MarketDataCenter implements ApplicationRunner {
                 }
             }
 
-            log.debug("K 线处理完成: symbol={}, timestamp={}", kline.getSymbol(), kline.getTimestamp());
+            log.debug("K 线处理完成: symbol={}, timestamp={}", 
+                    kline.getSymbol(), 
+                    klineTime != null ? TimeUtil.formatWithBothTimezones(klineTime) : "null");
         } catch (Exception e) {
             // 日志同时打印UTC和本地时间
-            Instant klineTime = Instant.ofEpochMilli(kline.getTimestamp());
-            ZonedDateTime utcTime = klineTime.atZone(ZoneId.of("UTC"));
-            ZonedDateTime localTime = klineTime.atZone(ZoneId.of("Asia/Shanghai"));
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            log.error("处理 K 线数据失败: symbol={}, timestamp={} (UTC: {}, CST: {})", 
-                    kline.getSymbol(), kline.getTimestamp(),
-                    utcTime.format(formatter), localTime.format(formatter), e);
+            Instant klineTime = kline.getTimestampInstant();
+            if (klineTime == null && kline.getTimestamp() != null) {
+                klineTime = TimeUtil.fromEpochMilli(kline.getTimestamp());
+            }
+            log.error("处理 K 线数据失败: symbol={}, timestamp={}", 
+                    kline.getSymbol(), 
+                    klineTime != null ? TimeUtil.formatWithBothTimezones(klineTime) : "null", 
+                    e);
         }
     }
 

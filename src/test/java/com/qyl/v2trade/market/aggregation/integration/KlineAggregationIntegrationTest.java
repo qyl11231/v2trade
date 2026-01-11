@@ -190,11 +190,15 @@ class KlineAggregationIntegrationTest {
                                        BigDecimal open, BigDecimal high, BigDecimal low, 
                                        BigDecimal close, BigDecimal volume) {
         long closeTime = openTime + 60000; // 1分钟K线
+        // 重构：将 long 转换为 Instant
+        java.time.Instant openTimeInstant = java.time.Instant.ofEpochMilli(openTime);
+        java.time.Instant closeTimeInstant = java.time.Instant.ofEpochMilli(closeTime);
+        java.time.Instant eventTimeInstant = java.time.Instant.now();
         return KlineEvent.of(
                 symbol, 
                 "OKX", 
-                openTime, 
-                closeTime, 
+                openTimeInstant, 
+                closeTimeInstant, 
                 "1m", 
                 open, 
                 high, 
@@ -202,7 +206,7 @@ class KlineAggregationIntegrationTest {
                 close, 
                 volume, 
                 false, 
-                System.currentTimeMillis()
+                eventTimeInstant
         );
     }
     

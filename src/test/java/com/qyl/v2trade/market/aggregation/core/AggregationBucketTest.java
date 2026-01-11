@@ -243,8 +243,12 @@ class AggregationBucketTest {
                                        BigDecimal open, BigDecimal high, BigDecimal low, 
                                        BigDecimal close, BigDecimal volume) {
         long closeTime = openTime + 60000; // 1分钟K线
-        return KlineEvent.of(symbol, "OKX", openTime, closeTime, "1m", 
-                open, high, low, close, volume, false, System.currentTimeMillis());
+        // 重构：将 long 转换为 Instant
+        java.time.Instant openTimeInstant = java.time.Instant.ofEpochMilli(openTime);
+        java.time.Instant closeTimeInstant = java.time.Instant.ofEpochMilli(closeTime);
+        java.time.Instant eventTimeInstant = java.time.Instant.now();
+        return KlineEvent.of(symbol, "OKX", openTimeInstant, closeTimeInstant, "1m", 
+                open, high, low, close, volume, false, eventTimeInstant);
     }
     
     /**

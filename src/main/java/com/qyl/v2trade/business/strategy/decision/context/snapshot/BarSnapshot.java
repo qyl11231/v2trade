@@ -6,7 +6,7 @@ import lombok.Getter;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * K线快照（不可变）
@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
  * <p>从 BarClosedEvent 获取的K线快照
  * 
  * <p>用于K线驱动策略的决策
+ * 
+ * <p>时间字段统一使用 {@link Instant} 类型，表示 UTC 时间点。
  */
 @Getter
 @Builder
@@ -30,7 +32,7 @@ public class BarSnapshot implements Serializable {
     /**
      * K线收盘时间（bar_close_time，UTC）
      */
-    private final LocalDateTime barCloseTime;
+    private final Instant barCloseTime;
 
     /**
      * 开盘价
@@ -63,8 +65,8 @@ public class BarSnapshot implements Serializable {
     private final Integer sourceCount;
 
     /**
-     * 事件产生时间（本地时间）
+     * 事件产生时间（UTC）
      */
-    private final LocalDateTime eventTime;
+    private final Instant eventTime;
 }
 

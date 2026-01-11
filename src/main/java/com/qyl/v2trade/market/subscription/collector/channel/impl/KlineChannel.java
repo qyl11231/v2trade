@@ -2,6 +2,7 @@ package com.qyl.v2trade.market.subscription.collector.channel.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.subscription.collector.channel.MarketChannel;
 import com.qyl.v2trade.market.subscription.collector.eventbus.MarketEventBus;
 import com.qyl.v2trade.market.model.event.KlineEvent;
@@ -9,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -123,10 +126,11 @@ public class KlineChannel implements MarketChannel {
                 // 解析 K 线数据
                 // OKX WebSocket 格式：[时间戳(0), 开盘价(1), 最高价(2), 最低价(3), 收盘价(4), 成交量(5), 成交额(6), 其他(7), confirm(8)]
                 // 索引8：K线状态，0=未完结，1=已完结
-                // 时间戳语义：OKX返回的是UTC epoch millis，需要对齐到分钟起始点
-                long rawTimestamp = Long.parseLong(klineArray.get(0).asText());
+                // 时间戳语义：OKX返回的是UTC epoch millis，立即转换为Instant
+                long rawTimestampMillis = Long.parseLong(klineArray.get(0).asText());
+                Instant rawTimestamp = TimeUtil.fromEpochMilli(rawTimestampMillis);
                 // 对齐到分钟起始点（UTC）
-                long timestamp = (rawTimestamp / 60000) * 60000;
+                Instant openTime = TimeUtil.alignToMinuteStart(rawTimestamp);
                 BigDecimal open = new BigDecimal(klineArray.get(1).asText());
                 BigDecimal high = new BigDecimal(klineArray.get(2).asText());
                 BigDecimal low = new BigDecimal(klineArray.get(3).asText());
@@ -143,61 +147,59 @@ public class KlineChannel implements MarketChannel {
                 // 如果K线未完结，检查时间戳是否接近分钟末尾（第59秒）
                 // 只有在K线已确认，或者在1分钟的第59秒时，才处理数据
                 if (!isConfirmed) {
-                    long currentTime = System.currentTimeMillis();
-                    long klineStartTime = timestamp;
-                    long elapsedSeconds = (currentTime - klineStartTime) / 1000;
+                    Instant currentTime = Instant.now();
+                    long elapsedSeconds = (currentTime.toEpochMilli() - openTime.toEpochMilli()) / 1000;
                     
                     // 如果距离K线开始时间不足59秒，跳过（K线还在更新中）
                     if (elapsedSeconds < 59) {
                         log.debug("跳过未完结K线（距离开始不足59秒）: symbol={}, timestamp={}, elapsedSeconds={}", 
-                                instId, timestamp, elapsedSeconds);
+                                instId, TimeUtil.formatWithBothTimezones(openTime), elapsedSeconds);
                         continue;
                     }
                     
                     // 如果已经超过60秒，说明是下一根K线，也跳过（应该已经处理过了）
                     if (elapsedSeconds >= 60) {
                         log.debug("跳过过期K线（已超过60秒）: symbol={}, timestamp={}, elapsedSeconds={}", 
-                                instId, timestamp, elapsedSeconds);
+                                instId, TimeUtil.formatWithBothTimezones(openTime), elapsedSeconds);
                         continue;
                     }
 
                     // 第59秒，处理数据
                     log.debug("处理未完结K线（第59秒）: symbol={}, timestamp={}, elapsedSeconds={}",
-                            instId, timestamp, elapsedSeconds);
+                            instId, TimeUtil.formatWithBothTimezones(openTime), elapsedSeconds);
                 } else {
-                    log.debug("处理已完结K线: symbol={}, timestamp={}", instId, timestamp);
+                    log.debug("处理已完结K线: symbol={}, timestamp={}", instId, TimeUtil.formatWithBothTimezones(openTime));
                 }
                 
                 // 记录解析后的数据（用于调试）
                 log.debug("OKX K线解析结果: symbol={}, timestamp={}, isConfirmed={}, open={}, high={}, low={}, close={}, volume={}",
-                        instId, timestamp, isConfirmed, open, high, low, close, volume);
+                        instId, TimeUtil.formatWithBothTimezones(openTime), isConfirmed, open, high, low, close, volume);
 
                 // 数据验证：检查开高低收价格是否合理
                 // 正常情况下：high >= open, high >= close, low <= open, low <= close
                 if (high.compareTo(open) < 0 || high.compareTo(close) < 0 || 
                     low.compareTo(open) > 0 || low.compareTo(close) > 0) {
                     log.warn("OKX K线数据异常（价格关系不合理）: symbol={}, timestamp={}, open={}, high={}, low={}, close={}, raw={}", 
-                            instId, timestamp, open, high, low, close, klineArray);
+                            instId, TimeUtil.formatWithBothTimezones(openTime), open, high, low, close, klineArray);
                     // 继续处理，但记录警告
                 }
                 
                 // 如果开高低收都相同，记录警告（可能是未完成的K线或数据异常）
                 if (open.equals(high) && high.equals(low) && low.equals(close)) {
                     log.warn("OKX K线数据异常（开高低收价格相同）: symbol={}, timestamp={}, price={}, raw={}", 
-                            instId, timestamp, open, klineArray);
+                            instId, TimeUtil.formatWithBothTimezones(openTime), open, klineArray);
                 }
 
-                // 计算收盘时间（根据周期计算）
-                // 根据周期计算收盘时间
-                long closeTime = calculateCloseTime(timestamp, interval);
+                // 计算收盘时间（根据周期计算，使用 Instant API）
+                Instant closeTime = calculateCloseTime(openTime, interval);
 
-                // 创建 KlineEvent
+                // 创建 KlineEvent（使用 Instant）
                 // v1.0 阶段：isFinal 设为 false，由下游 MarketDataCenter 负责判断
                 KlineEvent event = KlineEvent.of(
                         instId,                    // symbol（使用交易所原始格式）
                         "OKX",                     // exchange
-                        timestamp,                 // openTime
-                        closeTime,                 // closeTime
+                        openTime,                  // openTime (Instant)
+                        closeTime,                 // closeTime (Instant)
                         interval,                  // interval
                         open,                     // open
                         high,                      // high
@@ -205,13 +207,13 @@ public class KlineChannel implements MarketChannel {
                         close,                     // close
                         volume,                    // volume
                         false,                     // isFinal（v1.0 默认 false）
-                        System.currentTimeMillis()  // eventTime（本地时间戳）
+                        Instant.now()              // eventTime（UTC Instant）
                 );
 
                 // 发布到 EventBus
                 eventBus.publish(event);
                 log.debug("K线事件已发布: symbol={}, timestamp={}, open={}, high={}, low={}, close={}, volume={}", 
-                        instId, timestamp, open, high, low, close, volume);
+                        instId, TimeUtil.formatWithBothTimezones(openTime), open, high, low, close, volume);
             }
 
         } catch (Exception e) {
@@ -222,13 +224,13 @@ public class KlineChannel implements MarketChannel {
     /**
      * 根据周期计算收盘时间
      * 
-     * @param openTime 开盘时间（毫秒）
+     * @param openTime 开盘时间（UTC Instant）
      * @param interval 周期（如：1m, 5m, 1h）
-     * @return 收盘时间（毫秒）
+     * @return 收盘时间（UTC Instant）
      */
-    private long calculateCloseTime(long openTime, String interval) {
+    private Instant calculateCloseTime(Instant openTime, String interval) {
         if (interval == null || interval.isEmpty()) {
-            return openTime + 60000; // 默认 1 分钟
+            return openTime.plus(1, ChronoUnit.MINUTES); // 默认 1 分钟
         }
 
         try {
@@ -237,37 +239,29 @@ public class KlineChannel implements MarketChannel {
             String unit = interval.replaceAll("[0-9]", "").toLowerCase();
 
             if (numberStr.isEmpty()) {
-                return openTime + 60000; // 默认 1 分钟
+                return openTime.plus(1, ChronoUnit.MINUTES); // 默认 1 分钟
             }
 
             long number = Long.parseLong(numberStr);
-            long milliseconds;
 
             switch (unit) {
                 case "m":
-                    milliseconds = number * 60 * 1000; // 分钟转毫秒
-                    break;
+                    return openTime.plus(number, ChronoUnit.MINUTES);
                 case "h":
-                    milliseconds = number * 60 * 60 * 1000; // 小时转毫秒
-                    break;
+                    return openTime.plus(number, ChronoUnit.HOURS);
                 case "d":
-                    milliseconds = number * 24 * 60 * 60 * 1000; // 天转毫秒
-                    break;
+                    return openTime.plus(number, ChronoUnit.DAYS);
                 case "w":
-                    milliseconds = number * 7 * 24 * 60 * 60 * 1000; // 周转毫秒
-                    break;
+                    return openTime.plus(number * 7, ChronoUnit.DAYS);
                 case "M":
-                    milliseconds = number * 30L * 24 * 60 * 60 * 1000; // 月转毫秒（简化处理，按30天）
-                    break;
+                    return openTime.plus(number * 30, ChronoUnit.DAYS); // 简化处理，按30天
                 default:
-                    milliseconds = 60000; // 默认 1 分钟
                     log.warn("未知的周期单位: {}, 使用默认值 1 分钟", unit);
+                    return openTime.plus(1, ChronoUnit.MINUTES);
             }
-
-            return openTime + milliseconds;
         } catch (Exception e) {
             log.warn("计算收盘时间失败: interval={}, 使用默认值 1 分钟", interval, e);
-            return openTime + 60000; // 默认 1 分钟
+            return openTime.plus(1, ChronoUnit.MINUTES); // 默认 1 分钟
         }
     }
 }

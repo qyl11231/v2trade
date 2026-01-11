@@ -180,7 +180,7 @@ public class QuestDbMarketQueryService implements MarketQueryService {
         // QuestDB TIMESTAMP是UTC时间，直接转换为epoch millis
         long timestampMillis = ts != null ? ts.toInstant().toEpochMilli() : 0;
         
-        return NormalizedKline.builder()
+        NormalizedKline kline = NormalizedKline.builder()
                 .symbol(rs.getString("symbol"))
                 .interval(interval)
                 .open(rs.getDouble("open"))
@@ -188,9 +188,11 @@ public class QuestDbMarketQueryService implements MarketQueryService {
                 .low(rs.getDouble("low"))
                 .close(rs.getDouble("close"))
                 .volume(rs.getDouble("volume"))
-                .timestamp(timestampMillis)
-                .exchangeTimestamp(rs.getLong("exchange_ts"))
                 .build();
+        // 使用兼容性方法设置时间戳（long -> Instant）
+        kline.setTimestamp(timestampMillis);
+        kline.setExchangeTimestamp(rs.getLong("exchange_ts"));
+        return kline;
     }
 }
 

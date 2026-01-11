@@ -1,6 +1,7 @@
 package com.qyl.v2trade.market.model.event;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 /**
  * 标准化 K 线事件 - 跨交易所通用
@@ -10,7 +11,8 @@ import java.math.BigDecimal;
  * <p>注意：
  * <ul>
  *   <li>isFinal 字段在 v1.0 阶段默认设为 false，由下游 MarketDataCenter 负责判断</li>
- *   <li>eventTime 是消息到达本系统的本地时间戳，用于延迟监控</li>
+ *   <li>eventTime 是消息到达本系统的时间（UTC），用于延迟监控</li>
+ *   <li>所有时间字段统一使用 {@link Instant} 类型，表示 UTC 时间点</li>
  * </ul>
  *
  * @author qyl
@@ -27,14 +29,14 @@ public record KlineEvent(
     String exchange,
     
     /**
-     * K 线开盘时间（毫秒时间戳）
+     * K 线开盘时间（UTC）
      */
-    long openTime,
+    Instant openTime,
     
     /**
-     * K 线收盘时间（毫秒时间戳）
+     * K 线收盘时间（UTC）
      */
-    long closeTime,
+    Instant closeTime,
     
     /**
      * K 线周期（如：1m, 5m, 1h）
@@ -75,19 +77,19 @@ public record KlineEvent(
     boolean isFinal,
     
     /**
-     * 消息到达本系统的本地时间戳（毫秒）
+     * 消息到达本系统的时间（UTC）
      * 
      * <p>用于延迟监控，计算从交易所发出到本系统处理完成的延迟。
      */
-    long eventTime
+    Instant eventTime
 ) {
     /**
      * 创建 KlineEvent 实例
      * 
      * @param symbol 交易对符号
      * @param exchange 交易所名称
-     * @param openTime 开盘时间（毫秒）
-     * @param closeTime 收盘时间（毫秒）
+     * @param openTime 开盘时间（UTC）
+     * @param closeTime 收盘时间（UTC）
      * @param interval 周期
      * @param open 开盘价
      * @param high 最高价
@@ -95,14 +97,14 @@ public record KlineEvent(
      * @param close 收盘价
      * @param volume 成交量
      * @param isFinal 是否最终值
-     * @param eventTime 事件时间（毫秒）
+     * @param eventTime 事件时间（UTC）
      * @return KlineEvent 实例
      */
     public static KlineEvent of(
             String symbol,
             String exchange,
-            long openTime,
-            long closeTime,
+            Instant openTime,
+            Instant closeTime,
             String interval,
             BigDecimal open,
             BigDecimal high,
@@ -110,7 +112,7 @@ public record KlineEvent(
             BigDecimal close,
             BigDecimal volume,
             boolean isFinal,
-            long eventTime) {
+            Instant eventTime) {
         return new KlineEvent(
                 symbol,
                 exchange,

@@ -1,5 +1,6 @@
 package com.qyl.v2trade.market.subscription.delivery.distributor.impl;
 
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.subscription.delivery.distributor.MarketDistributor;
 import com.qyl.v2trade.market.model.NormalizedKline;
 import com.qyl.v2trade.market.model.dto.KlineResponse;
@@ -7,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
 
 /**
  * WebSocket行情分发服务实现
@@ -66,7 +69,16 @@ public class WebSocketMarketDistributor implements MarketDistributor {
      * 转换为响应DTO
      */
     private KlineResponse convertToResponse(NormalizedKline kline) {
-        return KlineResponse.builder()
+        // 获取时间戳（Instant 类型）
+        Instant timestamp = kline.getTimestampInstant();
+        if (timestamp == null && kline.getTimestamp() != null) {
+            timestamp = TimeUtil.fromEpochMilli(kline.getTimestamp());
+        }
+        
+        // 转换为上海时区字符串
+        String timeString = timestamp != null ? TimeUtil.formatAsShanghaiString(timestamp) : null;
+        
+        KlineResponse response = KlineResponse.builder()
                 .symbol(kline.getSymbol())
                 .interval(kline.getInterval())
                 .open(kline.getOpen())
@@ -74,8 +86,11 @@ public class WebSocketMarketDistributor implements MarketDistributor {
                 .low(kline.getLow())
                 .close(kline.getClose())
                 .volume(kline.getVolume())
-                .timestamp(kline.getTimestamp())
+                .timestamp(timestamp)
+                .time(timeString)
                 .build();
+        
+        return response;
     }
 }
 

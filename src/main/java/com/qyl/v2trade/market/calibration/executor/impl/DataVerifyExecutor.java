@@ -368,14 +368,15 @@ public class DataVerifyExecutor implements MarketCalibrationExecutor {
                             NormalizedKline kline = NormalizedKline.builder()
                                     .symbol(symbolOnExchange)
                                     .interval("1m")
-                                    .timestamp(alignedTimestamp)
-                                    .exchangeTimestamp(timestamp)
                                     .open(Double.parseDouble(candle.get(1).asText()))
                                     .high(Double.parseDouble(candle.get(2).asText()))
                                     .low(Double.parseDouble(candle.get(3).asText()))
                                     .close(Double.parseDouble(candle.get(4).asText()))
                                     .volume(Double.parseDouble(candle.get(5).asText()))
                                     .build();
+                            // 使用兼容性方法设置时间戳（long -> Instant）
+                            kline.setTimestamp(alignedTimestamp);
+                            kline.setExchangeTimestamp(timestamp);
                             klines.add(kline);
                         }
                     } catch (Exception e) {

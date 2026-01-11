@@ -41,9 +41,9 @@ public class KlineEventAdapter implements TimeAlignmentAdapter {
         
         KlineEvent event = (KlineEvent) rawBar;
         
-        // KlineEvent.closeTime 已经是 bar_close_time
-        ZonedDateTime barCloseTime = Instant.ofEpochMilli(event.closeTime())
-                .atZone(ZoneId.of("UTC"));
+        // KlineEvent.closeTime 已经是 bar_close_time (Instant)
+        // 需要转换为 LocalDateTime（为了兼容 NormalizedBar 的类型）
+        ZonedDateTime barCloseTime = event.closeTime().atZone(ZoneId.of("UTC"));
         
         // 获取tradingPairId
         Long tradingPairId = null;

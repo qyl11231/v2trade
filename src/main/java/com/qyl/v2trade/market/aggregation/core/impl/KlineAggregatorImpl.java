@@ -1,5 +1,6 @@
 package com.qyl.v2trade.market.aggregation.core.impl;
 
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.aggregation.config.SupportedPeriod;
 import com.qyl.v2trade.market.aggregation.core.AggregationBucket;
 import com.qyl.v2trade.market.aggregation.core.AggregationMetrics;
@@ -200,17 +201,18 @@ public class KlineAggregatorImpl implements KlineAggregator {
     private void processKlineForPeriod(KlineEvent event, SupportedPeriod period) {
         try {
             // 1. 计算该K线所属的聚合窗口
-            long windowStart = PeriodCalculator.calculateWindowStart(event.openTime(), period);
+            long openTimeMillis = TimeUtil.toEpochMilli(event.openTime());
+            long windowStart = PeriodCalculator.calculateWindowStart(openTimeMillis, period);
             long windowEnd = PeriodCalculator.calculateWindowEnd(windowStart, period);
             
             // 2. 生成Bucket Key
             String bucketKey = generateBucketKey(event.symbol(), period.getPeriod(), windowStart);
             
             // 3. 检查去重
-            String klineKey = generateKlineKey(event.symbol(), period.getPeriod(), windowStart, event.openTime());
+            String klineKey = generateKlineKey(event.symbol(), period.getPeriod(), windowStart, openTimeMillis);
             if (processedKlines.containsKey(klineKey)) {
                 log.debug("跳过重复K线: symbol={}, period={}, openTime={}", 
-                        event.symbol(), period.getPeriod(), event.openTime());
+                        event.symbol(), period.getPeriod(), TimeUtil.formatWithBothTimezones(event.openTime()));
                 metrics.incrementDuplicateIgnoreCount();
                 return;
             }
@@ -227,7 +229,7 @@ public class KlineAggregatorImpl implements KlineAggregator {
                 // 5.1 如果是新创建的Bucket，且当前K线时间不是窗口开始时间，说明可能有缺失的历史数据
                 // 例如：5分钟窗口[10:00, 10:05)，在10:03启动，收到的第一根K线是10:03的
                 // 此时需要从QuestDB查询10:00、10:01、10:02的1m K线数据
-                if (event.openTime() > windowStart && marketQueryService != null) {
+                if (openTimeMillis > windowStart && marketQueryService != null) {
                     // 在创建Bucket后立即补齐缺失的数据
                     backfillMissingKlines(event, period, windowStart, newBucket);
                 }
@@ -242,7 +244,7 @@ public class KlineAggregatorImpl implements KlineAggregator {
             processedKlines.put(klineKey, Boolean.TRUE);
             
             // 8. 更新最后处理时间戳
-            lastProcessedTimestamp.put(timestampKey, event.openTime());
+            lastProcessedTimestamp.put(timestampKey, openTimeMillis);
             
             // 9. 如果窗口结束，生成聚合结果
             if (windowComplete) {
@@ -251,7 +253,7 @@ public class KlineAggregatorImpl implements KlineAggregator {
             
         } catch (Exception e) {
             log.error("处理K线事件异常: symbol={}, period={}, openTime={}", 
-                    event.symbol(), period.getPeriod(), event.openTime(), e);
+                    event.symbol(), period.getPeriod(), TimeUtil.formatWithBothTimezones(event.openTime()), e);
         }
     }
     
@@ -272,7 +274,7 @@ public class KlineAggregatorImpl implements KlineAggregator {
                                       long windowStart, AggregationBucket bucket) {
         try {
             // 计算需要查询的时间范围：[windowStart, event.openTime())
-            long queryEndTime = event.openTime(); // 不包含当前K线，因为当前K线会在后面处理
+            long queryEndTime = TimeUtil.toEpochMilli(event.openTime()); // 不包含当前K线，因为当前K线会在后面处理
             
             // 从QuestDB查询该时间范围内的所有1m K线数据
             List<NormalizedKline> missingKlines = marketQueryService.queryKlines(
@@ -334,11 +336,15 @@ public class KlineAggregatorImpl implements KlineAggregator {
         long openTime = kline.getTimestamp();
         long closeTime = openTime + 60000; // 1分钟K线
         
+        // 转换 long 为 Instant
+        java.time.Instant openTimeInstant = com.qyl.v2trade.common.util.TimeUtil.fromEpochMilli(openTime);
+        java.time.Instant closeTimeInstant = com.qyl.v2trade.common.util.TimeUtil.fromEpochMilli(closeTime);
+        
         return KlineEvent.of(
                 kline.getSymbol(),
                 exchange,
-                openTime,
-                closeTime,
+                openTimeInstant,
+                closeTimeInstant,
                 kline.getInterval(),
                 BigDecimal.valueOf(kline.getOpen()),
                 BigDecimal.valueOf(kline.getHigh()),
@@ -346,7 +352,7 @@ public class KlineAggregatorImpl implements KlineAggregator {
                 BigDecimal.valueOf(kline.getClose()),
                 BigDecimal.valueOf(kline.getVolume()),
                 true, // 历史数据都是已完成的
-                System.currentTimeMillis()
+                java.time.Instant.now()  // eventTime (UTC Instant)
         );
     }
     
@@ -385,16 +391,20 @@ public class KlineAggregatorImpl implements KlineAggregator {
             int sourceCount = bars.size();
 
             // 3. 完整性判断（不仅看数量，还要看首尾）
-            Long windStart = windowStart - 8 * 60 * 60 * 1000;
-            Long endStat = lastMinuteTs - 8 * 60 * 60 * 1000;
+            // 重构：移除硬编码时区偏移，直接使用 UTC 时间戳进行比较
+            Long windStart = windowStart;
+            Long endStat = lastMinuteTs;
             boolean hasStart = false;
             boolean hasEnd = false;
             for (NormalizedKline bar : bars) {
-                if( bar.getTimestamp().longValue() ==  windStart.longValue() && !hasStart) {
-                    hasStart = true;
-                }
-                if(bar.getTimestamp().longValue() == endStat.longValue() && !hasEnd) {
-                    hasEnd = true;
+                Long barTimestamp = bar.getTimestamp();
+                if (barTimestamp != null) {
+                    if (barTimestamp.equals(windStart) && !hasStart) {
+                        hasStart = true;
+                    }
+                    if (barTimestamp.equals(endStat) && !hasEnd) {
+                        hasEnd = true;
+                    }
                 }
             }
             boolean isComplete = (sourceCount == expectedCount) && hasStart && hasEnd;
