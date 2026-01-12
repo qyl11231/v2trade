@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -239,11 +240,16 @@ public class MarketSubscriptionConfigController {
             
             // 获取今日统计信息（使用today-stats逻辑获取完整统计数据）
             try {
-                // 获取今日0点时间戳（毫秒）
-                long now = System.currentTimeMillis();
-                long todayStart = (now / (24 * 60 * 60 * 1000L)) * (24 * 60 * 60 * 1000L);
+                // 获取今日0点时间（UTC Instant）
+                // 重构：按照时间管理约定，使用 Instant 进行计算
+                Instant now = Instant.now();
+                long nowMillis = now.toEpochMilli();
+                long dayMillis = 24 * 60 * 60 * 1000L;
+                long todayStartMillis = (nowMillis / dayMillis) * dayMillis;
+                Instant todayStart = Instant.ofEpochMilli(todayStartMillis);
                 
                 // 查询今日所有1m K线
+                // 重构：按照时间管理约定，直接传递 Instant 参数
                 List<NormalizedKline> todayKlines = marketQueryService.queryKlines(
                     tradingPair.getSymbol(), "1m", todayStart, now, null
                 );

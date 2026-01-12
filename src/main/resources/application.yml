@@ -107,7 +107,8 @@ questdb:
   # QuestDB使用PostgreSQL协议进行JDBC连接
   # HTTP界面端口：9000
   # JDBC端口：8812（PostgreSQL协议）
-  url: jdbc:postgresql://127.0.0.1:8812/qdb
+  # 重要：必须指定 timezone=UTC，确保时间戳参数以UTC时区传递，避免时区转换问题
+  url: jdbc:postgresql://127.0.0.1:8812/qdb?timezone=UTC
   username: admin
   password: quest
   # 连接池配置

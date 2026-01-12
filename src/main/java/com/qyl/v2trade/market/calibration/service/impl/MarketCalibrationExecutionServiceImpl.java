@@ -13,10 +13,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * 行情校准任务执行服务实现类
+ * 
+ * <p>重构：使用 Instant 作为时间参数，遵循 UTC Everywhere 原则
  */
 @Slf4j
 @Service
@@ -32,7 +34,7 @@ public class MarketCalibrationExecutionServiceImpl implements MarketCalibrationE
     private DataVerifyExecutor dataVerifyExecutor;
 
     @Override
-    public TaskExecutionResult executeTask(Long taskConfigId, LocalDateTime startTime, LocalDateTime endTime) {
+    public TaskExecutionResult executeTask(Long taskConfigId, Instant startTime, Instant endTime) {
         log.info("开始执行任务: taskConfigId={}, startTime={}, endTime={}", taskConfigId, startTime, endTime);
 
         // 1. 根据任务配置ID查询配置

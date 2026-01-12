@@ -12,8 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -32,6 +31,8 @@ import java.util.List;
  *   <li>检查是否有正在执行的相同任务，避免重复执行</li>
  *   <li>调用执行服务执行任务</li>
  * </ul>
+ * 
+ * <p>重构：使用 Instant 作为时间参数，遵循 UTC Everywhere 原则
  *
  * @author qyl
  */
@@ -143,8 +144,9 @@ public class MarketCalibrationScheduler {
             }
             
             // 3. 计算时间范围（当前时间 - intervalHours 到 当前时间）
-            LocalDateTime endTime = LocalDateTime.now(ZoneId.of("UTC"));
-            LocalDateTime startTime = endTime.minusHours(config.getIntervalHours());
+            // 重构：使用 Instant.now() 获取 UTC 时间，遵循 UTC Everywhere 原则
+            Instant endTime = Instant.now();
+            Instant startTime = endTime.minusSeconds(config.getIntervalHours() * 3600L);
             
             log.info("执行任务: taskConfigId={}, taskName={}, startTime={}, endTime={}, intervalHours={}", 
                     taskConfigId, taskName, startTime, endTime, config.getIntervalHours());

@@ -1,5 +1,7 @@
 package com.qyl.v2trade.market.calibration.service;
 
+import java.time.Instant;
+
 /**
  * 市场校准服务接口
  * 
@@ -21,8 +23,8 @@ public interface MarketCalibrationService {
      * <p>补拉写入QuestDB必须幂等（允许重复写但不会造成脏数据/重复数据）
      * 
      * @param tradingPairId 交易对ID
-     * @param endTimeUtc 结束时间（毫秒，UTC epoch millis），默认使用 nowUtc 或者 relatedTime
+     * @param endTime 结束时间（Instant，UTC），如果为null则使用当前时间
      */
-    void backfillLastHour(Long tradingPairId, long endTimeUtc);
+    void backfillLastHour(Long tradingPairId, Instant endTime);
 }
 

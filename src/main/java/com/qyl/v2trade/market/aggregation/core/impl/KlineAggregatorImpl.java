@@ -21,8 +21,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -225,15 +228,11 @@ public class KlineAggregatorImpl implements KlineAggregator {
             AggregationBucket bucket = buckets.computeIfAbsent(bucketKey, key -> {
                 log.debug("创建新Bucket: key={}", key);
                 AggregationBucket newBucket = new AggregationBucket(event.symbol(), period.getPeriod(), windowStart, windowEnd);
-                
-                // 5.1 如果是新创建的Bucket，且当前K线时间不是窗口开始时间，说明可能有缺失的历史数据
-                // 例如：5分钟窗口[10:00, 10:05)，在10:03启动，收到的第一根K线是10:03的
-                // 此时需要从QuestDB查询10:00、10:01、10:02的1m K线数据
-                if (openTimeMillis > windowStart && marketQueryService != null) {
+                Instant windowStartInstant = TimeUtil.fromEpochMilli(windowStart);
+                if (event.openTime().isAfter(windowStartInstant) && marketQueryService != null) {
                     // 在创建Bucket后立即补齐缺失的数据
-                    backfillMissingKlines(event, period, windowStart, newBucket);
+                    backfillMissingKlines(event, period, windowStartInstant, newBucket);
                 }
-                
                 return newBucket;
             });
             
@@ -265,18 +264,22 @@ public class KlineAggregatorImpl implements KlineAggregator {
      * <p>例如：5分钟窗口[10:00, 10:05)，在10:03启动，收到的第一根K线是10:03的
      * 此时需要从QuestDB查询10:00、10:01、10:02的1m K线数据
      * 
+     * 重构：按照时间管理约定，使用 Instant 作为参数类型
+     * 
      * @param event 当前收到的K线事件
      * @param period 聚合周期
-     * @param windowStart 窗口起始时间戳
+     * @param windowStart 窗口起始时间（UTC Instant）
      * @param bucket 聚合Bucket
      */
     private void backfillMissingKlines(KlineEvent event, SupportedPeriod period, 
-                                      long windowStart, AggregationBucket bucket) {
+                                      Instant windowStart, AggregationBucket bucket) {
         try {
             // 计算需要查询的时间范围：[windowStart, event.openTime())
-            long queryEndTime = TimeUtil.toEpochMilli(event.openTime()); // 不包含当前K线，因为当前K线会在后面处理
+            Instant queryEndTime = event.openTime(); // 不包含当前K线，因为当前K线会在后面处理
             
             // 从QuestDB查询该时间范围内的所有1m K线数据
+            // 重构：按照时间管理约定，直接传递 Instant 参数
+            // 数据库查询边界转换在 MarketQueryService 实现类内部完成
             List<NormalizedKline> missingKlines = marketQueryService.queryKlines(
                     event.symbol(), 
                     "1m", 
@@ -286,21 +289,22 @@ public class KlineAggregatorImpl implements KlineAggregator {
             );
             
             if (missingKlines == null || missingKlines.isEmpty()) {
-                log.debug("QuestDB中无缺失的1m K线数据: symbol={}, period={}, windowStart={}, queryEndTime={}", 
-                        event.symbol(), period.getPeriod(), windowStart, queryEndTime);
+                log.debug("QuestDB中无缺失的1m K线数据: symbol={}, period={}, windowStart={}, queryEndTime={}",
+                        event.symbol(), period.getPeriod(), TimeUtil.formatWithBothTimezones(windowStart), 
+                        TimeUtil.formatWithBothTimezones(queryEndTime));
                 return;
             }
             
             log.info("从QuestDB补齐缺失的1m K线数据: symbol={}, period={}, windowStart={}, missingCount={}", 
-                    event.symbol(), period.getPeriod(), windowStart, missingKlines.size());
+                    event.symbol(), period.getPeriod(), TimeUtil.formatWithBothTimezones(windowStart), missingKlines.size());
             
             // 将查询到的历史K线数据转换为KlineEvent并聚合到Bucket中
             for (NormalizedKline kline : missingKlines) {
                 // 检查是否已处理过（去重）
-                String klineKey = generateKlineKey(event.symbol(), period.getPeriod(), windowStart, kline.getTimestamp());
+                String klineKey = generateKlineKey(event.symbol(), period.getPeriod(), TimeUtil.toEpochMilli(windowStart), kline.getTimestamp());
                 if (processedKlines.containsKey(klineKey)) {
                     log.debug("跳过已处理的1m K线: symbol={}, timestamp={}", 
-                            event.symbol(), kline.getTimestamp());
+                            event.symbol(), TimeUtil.formatWithBothTimezones(kline.getTimestampInstant()));
                     continue;
                 }
                 
@@ -314,7 +318,7 @@ public class KlineAggregatorImpl implements KlineAggregator {
                 processedKlines.put(klineKey, Boolean.TRUE);
                 
                 log.debug("补齐历史1m K线: symbol={}, timestamp={}, open={}, high={}, low={}, close={}, volume={}", 
-                        event.symbol(), kline.getTimestamp(), 
+                        event.symbol(), TimeUtil.formatWithBothTimezones(kline.getTimestampInstant()), 
                         kline.getOpen(), kline.getHigh(), kline.getLow(), kline.getClose(), kline.getVolume());
             }
             
@@ -323,6 +327,31 @@ public class KlineAggregatorImpl implements KlineAggregator {
                     event.symbol(), period.getPeriod(), windowStart, e);
             // 不抛出异常，继续处理当前K线事件
         }
+    }
+    
+    /**
+     * 将KlineEvent转换为NormalizedKline
+     * 
+     * @param event KlineEvent
+     * @return NormalizedKline
+     */
+    private NormalizedKline convertKlineEventToNormalizedKline(KlineEvent event) {
+        if (event == null) {
+            return null;
+        }
+        NormalizedKline kline = NormalizedKline.builder()
+                .symbol(event.symbol())
+                .interval(event.interval())
+                .open(event.open().doubleValue())
+                .high(event.high().doubleValue())
+                .low(event.low().doubleValue())
+                .close(event.close().doubleValue())
+                .volume(event.volume().doubleValue())
+                .build();
+        // 使用 setter 方法设置 Instant 类型的时间戳
+        kline.setTimestampInstant(event.openTime());
+        kline.setExchangeTimestampInstant(event.openTime());
+        return kline;
     }
     
     /**
@@ -384,63 +413,31 @@ public class KlineAggregatorImpl implements KlineAggregator {
                 return;
             }
             int expectedCount = (int) (periodEnum.getDurationMs() / 60000); // 分钟数
-            long lastMinuteTs = windowEnd - 60000; // 窗口最后一分钟的时间戳
-            
-            // 2. 第一次读取：从QuestDB查询1m数据
-            List<NormalizedKline> bars = query1mBars(symbol, windowStart, windowEnd);
-            int sourceCount = bars.size();
+            // 重构：使用 Instant 进行计算，遵循时间管理约定
+            Instant windowStartInstant = TimeUtil.fromEpochMilli(windowStart);
+            Instant windowEndInstant = TimeUtil.fromEpochMilli(windowEnd);
+            List<NormalizedKline> bars = new ArrayList<>();
 
-            // 3. 完整性判断（不仅看数量，还要看首尾）
-            // 重构：移除硬编码时区偏移，直接使用 UTC 时间戳进行比较
-            Long windStart = windowStart;
-            Long endStat = lastMinuteTs;
-            boolean hasStart = false;
-            boolean hasEnd = false;
-            for (NormalizedKline bar : bars) {
-                Long barTimestamp = bar.getTimestamp();
-                if (barTimestamp != null) {
-                    if (barTimestamp.equals(windStart) && !hasStart) {
-                        hasStart = true;
-                    }
-                    if (barTimestamp.equals(endStat) && !hasEnd) {
-                        hasEnd = true;
-                    }
-                }
+            // 4. 若不完整：从QuestDB查询补充数据
+            if (bucket.getKlines().size() != expectedCount) {
+                bars = query1mBars(symbol, windowStartInstant, windowEndInstant);
             }
-            boolean isComplete = (sourceCount == expectedCount) && hasStart && hasEnd;
-            boolean triggeredBackfill = false;
             
-            // 4. 若不完整：触发补拉，然后进行第二次读取
-            if (!isComplete && backfillTrigger != null && marketQueryService != null) {
-                // 获取 tradingPairId
+            // 5. 若仍然不完整：触发补拉，然后进行第二次读取
+            if (bars.size() != expectedCount) {
+                log.info("bars.size={}", bars.size());
                 Long tradingPairId = getTradingPairId(symbol);
-                if (tradingPairId != null) {
-                    // 触发补拉（异步，不阻塞）
-                    backfillTrigger.triggerLast1Hour(
-                            tradingPairId, 
-                            symbol, 
-                            BackfillTrigger.BackfillReason.INCOMPLETE_AGG_SOURCE, 
-                            windowEnd
-                    );
-                    triggeredBackfill = true;
-                    Thread.sleep(1000);
-                    // 立即进行第二次读取（重查）
-                    bars = query1mBars(symbol, windowStart, windowEnd);
-                    sourceCount = bars.size();
-                    hasStart = bars.stream().anyMatch(b -> b.getTimestamp() == windStart);
-                    hasEnd = bars.stream().anyMatch(b -> b.getTimestamp() == endStat);
-                    isComplete = (sourceCount == expectedCount) && hasStart && hasEnd;
-                    
-                }
+                bars = queryDBBars(tradingPairId,symbol, windowStartInstant, windowEndInstant);
             }
-            
+
             // 6. 用最终拿到的数据计算聚合 OHLCV
+            // 重构：使用 Instant 参数，遵循时间管理约定
             AggregatedKLine aggregated = calculateAggregatedKLine(
-                    symbol, period, windowStart, bars, expectedCount, sourceCount, hasStart, hasEnd);
+                    symbol, period, windowStartInstant, bars, expectedCount, bars.size());
             
             if (aggregated == null) {
                 log.warn("无法生成聚合结果: symbol={}, period={}, windowStart={}, sourceCount={}", 
-                        symbol, period, windowStart, sourceCount);
+                        symbol, period, windowStart, bars.size());
                 buckets.remove(bucketKey);
                 return;
             }
@@ -448,15 +445,15 @@ public class KlineAggregatorImpl implements KlineAggregator {
             totalAggregatedCount.incrementAndGet();
             
             // 7. 结构化日志
-            if (!isComplete || triggeredBackfill) {
+            if (bars.size() != expectedCount) {
                 log.warn("聚合不完整: tradingPairId={}, symbol={}, targetTf={}, windowStart={}, windowEnd={}, " +
-                        "expectedCount={}, sourceCount={}, hasStart={}, hasEnd={}, triggeredBackfill={}", 
+                        "expectedCount={}, sourceCount={}",
                         getTradingPairId(symbol), symbol, period, windowStart, windowEnd,
-                        expectedCount, sourceCount, hasStart, hasEnd, triggeredBackfill);
+                        expectedCount, bars.size());
             }
             
-            log.debug("窗口聚合完成: symbol={}, period={}, timestamp={}, sourceCount={}, expectedCount={}, isComplete={}", 
-                    symbol, period, aggregated.timestamp(), sourceCount, expectedCount, isComplete);
+            log.debug("窗口聚合完成: symbol={}, period={}, timestamp={}, sourceCount={}, expectedCount={}",
+                    symbol, period, aggregated.timestamp(),  bars.size(), expectedCount);
             
             // 8. 异步写入QuestDB（不阻塞聚合流程，只INSERT，不允许UPDATE）
             if (storageService != null) {
@@ -501,16 +498,25 @@ public class KlineAggregatorImpl implements KlineAggregator {
     
     /**
      * 查询1m K线数据
+     * 
+     * 重构：按照时间管理约定，使用 Instant 作为参数类型
+     * 
+     * @param symbol 交易对符号
+     * @param windowStart 窗口起始时间（UTC Instant）
+     * @param windowEnd 窗口结束时间（UTC Instant）
+     * @return 1m K线列表
      */
-    private List<NormalizedKline> query1mBars(String symbol, long windowStart, long windowEnd) {
+    private List<NormalizedKline> query1mBars(String symbol, Instant windowStart, Instant windowEnd) {
         if (marketQueryService == null) {
             return new ArrayList<>();
         }
         try {
+            // 重构：按照时间管理约定，直接传递 Instant 参数
+            // 数据库查询边界转换在 MarketQueryService 实现类内部完成
             return marketQueryService.queryKlines(symbol, "1m", windowStart, windowEnd, null);
         } catch (Exception e) {
             log.error("查询1m K线数据失败: symbol={}, windowStart={}, windowEnd={}", 
-                    symbol, windowStart, windowEnd, e);
+                    symbol, TimeUtil.formatWithBothTimezones(windowStart), TimeUtil.formatWithBothTimezones(windowEnd), e);
             return new ArrayList<>();
         }
     }
@@ -530,7 +536,28 @@ public class KlineAggregatorImpl implements KlineAggregator {
             return null;
         }
     }
-    
+
+
+    private List<NormalizedKline> queryDBBars(Long tradingPairId, String symbol,  Instant windowStartInstant,Instant windowEndInstant) {
+        if (tradingPairId == null) {
+           return new ArrayList<>();
+        }
+        // 触发补拉（异步，不阻塞）
+        // 重构：使用 Instant 参数，遵循时间管理约定
+        backfillTrigger.triggerLast1Hour(
+                tradingPairId,
+                symbol,
+                BackfillTrigger.BackfillReason.INCOMPLETE_AGG_SOURCE,
+                windowEndInstant
+        );
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        // 立即进行第二次读取（重查）
+        return query1mBars(symbol, windowStartInstant, windowEndInstant);
+    }
     /**
      * 计算聚合K线
      * 
@@ -543,9 +570,9 @@ public class KlineAggregatorImpl implements KlineAggregator {
      *   <li>volume：sum(volume)</li>
      * </ul>
      */
-    private AggregatedKLine calculateAggregatedKLine(String symbol, String period, long windowStart,
+    private AggregatedKLine calculateAggregatedKLine(String symbol, String period, Instant windowStart,
                                                      List<NormalizedKline> bars, int expectedCount, 
-                                                     int sourceCount, boolean hasStart, boolean hasEnd) {
+                                                     int sourceCount) {
         if (bars.isEmpty()) {
             return null;
         }
@@ -555,21 +582,14 @@ public class KlineAggregatorImpl implements KlineAggregator {
             return null;
         }
         
-        long lastMinuteTs = windowStart + periodEnum.getDurationMs() - 60000;
-        long alignedTimestamp = PeriodCalculator.alignTimestamp(windowStart, periodEnum);
+        // 重构：使用 Instant 进行计算，遵循时间管理约定
+        long windowStartMillis = TimeUtil.toEpochMilli(windowStart);
+        long alignedTimestamp = PeriodCalculator.alignTimestamp(windowStartMillis, periodEnum);
         
         // 找到首尾bar
+        // 重构：使用 Instant 进行比较，遵循时间管理约定
         NormalizedKline startBar = null;
         NormalizedKline endBar = null;
-        for (NormalizedKline bar : bars) {
-            if (bar.getTimestamp() == windowStart) {
-                startBar = bar;
-            }
-            if (bar.getTimestamp() == lastMinuteTs) {
-                endBar = bar;
-            }
-        }
-        
         // 如果没有找到首尾，使用最早/最晚的bar
         if (startBar == null && !bars.isEmpty()) {
             startBar = bars.get(0);
@@ -581,7 +601,6 @@ public class KlineAggregatorImpl implements KlineAggregator {
         if (startBar == null || endBar == null) {
             return null;
         }
-        
         // 计算 OHLCV
         BigDecimal open = BigDecimal.valueOf(startBar.getOpen());
         BigDecimal close = BigDecimal.valueOf(endBar.getClose());
@@ -670,19 +689,9 @@ public class KlineAggregatorImpl implements KlineAggregator {
         });
     }
     
-    @Override
-    public void initializeHistoryBackfill(List<String> symbols) {
-        // 此方法由KlineAggregatorInitializer调用，实际实现在Initializer中
-        log.info("initializeHistoryBackfill方法由KlineAggregatorInitializer调用: symbols={}", 
-                symbols != null ? symbols.size() : "null");
-    }
+
     
-    @Override
-    public void backfillWindow(String symbol, SupportedPeriod period, long windowStart) {
-        // 此方法由KlineAggregatorInitializer调用，实际实现在Initializer中
-        log.info("backfillWindow方法由KlineAggregatorInitializer调用: symbol={}, period={}, windowStart={}", 
-                symbol, period.getPeriod(), windowStart);
-    }
+
     
     /**
      * 生成Bucket Key

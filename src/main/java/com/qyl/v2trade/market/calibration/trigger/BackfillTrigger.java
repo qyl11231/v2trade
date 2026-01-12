@@ -6,9 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.qyl.v2trade.common.util.TimeUtil;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -109,15 +108,15 @@ public class BackfillTrigger {
      * @param tradingPairId 交易对ID
      * @param symbol 交易对符号
      * @param reason 触发原因（枚举值）
-     * @param relatedTime 相关时间（毫秒，UTC epoch millis）
+     * @param relatedTime 相关时间（Instant，UTC），如果为null则使用当前时间
      */
-    public void triggerLast1Hour(Long tradingPairId, String symbol, BackfillReason reason, long relatedTime) {
-        long now = System.currentTimeMillis();
+    public void triggerLast1Hour(Long tradingPairId, String symbol, BackfillReason reason, Instant relatedTime) {
+        Instant now = Instant.now();
         
         // 1. 检查 cooldown
         Long lastTriggerTime = cooldownMap.get(tradingPairId);
         if (lastTriggerTime != null) {
-            long elapsed = (now - lastTriggerTime) / 1000; // 秒
+            long elapsed = (TimeUtil.toEpochMilli(now) - lastTriggerTime) / 1000; // 秒
             if (elapsed < cooldownSeconds) {
                 cooldownBlockedCount.incrementAndGet();
                 log.debug("补拉触发被cooldown拦截: tradingPairId={}, symbol={}, reason={}, elapsed={}s, cooldown={}s", 
@@ -136,35 +135,36 @@ public class BackfillTrigger {
         }
 
         // 3. 更新 cooldown
-        cooldownMap.put(tradingPairId, now);
+        cooldownMap.put(tradingPairId, TimeUtil.toEpochMilli(now));
 
         // 4. 记录触发
         triggerCount.incrementAndGet();
         
         // 5. 计算时间窗口
-        long endTimeUtc = relatedTime > 0 ? relatedTime : now;
-        long windowStart = endTimeUtc - (lookbackMinutes * 60 * 1000L);
-        long windowEnd = endTimeUtc;
+        // 重构：使用 Instant 进行计算，遵循时间管理约定
+        Instant endTimeInstant = relatedTime != null ? relatedTime : now;
+        Instant windowStartInstant = endTimeInstant.minus(lookbackMinutes, java.time.temporal.ChronoUnit.MINUTES);
+        Instant windowEndInstant = endTimeInstant;
 
         // 6. 结构化日志
-        ZonedDateTime windowStartUtc = Instant.ofEpochMilli(windowStart).atZone(ZoneId.of("UTC"));
-        ZonedDateTime windowEndUtc = Instant.ofEpochMilli(windowEnd).atZone(ZoneId.of("UTC"));
-        log.info("触发补拉: tradingPairId={}, symbol={}, reason={}, windowStart={}, windowEnd={}, " +
-                "windowStartUtc={}, windowEndUtc={}", 
-                tradingPairId, symbol, reason, windowStart, windowEnd,
-                windowStartUtc, windowEndUtc);
+        // 重构：使用 TimeUtil 格式化日志，遵循统一时间管理规范
+        log.info("触发补拉: tradingPairId={}, symbol={}, reason={}, windowStart={}, windowEnd={}", 
+                tradingPairId, symbol, reason,
+                TimeUtil.formatWithBothTimezones(windowStartInstant),
+                TimeUtil.formatWithBothTimezones(windowEndInstant));
 
         // 7. 异步执行补拉（不阻塞）
+        // 重构：使用 Instant 参数，遵循时间管理约定
         asyncExecutor.submit(() -> {
             try {
-                marketCalibrationService.backfillLastHour(tradingPairId, endTimeUtc);
+                marketCalibrationService.backfillLastHour(tradingPairId, windowEndInstant);
                 successCount.incrementAndGet();
                 log.info("补拉执行成功: tradingPairId={}, symbol={}, reason={}, windowEnd={}", 
-                        tradingPairId, symbol, reason, windowEndUtc);
+                        tradingPairId, symbol, reason, TimeUtil.formatWithBothTimezones(windowEndInstant));
             } catch (Exception e) {
                 failCount.incrementAndGet();
                 log.error("补拉执行失败: tradingPairId={}, symbol={}, reason={}, windowEnd={}", 
-                        tradingPairId, symbol, reason, windowEndUtc, e);
+                        tradingPairId, symbol, reason, TimeUtil.formatWithBothTimezones(windowEndInstant), e);
             } finally {
                 // 释放 inFlight 标记
                 inFlightMap.remove(tradingPairId);

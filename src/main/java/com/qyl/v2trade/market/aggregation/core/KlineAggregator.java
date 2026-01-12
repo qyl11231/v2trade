@@ -33,22 +33,8 @@ public interface KlineAggregator {
      */
     void cleanupExpiredBuckets();
     
-    /**
-     * 初始化历史数据补齐（启动时调用）
-     * 
-     * <p>扫描并补齐启动前未完成的聚合窗口
-     * 
-     * @param symbols 需要补齐的交易对列表（如果为空，则补齐所有交易对）
-     */
-    void initializeHistoryBackfill(List<String> symbols);
+
     
-    /**
-     * 补齐指定窗口的历史数据
-     * 
-     * @param symbol 交易对
-     * @param period 周期
-     * @param windowStart 窗口起始时间戳
-     */
-    void backfillWindow(String symbol, SupportedPeriod period, long windowStart);
+
 }
 

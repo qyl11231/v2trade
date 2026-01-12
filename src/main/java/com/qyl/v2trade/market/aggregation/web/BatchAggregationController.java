@@ -15,7 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
+import com.qyl.v2trade.common.util.TimeUtil;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -168,8 +170,11 @@ public class BatchAggregationController {
                     symbol, fromTimestamp, toTimestamp, exchange, saveToDb);
             
             // 1. 从QuestDB查询1m K线数据
+            // 重构：按照时间管理约定，将 long 转换为 Instant 传递给 Service
+            Instant fromTime = TimeUtil.fromEpochMilli(fromTimestamp);
+            Instant toTime = TimeUtil.fromEpochMilli(toTimestamp);
             List<NormalizedKline> sourceKlines = marketQueryService.queryKlines(
-                    symbol, "1m", fromTimestamp, toTimestamp, null);
+                    symbol, "1m", fromTime, toTime, null);
             
             if (sourceKlines == null || sourceKlines.isEmpty()) {
                 log.warn("未查询到1m K线数据: symbol={}, from={}, to={}", symbol, fromTimestamp, toTimestamp);

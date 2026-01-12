@@ -8,9 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.qyl.v2trade.common.util.TimeUtil;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.List;
 
 /**
@@ -43,9 +42,12 @@ public class MarketCalibrationServiceImpl implements MarketCalibrationService {
     private int lookbackMinutes;
 
     @Override
-    public void backfillLastHour(Long tradingPairId, long endTimeUtc) {
+    public void backfillLastHour(Long tradingPairId, Instant endTime) {
         try {
-            log.info("开始补拉最近1小时数据: tradingPairId={}, endTimeUtc={}", tradingPairId, endTimeUtc);
+            // 重构：使用 Instant 参数，遵循时间管理约定
+            Instant endTimeInstant = endTime != null ? endTime : Instant.now();
+            log.info("开始补拉最近1小时数据: tradingPairId={}, endTime={}", 
+                    tradingPairId, TimeUtil.formatWithBothTimezones(endTimeInstant));
 
             // 1. 获取交易对信息
             TradingPairInfo pairInfo = tradingPairInfoService.getTradingPairInfo(tradingPairId);
@@ -53,22 +55,22 @@ public class MarketCalibrationServiceImpl implements MarketCalibrationService {
             String symbol = pairInfo.getSymbol();
 
             // 2. 计算时间窗口
-            long windowStart = endTimeUtc - (lookbackMinutes * 60 * 1000L);
-            long windowEnd = endTimeUtc;
+            // 重构：使用 Instant 进行计算，遵循时间管理约定
+            Instant windowStartInstant = endTimeInstant.minus(lookbackMinutes, java.time.temporal.ChronoUnit.MINUTES);
+            Instant windowEndInstant = endTimeInstant;
 
-            ZonedDateTime windowStartUtc = Instant.ofEpochMilli(windowStart).atZone(ZoneId.of("UTC"));
-            ZonedDateTime windowEndUtc = Instant.ofEpochMilli(windowEnd).atZone(ZoneId.of("UTC"));
-
-            log.info("补拉时间窗口: tradingPairId={}, symbol={}, windowStart={}, windowEnd={}, " +
-                    "windowStartUtc={}, windowEndUtc={}", 
-                    tradingPairId, symbol, windowStart, windowEnd, windowStartUtc, windowEndUtc);
+            log.info("补拉时间窗口: tradingPairId={}, symbol={}, windowStart={}, windowEnd={}", 
+                    tradingPairId, symbol, 
+                    TimeUtil.formatWithBothTimezones(windowStartInstant),
+                    TimeUtil.formatWithBothTimezones(windowEndInstant));
 
             // 3. 检测缺失的时间点
+            // 重构：使用 Instant 参数，遵循时间管理约定
             List<Long> missingTimestamps = klineGapDetector.detectMissingTimestamps(
-                    tradingPairId, windowStart, windowEnd);
+                    tradingPairId, windowStartInstant, windowEndInstant);
 
             if (missingTimestamps.isEmpty()) {
-                log.info("补拉完成（无缺失数据）: tradingPairId={}, symbol={}", tradingPairId, symbol);
+                log.debug("补拉完成（无缺失数据）: tradingPairId={}, symbol={}", tradingPairId, symbol);
                 return;
             }
 
@@ -92,7 +94,8 @@ public class MarketCalibrationServiceImpl implements MarketCalibrationService {
                     tradingPairId, symbol, missingTimestamps.size(), klines.size(), filledCount);
 
         } catch (Exception e) {
-            log.error("补拉最近1小时数据失败: tradingPairId={}, endTimeUtc={}", tradingPairId, endTimeUtc, e);
+            log.error("补拉最近1小时数据失败: tradingPairId={}, endTime={}", 
+                    tradingPairId, endTime != null ? TimeUtil.formatWithBothTimezones(endTime) : "null", e);
             throw new RuntimeException("补拉失败: " + e.getMessage(), e);
         }
     }

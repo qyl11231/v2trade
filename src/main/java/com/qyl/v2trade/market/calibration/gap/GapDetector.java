@@ -1,5 +1,6 @@
 package com.qyl.v2trade.market.calibration.gap;
 
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.calibration.trigger.BackfillTrigger;
 import com.qyl.v2trade.market.model.NormalizedKline;
 import com.qyl.v2trade.market.web.query.MarketQueryService;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -81,22 +83,26 @@ public class GapDetector {
      * 
      * @param tradingPairId 交易对ID
      * @param symbol 交易对符号
-     * @param currentOpenTime 当前K线的openTime（毫秒，UTC epoch millis）
+     * @param currentOpenTime 当前K线的openTime（Instant，UTC）
      */
-    public void detectGap(Long tradingPairId, String symbol, long currentOpenTime) {
+    public void detectGap(Long tradingPairId, String symbol, Instant currentOpenTime) {
         try {
+            // 重构：使用 Instant 参数，遵循时间管理约定
+            long currentOpenTimeMillis = TimeUtil.toEpochMilli(currentOpenTime);
+            
             // 1. 检查是否乱序/重复（当前时间戳 <= 上次查询的最新时间戳）
             Long lastQueryTime = lastQueryTimeMap.get(tradingPairId);
-            if (lastQueryTime != null && currentOpenTime <= lastQueryTime) {
+            if (lastQueryTime != null && currentOpenTimeMillis <= lastQueryTime) {
                 outOfOrderCount.incrementAndGet();
                 log.debug("检测到乱序/重复K线: tradingPairId={}, symbol={}, lastQueryTime={}, currentOpenTime={}", 
-                        tradingPairId, symbol, lastQueryTime, currentOpenTime);
+                        tradingPairId, symbol, lastQueryTime, TimeUtil.formatWithBothTimezones(currentOpenTime));
                 return;
             }
 
             // 2. 计算窗口范围
-            long windowStart = currentOpenTime - (windowMinutes * 60 * 1000L);
-            long windowEnd = currentOpenTime;
+            // 重构：使用 Instant 进行计算，遵循时间管理约定
+            Instant windowStart = currentOpenTime.minus(windowMinutes, java.time.temporal.ChronoUnit.MINUTES);
+            Instant windowEnd = currentOpenTime;
 
             // 3. 从QuestDB查询实际存在的K线数量
             int actualCount = queryActualCount(symbol, windowStart, windowEnd);
@@ -108,10 +114,13 @@ public class GapDetector {
                 gapDetectedCount.incrementAndGet();
                 log.warn("检测到K线不连续: tradingPairId={}, symbol={}, windowStart={}, windowEnd={}, " +
                         "expectedCount={}, actualCount={}, missingCount={}", 
-                        tradingPairId, symbol, windowStart, windowEnd,
+                        tradingPairId, symbol, 
+                        TimeUtil.formatWithBothTimezones(windowStart),
+                        TimeUtil.formatWithBothTimezones(windowEnd),
                         expectedCount, actualCount, expectedCount - actualCount);
                 
                 // 触发补拉（具体缺失哪些时间戳，由补拉层去处理）
+                // 重构：使用 Instant 参数，遵循时间管理约定
                 backfillTrigger.triggerLast1Hour(
                         tradingPairId, 
                         symbol, 
@@ -123,29 +132,33 @@ public class GapDetector {
             }
 
             // 5. 更新查询缓存
-            lastQueryTimeMap.put(tradingPairId, currentOpenTime);
+            lastQueryTimeMap.put(tradingPairId, currentOpenTimeMillis);
 
         } catch (Exception e) {
             log.error("缺口检测异常: tradingPairId={}, symbol={}, currentOpenTime={}", 
-                    tradingPairId, symbol, currentOpenTime, e);
+                    tradingPairId, symbol, 
+                    currentOpenTime != null ? TimeUtil.formatWithBothTimezones(currentOpenTime) : "null", e);
         }
     }
 
     /**
      * 从QuestDB查询实际存在的K线数量
      * 
+     * 重构：按照时间管理约定，使用 Instant 作为参数类型
+     * 
      * @param symbol 交易对符号
-     * @param windowStart 窗口开始时间
-     * @param windowEnd 窗口结束时间
+     * @param windowStart 窗口开始时间（Instant，UTC）
+     * @param windowEnd 窗口结束时间（Instant，UTC）
      * @return 实际存在的K线数量
      */
-    private int queryActualCount(String symbol, long windowStart, long windowEnd) {
+    private int queryActualCount(String symbol, Instant windowStart, Instant windowEnd) {
         if (marketQueryService == null) {
             log.debug("MarketQueryService未配置，返回0");
             return 0;
         }
 
         try {
+            // 重构：使用 Instant 参数，遵循时间管理约定
             // 从QuestDB查询1m K线数据
             List<NormalizedKline> klines = marketQueryService.queryKlines(
                     symbol, 
@@ -155,13 +168,13 @@ public class GapDetector {
                     null // 不限制数量，查询所有
             );
 
-
-
             return klines.size();
 
         } catch (Exception e) {
             log.error("查询实际K线数量失败: symbol={}, windowStart={}, windowEnd={}", 
-                    symbol, windowStart, windowEnd, e);
+                    symbol, 
+                    TimeUtil.formatWithBothTimezones(windowStart),
+                    TimeUtil.formatWithBothTimezones(windowEnd), e);
             return 0;
         }
     }

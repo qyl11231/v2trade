@@ -5,6 +5,8 @@ import com.qyl.v2trade.market.aggregation.event.AggregatedKLine;
 import com.qyl.v2trade.market.model.event.KlineEvent;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 聚合桶（内存状态）
@@ -70,6 +72,11 @@ public class AggregationBucket {
     private int klineCount;
     
     /**
+     * 窗口内维护的1m K线事件集合
+     */
+    private final List<KlineEvent> klines;
+    
+    /**
      * 窗口是否已关闭
      */
     private volatile boolean isComplete;
@@ -93,6 +100,7 @@ public class AggregationBucket {
         this.close = null;
         this.volume = BigDecimal.ZERO;
         this.klineCount = 0;
+        this.klines = new ArrayList<>();
         this.isComplete = false;
     }
     
@@ -135,6 +143,9 @@ public class AggregationBucket {
         
         // 增加K线计数
         klineCount++;
+        
+        // 将K线事件添加到集合中
+        klines.add(event);
         
         // 判断窗口是否结束
         // 规则：如果 kline.closeTime >= windowEnd，窗口结束
@@ -250,6 +261,15 @@ public class AggregationBucket {
     
     public boolean isComplete() {
         return isComplete;
+    }
+    
+    /**
+     * 获取窗口内维护的1m K线事件集合
+     * 
+     * @return K线事件集合的副本（避免外部修改）
+     */
+    public synchronized List<KlineEvent> getKlines() {
+        return new ArrayList<>(klines);
     }
 }
 

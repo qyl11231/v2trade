@@ -3,7 +3,6 @@ package com.qyl.v2trade.market.calibration.executor.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qyl.v2trade.client.OkxApiClient;
-import com.qyl.v2trade.common.util.UtcTimeConverter;
 import com.qyl.v2trade.market.calibration.common.TaskLogStatus;
 import com.qyl.v2trade.market.calibration.executor.MarketCalibrationExecutor;
 import com.qyl.v2trade.market.calibration.executor.dto.TaskExecutionResult;
@@ -22,8 +21,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import com.qyl.v2trade.common.util.TimeUtil;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 
 /**
  * 数据核对执行器
+ * 
+ * <p>重构：使用 Instant 作为时间参数，遵循 UTC Everywhere 原则
  */
 @Slf4j
 @Component
@@ -56,14 +58,16 @@ public class DataVerifyExecutor implements MarketCalibrationExecutor {
 
     @Override
     public TaskExecutionResult execute(MarketCalibrationTaskConfig taskConfig,
-                                       LocalDateTime startTime, LocalDateTime endTime) {
+                                       Instant startTime, Instant endTime) {
         long startTimeMs = System.currentTimeMillis();
         MarketCalibrationTaskLog taskLog = null;
         TaskExecutionResult result = new TaskExecutionResult();
 
         try {
             log.info("开始执行数据核对任务: taskConfigId={}, taskName={}, startTime={}, endTime={}",
-                    taskConfig.getId(), taskConfig.getTaskName(), startTime, endTime);
+                    taskConfig.getId(), taskConfig.getTaskName(), 
+                    TimeUtil.formatWithBothTimezones(startTime),
+                    TimeUtil.formatWithBothTimezones(endTime));
 
             // 1. 获取交易对信息
             TradingPairInfo pairInfo = tradingPairInfoService.getTradingPairInfo(taskConfig.getTradingPairId());
@@ -71,6 +75,7 @@ public class DataVerifyExecutor implements MarketCalibrationExecutor {
             String symbolOnExchange = pairInfo.getSymbolOnExchange();
 
             // 2. 创建执行日志（状态=RUNNING）
+            // 重构：将 Instant 转换为 LocalDateTime 用于数据库存储（数据库边界转换）
             TaskLogCreateRequest logCreateRequest = new TaskLogCreateRequest();
             logCreateRequest.setTaskConfigId(taskConfig.getId());
             logCreateRequest.setTaskName(taskConfig.getTaskName());
@@ -78,28 +83,32 @@ public class DataVerifyExecutor implements MarketCalibrationExecutor {
             logCreateRequest.setTradingPairId(taskConfig.getTradingPairId());
             logCreateRequest.setSymbol(symbol);
             logCreateRequest.setExecutionMode(taskConfig.getExecutionMode());
-            logCreateRequest.setDetectStartTime(startTime);
-            logCreateRequest.setDetectEndTime(endTime);
+            // 将 Instant 转换为 LocalDateTime（UTC），用于数据库存储
+            logCreateRequest.setDetectStartTime(startTime.atZone(ZoneOffset.UTC).toLocalDateTime());
+            logCreateRequest.setDetectEndTime(endTime.atZone(ZoneOffset.UTC).toLocalDateTime());
             logCreateRequest.setStatus(TaskLogStatus.RUNNING);
             taskLog = taskLogService.createLog(logCreateRequest);
 
-            // 3. 将LocalDateTime转换为UTC epoch millis
-            // 注意：用户输入的时间字符串应该直接当作UTC时间来处理，不需要时区转换
-            ZoneId utcZone = ZoneId.of("UTC");
-            long startTimestamp = startTime.atZone(utcZone).toInstant().toEpochMilli();
-            long endTimestamp = endTime.atZone(utcZone).toInstant().toEpochMilli();
+            // 3. 将 Instant 转换为 UTC epoch millis
+            // 重构：直接使用 Instant.toEpochMilli()，无需时区转换
+            long startTimestamp = startTime.toEpochMilli();
+            long endTimestamp = endTime.toEpochMilli();
 
             // 对齐时间戳到分钟起始点
             long alignedStartTimestamp = KlineTimeCalculator.alignToMinuteStart(startTimestamp);
             long alignedEndTimestamp = KlineTimeCalculator.alignToMinuteStart(endTimestamp);
 
             // 4. 从QuestDB查询已存储的K线数据
+            // 重构：按照时间管理约定，将 long 转换为 Instant 传递给 Service
+            Instant alignedStartInstant = TimeUtil.fromEpochMilli(alignedStartTimestamp);
+            Instant alignedEndInstant = TimeUtil.fromEpochMilli(alignedEndTimestamp);
             List<NormalizedKline> questDbKlines = marketQueryService.queryKlines(
-                    symbolOnExchange, "1m", alignedStartTimestamp, alignedEndTimestamp, null);
+                    symbolOnExchange, "1m", alignedStartInstant, alignedEndInstant, null);
             log.info("从QuestDB查询到K线数据: taskConfigId={}, 数量={}", taskConfig.getId(), questDbKlines.size());
 
             // 5. 从OKX交易所获取K线数据
-            List<NormalizedKline> okxKlines = fetchKlinesFromOkx(symbolOnExchange, alignedStartTimestamp, alignedEndTimestamp);
+            // 重构：使用 Instant 参数，遵循时间管理约定
+            List<NormalizedKline> okxKlines = fetchKlinesFromOkx(symbolOnExchange, startTime, endTime);
             log.info("从OKX获取到K线数据: taskConfigId={}, 数量={}", taskConfig.getId(), okxKlines.size());
 
             // 6. 对比QuestDB和OKX的数据，找出QuestDB缺失的K线
@@ -123,7 +132,7 @@ public class DataVerifyExecutor implements MarketCalibrationExecutor {
                         .map(missing -> {
                             Map<String, Object> info = new HashMap<>();
                             info.put("timestamp", missing.timestamp);
-                            info.put("utcTime", UtcTimeConverter.utcTimestampToUtcString(missing.timestamp));
+                            info.put("utcTime", TimeUtil.formatAsUtcString(TimeUtil.fromEpochMilli(missing.timestamp)));
                             return info;
                         })
                         .collect(Collectors.toList());
@@ -306,15 +315,20 @@ public class DataVerifyExecutor implements MarketCalibrationExecutor {
      * @param endTimestamp     结束时间戳（毫秒，UTC epoch millis，已对齐到分钟起始点）
      * @return K线数据列表
      */
-    private List<NormalizedKline> fetchKlinesFromOkx(String symbolOnExchange, long startTimestamp, long endTimestamp) {
+    private List<NormalizedKline> fetchKlinesFromOkx(String symbolOnExchange, Instant startTime, Instant endTime) {
         try {
-
-            log.info("开始从OKX获取K线数据: symbol={}, start={} (UTC: {}), end={} (UTC: {})",
-                    symbolOnExchange, startTimestamp, UtcTimeConverter.utcTimestampToUtcString(startTimestamp),
-                    endTimestamp, UtcTimeConverter.utcTimestampToUtcString(endTimestamp));
+            // 重构：使用 Instant 参数，遵循时间管理约定
+            // 转换为 long 用于 API 调用
+            long startTimestamp = TimeUtil.toEpochMilli(startTime);
+            long endTimestamp = TimeUtil.toEpochMilli(endTime);
+            
+            log.info("开始从OKX获取K线数据: symbol={}, start={}, end={}",
+                    symbolOnExchange, 
+                    TimeUtil.formatWithBothTimezones(startTime),
+                    TimeUtil.formatWithBothTimezones(endTime));
 
             // 判断结束时间戳是否是今天（UTC时间）
-            boolean isEndTimeToday = isTodayInUTC(endTimestamp);
+            boolean isEndTimeToday = isTodayInUTC(endTime);
 
             // 根据是否是今天选择不同的接口
             JsonNode response;
@@ -391,8 +405,10 @@ public class DataVerifyExecutor implements MarketCalibrationExecutor {
             return klines;
 
         } catch (Exception e) {
-            log.error("从OKX获取K线数据失败: symbol={}, startTimestamp={}, endTimestamp={}",
-                    symbolOnExchange, startTimestamp, endTimestamp, e);
+            log.error("从OKX获取K线数据失败: symbol={}, startTime={}, endTime={}",
+                    symbolOnExchange, 
+                    startTime != null ? TimeUtil.formatWithBothTimezones(startTime) : "null",
+                    endTime != null ? TimeUtil.formatWithBothTimezones(endTime) : "null", e);
             // 返回空列表，不中断整个校准流程
             return new ArrayList<>();
         }
@@ -400,13 +416,13 @@ public class DataVerifyExecutor implements MarketCalibrationExecutor {
 
     /**
      * 判断时间戳是否是今天（UTC时间）
-     *
-     * @param timestamp 时间戳（毫秒，UTC epoch millis）
+     * 
+     * @param instant 时间（Instant，UTC）
      * @return 是否是今天
      */
-    private boolean isTodayInUTC(long timestamp) {
-        java.time.Instant timestampInstant = java.time.Instant.ofEpochMilli(timestamp);
-        java.time.LocalDate timestampDate = timestampInstant.atZone(java.time.ZoneOffset.UTC).toLocalDate();
+    private boolean isTodayInUTC(Instant instant) {
+        // 重构：使用 Instant 参数，遵循时间管理约定
+        java.time.LocalDate timestampDate = instant.atZone(java.time.ZoneOffset.UTC).toLocalDate();
 
         java.time.Instant nowInstant = java.time.Instant.now();
         java.time.LocalDate todayDate = nowInstant.atZone(java.time.ZoneOffset.UTC).toLocalDate();

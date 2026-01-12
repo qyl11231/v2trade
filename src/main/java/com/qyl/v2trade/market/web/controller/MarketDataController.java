@@ -52,11 +52,14 @@ public class MarketDataController {
             }
 
             // 查询K线数据
+            // 重构：按照时间管理约定，在 Controller 层将 Long 转换为 Instant（边界转换）
+            Instant fromTime = request.getFrom() != null ? TimeUtil.fromEpochMilli(request.getFrom()) : null;
+            Instant toTime = request.getTo() != null ? TimeUtil.fromEpochMilli(request.getTo()) : null;
             List<NormalizedKline> klines = marketQueryService.queryKlines(
                 request.getSymbol(),
                 request.getInterval(),
-                request.getFrom(),
-                request.getTo(),
+                fromTime,
+                toTime,
                 request.getLimit()
             );
 
@@ -125,8 +128,10 @@ public class MarketDataController {
                 return Result.error(400, "不支持的K线周期: " + interval);
             }
 
+            // 重构：按照时间管理约定，在 Controller 层将 Long 转换为 Instant（边界转换）
+            Instant timestampInstant = TimeUtil.fromEpochMilli(timestamp);
             NormalizedKline kline = marketQueryService.queryKlineByTimestamp(
-                symbol, interval, timestamp
+                symbol, interval, timestampInstant
             );
             
             if (kline == null) {
@@ -151,11 +156,17 @@ public class MarketDataController {
         log.debug("查询今日统计: symbol={}", symbol);
 
         try {
-            // 获取今日0点时间戳（毫秒）
-            long now = System.currentTimeMillis();
-            long todayStart = (now / (24 * 60 * 60 * 1000L)) * (24 * 60 * 60 * 1000L);
+            // 获取今日0点时间（UTC Instant）
+            // 重构：按照时间管理约定，使用 Instant 进行计算
+            Instant now = Instant.now();
+            // 将当前时间对齐到今天开始（UTC时区的0点）
+            long nowMillis = TimeUtil.toEpochMilli(now);
+            long dayMillis = 24 * 60 * 60 * 1000L;
+            long todayStartMillis = (nowMillis / dayMillis) * dayMillis;
+            Instant todayStart = TimeUtil.fromEpochMilli(todayStartMillis);
             
             // 查询今日所有1m K线
+            // 重构：按照时间管理约定，直接传递 Instant 参数
             List<NormalizedKline> klines = marketQueryService.queryKlines(
                 symbol, "1m", todayStart, now, null
             );

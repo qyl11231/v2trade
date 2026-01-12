@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,9 +36,10 @@ public class CachedMarketQueryService implements MarketQueryService {
 
     @Override
     public List<NormalizedKline> queryKlines(String symbol, String interval, 
-                                             Long fromTimestamp, Long toTimestamp, Integer limit) {
+                                             Instant fromTime, Instant toTime, Integer limit) {
+        // 重构：按照时间管理约定，直接传递 Instant 参数
         // 超出缓存窗口，直接从QuestDB查询
-        return questDbQueryService.queryKlines(symbol, interval, fromTimestamp, toTimestamp, limit);
+        return questDbQueryService.queryKlines(symbol, interval, fromTime, toTime, limit);
     }
 
     @Override
@@ -61,12 +63,15 @@ public class CachedMarketQueryService implements MarketQueryService {
     }
 
     @Override
-    public NormalizedKline queryKlineByTimestamp(String symbol, String interval, long timestamp) {
+    public NormalizedKline queryKlineByTimestamp(String symbol, String interval, Instant timestamp) {
+        // 重构：按照时间管理约定，使用 Instant 作为参数类型
         // 如果缓存服务是Redis实现，检查连接状态并尝试恢复
         checkRedisConnection();
         
-        // 先尝试从缓存查询
-        NormalizedKline cached = cacheService.getKlineFromCache(symbol, interval, timestamp);
+        // 先尝试从缓存查询（需要转换为 long 用于缓存查询）
+        // 注意：缓存服务接口仍使用 long，这是缓存层的边界转换
+        long timestampMillis = timestamp.toEpochMilli();
+        NormalizedKline cached = cacheService.getKlineFromCache(symbol, interval, timestampMillis);
         if (cached != null) {
             return cached;
         }

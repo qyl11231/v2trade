@@ -416,7 +416,8 @@ public class MarketDataCenter implements ApplicationRunner {
                     TradingPair tradingPair = tradingPairService.getBySymbolAndMarketType(
                             kline.getSymbol(), "SWAP");
                     if (tradingPair != null) {
-                        gapDetector.detectGap(tradingPair.getId(), kline.getSymbol(), kline.getTimestamp());
+                        // 重构：使用 Instant 参数，遵循时间管理约定
+                        gapDetector.detectGap(tradingPair.getId(), kline.getSymbol(), kline.getTimestampInstant());
                     } else {
                         log.debug("未找到交易对，跳过缺口检测: symbol={}", kline.getSymbol());
                     }

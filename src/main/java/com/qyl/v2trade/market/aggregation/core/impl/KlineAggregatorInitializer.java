@@ -7,6 +7,7 @@ import com.qyl.v2trade.business.system.service.TradingPairService;
 import com.qyl.v2trade.market.aggregation.config.AggregationProperties;
 import com.qyl.v2trade.market.aggregation.config.SupportedPeriod;
 import com.qyl.v2trade.market.aggregation.core.AggregationBucket;
+import com.qyl.v2trade.common.util.TimeUtil;
 import com.qyl.v2trade.market.aggregation.core.KlineAggregator;
 import com.qyl.v2trade.market.aggregation.core.PeriodCalculator;
 import com.qyl.v2trade.market.aggregation.event.AggregatedKLine;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -266,15 +268,18 @@ public class KlineAggregatorInitializer {
             // 从QuestDB读取该窗口内的1m数据
             // 注意：QuestDB中存储的symbol可能是标准化的（BTC-USDT），也可能是交易所格式（BTC-USDT-SWAP）
             // 这里先尝试使用标准化symbol查询，如果查询不到，再尝试使用原始symbol
+            // 重构：按照时间管理约定，将 long 转换为 Instant 传递给 Service
+            Instant windowStartInstant = TimeUtil.fromEpochMilli(windowStart);
+            Instant windowEndInstant = TimeUtil.fromEpochMilli(windowEnd);
             List<NormalizedKline> klines = marketQueryService.queryKlines(
-                    querySymbol, "1m", windowStart, windowEnd, null);
+                    querySymbol, "1m", windowStartInstant, windowEndInstant, null);
             
             // 如果查询不到，尝试使用原始symbol（可能是交易所格式）
             if (klines.isEmpty() && !querySymbol.equals(symbol)) {
                 log.debug("使用标准化symbol查询无结果，尝试使用原始symbol: querySymbol={}, originalSymbol={}", 
                         querySymbol, symbol);
                 klines = marketQueryService.queryKlines(
-                        symbol, "1m", windowStart, windowEnd, null);
+                        symbol, "1m", windowStartInstant, windowEndInstant, null);
             }
             
             if (klines.isEmpty()) {

@@ -16,13 +16,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import com.qyl.v2trade.common.util.TimeUtil;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * 缺失数据检测执行器
+ * 
+ * <p>重构：使用 Instant 作为时间参数，遵循 UTC Everywhere 原则
  */
 @Slf4j
 @Component
@@ -48,14 +52,16 @@ public class MissingDataExecutor implements MarketCalibrationExecutor {
 
     @Override
     public TaskExecutionResult execute(MarketCalibrationTaskConfig taskConfig, 
-                                      LocalDateTime startTime, LocalDateTime endTime) {
+                                      Instant startTime, Instant endTime) {
         long startTimeMs = System.currentTimeMillis();
         MarketCalibrationTaskLog taskLog = null;
         TaskExecutionResult result = new TaskExecutionResult();
 
         try {
             log.info("开始执行缺失数据检测任务: taskConfigId={}, taskName={}, startTime={}, endTime={}", 
-                    taskConfig.getId(), taskConfig.getTaskName(), startTime, endTime);
+                    taskConfig.getId(), taskConfig.getTaskName(), 
+                    TimeUtil.formatWithBothTimezones(startTime), 
+                    TimeUtil.formatWithBothTimezones(endTime));
 
             // 1. 获取交易对信息
             TradingPairInfo pairInfo = tradingPairInfoService.getTradingPairInfo(taskConfig.getTradingPairId());
@@ -63,6 +69,7 @@ public class MissingDataExecutor implements MarketCalibrationExecutor {
             String symbolOnExchange = pairInfo.getSymbolOnExchange();
 
             // 2. 创建执行日志（状态=RUNNING）
+            // 重构：将 Instant 转换为 LocalDateTime 用于数据库存储（数据库边界转换）
             TaskLogCreateRequest logCreateRequest = new TaskLogCreateRequest();
             logCreateRequest.setTaskConfigId(taskConfig.getId());
             logCreateRequest.setTaskName(taskConfig.getTaskName());
@@ -70,20 +77,17 @@ public class MissingDataExecutor implements MarketCalibrationExecutor {
             logCreateRequest.setTradingPairId(taskConfig.getTradingPairId());
             logCreateRequest.setSymbol(symbol);
             logCreateRequest.setExecutionMode(taskConfig.getExecutionMode());
-            logCreateRequest.setDetectStartTime(startTime);
-            logCreateRequest.setDetectEndTime(endTime);
+            // 将 Instant 转换为 LocalDateTime（UTC），用于数据库存储
+            logCreateRequest.setDetectStartTime(startTime.atZone(ZoneOffset.UTC).toLocalDateTime());
+            logCreateRequest.setDetectEndTime(endTime.atZone(ZoneOffset.UTC).toLocalDateTime());
             logCreateRequest.setStatus(TaskLogStatus.RUNNING);
             taskLog = taskLogService.createLog(logCreateRequest);
 
-            // 3. 将LocalDateTime转换为UTC epoch millis
-            // 注意：用户输入的时间字符串应该直接当作UTC时间来处理，不需要时区转换
-            java.time.ZoneId utcZone = java.time.ZoneId.of("UTC");
-            long startTimestamp = startTime.atZone(utcZone).toInstant().toEpochMilli();
-            long endTimestamp = endTime.atZone(utcZone).toInstant().toEpochMilli();
-            
-            // 检测缺失的K线时间点（使用UTC epoch millis）
+            // 3. 将 Instant 转换为 UTC epoch millis
+            // 检测缺失的K线时间点
+            // 重构：使用 Instant 参数，遵循时间管理约定
             List<Long> missingTimestamps = klineGapDetector.detectMissingTimestamps(
-                    taskConfig.getTradingPairId(), startTimestamp, endTimestamp);
+                    taskConfig.getTradingPairId(), startTime, endTime);
             result.setMissingCount(missingTimestamps.size());
 
             log.info("检测到缺失的K线时间点: taskConfigId={}, 缺失数量={}", 

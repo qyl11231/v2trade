@@ -109,6 +109,8 @@ public class MarketCalibrationTaskConfigController {
 
     /**
      * 手动执行任务
+     * 
+     * <p>重构：在 Controller 层将 LocalDateTime 转换为 Instant，遵循 UTC Everywhere 原则
      */
     @PostMapping("/{id}/execute")
     public Result<TaskExecutionResult> execute(
@@ -116,7 +118,12 @@ public class MarketCalibrationTaskConfigController {
             @Valid @RequestBody TaskExecuteRequest request) {
         logger.info("手动执行任务: id={}, startTime={}, endTime={}", id, request.getStartTime(), request.getEndTime());
 
-        TaskExecutionResult result = executionService.executeTask(id, request.getStartTime(), request.getEndTime());
+        // 重构：将 LocalDateTime 转换为 Instant（UTC）
+        // 假设前端传入的 LocalDateTime 是 UTC 时间（无时区信息），直接转换为 Instant
+        java.time.Instant startTime = request.getStartTime().atZone(java.time.ZoneOffset.UTC).toInstant();
+        java.time.Instant endTime = request.getEndTime().atZone(java.time.ZoneOffset.UTC).toInstant();
+
+        TaskExecutionResult result = executionService.executeTask(id, startTime, endTime);
         return Result.success("执行成功", result);
     }
 
