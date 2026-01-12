@@ -217,43 +217,6 @@
             color: #f6465d;
         }
         
-        .symbol-stats {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-            font-size: 10px;
-            color: #848e9c;
-            margin-top: 4px;
-        }
-        
-        .symbol-stat-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        
-        .symbol-stat-label {
-            font-size: 9px;
-            color: #636a73;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        
-        .symbol-stat-value {
-            font-size: 11px;
-            font-weight: 600;
-            font-variant-numeric: tabular-nums;
-            color: #848e9c;
-        }
-        
-        .symbol-stat-value.up {
-            color: #0ecb81;
-        }
-        
-        .symbol-stat-value.down {
-            color: #f6465d;
-        }
         
         /* ========== 中央 Chart Section ========== */
         .chart-panel {
@@ -987,23 +950,19 @@
                         borderVisible: false,
                         borderColor: '#2a2e39',
                         visible: true,
-                        // 重构：后端已统一使用UTC，前端显示时转换为上海时区（UTC+8）
+                        // 重构：后端已统一使用UTC，前端显示时JavaScript自动根据系统时区转换
                         tickMarkFormatter: function(time, tickMarkType, locale) {
                             // TradingView传入的time是秒级UTC时间戳
-                            // 后端已统一使用UTC，前端显示时转换为上海时区（UTC+8）
+                            // 后端已统一使用UTC，JavaScript的Date对象会自动根据系统时区显示
                             const utcTimestampMs = time * 1000; // 转换为毫秒级UTC时间戳
+                            const date = new Date(utcTimestampMs); // 直接使用UTC时间戳，JavaScript会自动转换
                             
-                            // 转换为上海时区（UTC+8）用于显示
-                            const shanghaiOffsetMs = 8 * 60 * 60 * 1000;
-                            const shanghaiTimestampMs = utcTimestampMs + shanghaiOffsetMs;
-                            const date = new Date(shanghaiTimestampMs);
-                            
-                            // 使用UTC方法提取时间（因为已经加上了8小时偏移）
-                            const year = date.getUTCFullYear();
-                            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-                            const day = String(date.getUTCDate()).padStart(2, '0');
-                            const hours = String(date.getUTCHours()).padStart(2, '0');
-                            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+                            // 使用本地时区方法提取时间（系统时区为UTC+8，会自动显示为上海时区）
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const minutes = String(date.getMinutes()).padStart(2, '0');
                             
                             // 根据时间周期返回不同的格式
                             if (activeTimeframe === '1d') {
@@ -1230,19 +1189,17 @@
                 return 'Invalid Time';
             }
             
-            // 重构：后端返回的是UTC时间戳，需要转换为上海时区（UTC+8）显示
-            // 上海时区 = UTC + 8小时
-            const shanghaiOffsetMs = 8 * 60 * 60 * 1000;
-            const shanghaiTimestamp = timestampMs + shanghaiOffsetMs;
-            const date = new Date(shanghaiTimestamp);
+            // 重构：后端返回的是UTC时间戳，JavaScript的Date对象会自动根据系统时区显示
+            // 直接使用UTC时间戳，JavaScript会自动转换为本地时区（系统时区为UTC+8）
+            const date = new Date(timestampMs);
             
-            // 使用UTC方法提取时间（因为已经加上了8小时偏移）
-            const year = date.getUTCFullYear();
-            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(date.getUTCDate()).padStart(2, '0');
-            const hours = String(date.getUTCHours()).padStart(2, '0');
-            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-            const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+            // 使用本地时区方法提取时间（系统时区为UTC+8，会自动显示为上海时区）
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
             
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
@@ -1395,24 +1352,9 @@
                         div.innerHTML = `
                             <div class="symbol-item-row">
                                 <span class="symbol-name">${displaySymbol}</span>
-                                <span class="symbol-price">${formattedPrice}</span>
                             </div>
                             <div class="symbol-item-row">
-                            <span class="symbol-change ${changeClass}">${formattedChange}</span>
-                            </div>
-                            <div class="symbol-stats">
-                                <div class="symbol-stat-item">
-                                    <span class="symbol-stat-label">24h High</span>
-                                    <span class="symbol-stat-value up">${formattedHigh}</span>
-                                </div>
-                                <div class="symbol-stat-item">
-                                    <span class="symbol-stat-label">24h Low</span>
-                                    <span class="symbol-stat-value down">${formattedLow}</span>
-                                </div>
-                                <div class="symbol-stat-item">
-                                    <span class="symbol-stat-label">24h Vol</span>
-                                    <span class="symbol-stat-value">${formattedVolume}</span>
-                                </div>
+                                <span class="symbol-change ${changeClass}">${formattedChange}</span>
                             </div>
                         `;
                         
@@ -1539,6 +1481,37 @@
                 method: 'GET'
             }).then(function(res) {
                 showChartLoading(false);
+                
+                // 调试日志：输出API响应（包含详细的时间戳信息）
+                if (res.data && res.data.length > 0) {
+                    const firstItem = res.data[0];
+                    const lastItem = res.data[res.data.length - 1];
+                    console.log('[loadKlines] 📊 API响应:', {
+                        code: res.code,
+                        message: res.message,
+                        数据数量: res.data.length,
+                        交易对: symbol,
+                        周期: timeframe,
+                        第一条数据: {
+                            timestamp: firstItem.timestamp,
+                            timestamp类型: typeof firstItem.timestamp,
+                            时间字符串: firstItem.timestamp ? new Date(firstItem.timestamp).toISOString() : 'N/A',
+                            time: firstItem.time,
+                            open: firstItem.open, high: firstItem.high, low: firstItem.low, close: firstItem.close
+                        },
+                        最后一条数据: {
+                            timestamp: lastItem.timestamp,
+                            时间字符串: lastItem.timestamp ? new Date(lastItem.timestamp).toISOString() : 'N/A'
+                        }
+                    });
+                } else {
+                    console.log('[loadKlines] 📊 API响应: 无数据', {
+                        code: res.code,
+                        message: res.message,
+                        数据数量: 0
+                    });
+                }
+                
                 if (res.data && res.data.length > 0) {
                     // 重置数据窗口
                     dataWindow.reset();
@@ -1615,10 +1588,22 @@
             // 图表显示：左侧是旧数据，右侧是新数据（时间从左到右递增）
             
             // 直接使用后端返回的数据（已经按时间升序排列）
-            klinesData = data;
+            // 确保 timestamp 是数字类型
+            klinesData = data.map(function(k) {
+                if (typeof k.timestamp === 'string') {
+                    k.timestamp = parseInt(k.timestamp, 10);
+                }
+                return k;
+            });
             
-            // 更新数据窗口边界
-            dataWindow.updateBoundaries(data);
+            // 更新数据窗口边界（确保 timestamp 是数字）
+            const normalizedData = data.map(function(k) {
+                if (typeof k.timestamp === 'string') {
+                    k.timestamp = parseInt(k.timestamp, 10);
+                }
+                return k;
+            });
+            dataWindow.updateBoundaries(normalizedData);
             
             // 确保图表已初始化
             if (!tvChart) {
@@ -1632,17 +1617,192 @@
             // 转换数据格式为 TradingView 格式
             // 注意：后端返回的timestamp是UTC时间戳（毫秒级），TradingView需要秒级时间戳
             const chartData = data.map(function(k) {
+                // 首先检查整个对象是否有效
+                if (!k || typeof k !== 'object') {
+                    console.error('无效的数据对象:', k);
+                    return null;
+                }
+                
+                // 确保 timestamp 是数字类型（防止JSON反序列化后是字符串）
+                let timestampMs = k.timestamp;
+                if (timestampMs == null) {
+                    console.error('时间戳为 null 或 undefined:', k);
+                    return null;
+                }
+                if (typeof timestampMs === 'string') {
+                    timestampMs = parseInt(timestampMs, 10);
+                }
+                timestampMs = Number(timestampMs);
+                
+                // 如果时间戳看起来是秒级（小于 10000000000），转换为毫秒级
+                // 正常的时间戳：2026年 = 1735689600000 (毫秒) = 1735689600 (秒)
+                if (timestampMs > 0 && timestampMs < 10000000000) {
+                    // 可能是秒级时间戳，转换为毫秒级
+                    console.warn('[drawKlines] ⚠️ 时间戳可能是秒级，转换为毫秒级:', timestampMs, '->', timestampMs * 1000);
+                    timestampMs = timestampMs * 1000;
+                }
+                
+                // 验证时间戳有效性（必须是合理的毫秒级时间戳）
+                const MIN_VALID_TIMESTAMP_MS = 946684800000; // 2000-01-01 00:00:00 UTC (毫秒级)
+                if (isNaN(timestampMs) || timestampMs <= 0 || !isFinite(timestampMs)) {
+                    console.error('[drawKlines] ❌ 无效的时间戳:', k.timestamp, '转换后:', timestampMs, '原始数据:', k);
+                    return null;
+                }
+                if (timestampMs < MIN_VALID_TIMESTAMP_MS) {
+                    console.error('[drawKlines] ❌ 时间戳过小（可能是1970年）:', timestampMs, '日期:', new Date(timestampMs).toISOString(), '原始数据:', k);
+                    return null;
+                }
+                
+                // 验证并转换价格数据（使用 Number 而不是 parseFloat，更严格）
+                const open = (k.open != null && k.open !== '') ? Number(k.open) : NaN;
+                const high = (k.high != null && k.high !== '') ? Number(k.high) : NaN;
+                const low = (k.low != null && k.low !== '') ? Number(k.low) : NaN;
+                const close = (k.close != null && k.close !== '') ? Number(k.close) : NaN;
+                
+                // 验证价格数据有效性（确保是有效数字且有限）
+                if (isNaN(open) || !isFinite(open) || 
+                    isNaN(high) || !isFinite(high) || 
+                    isNaN(low) || !isFinite(low) || 
+                    isNaN(close) || !isFinite(close)) {
+                    console.error('无效的价格数据:', {
+                        open: k.open, high: k.high, low: k.low, close: k.close,
+                        转换后: {open, high, low, close},
+                        原始数据: k
+                    });
+                    return null;
+                }
+                
+                // 验证价格逻辑（high >= low, high >= open, high >= close, low <= open, low <= close）
+                if (high < low || high < open || high < close || low > open || low > close) {
+                    console.warn('价格数据逻辑错误:', {open, high, low, close, original: k});
+                    // 不返回 null，而是修正数据
+                    const correctedHigh = Math.max(open, high, close);
+                    const correctedLow = Math.min(open, low, close);
+                    return {
+                        time: Math.floor(timestampMs / 1000),
+                        open: open,
+                        high: correctedHigh,
+                        low: correctedLow,
+                        close: close
+                    };
+                }
+                
+                // 计算秒级时间戳
+                const timeSec = Math.floor(timestampMs / 1000);
+                
+                // 最终验证：确保所有值都不是 null、NaN 或 Infinity
+                if (timeSec == null || isNaN(timeSec) || !isFinite(timeSec) || timeSec <= 0 ||
+                    open == null || isNaN(open) || !isFinite(open) ||
+                    high == null || isNaN(high) || !isFinite(high) ||
+                    low == null || isNaN(low) || !isFinite(low) ||
+                    close == null || isNaN(close) || !isFinite(close)) {
+                    console.error('最终验证失败，数据包含无效值:', {
+                        timeSec, open, high, low, close, timestampMs, 原始数据: k
+                    });
+                    return null;
+                }
+                
                 return {
-                    time: Math.floor(k.timestamp / 1000), // 后端返回的是毫秒级UTC时间戳，转换为秒级
-                    open: k.open,
-                    high: k.high,
-                    low: k.low,
-                    close: k.close
+                    time: timeSec, // 后端返回的是毫秒级UTC时间戳，转换为秒级
+                    open: open,
+                    high: high,
+                    low: low,
+                    close: close
                 };
+            }).filter(function(item) {
+                // 过滤掉无效数据（null 或包含无效值的对象）
+                if (item === null) return false;
+                if (isNaN(item.time) || item.time <= 0) return false;
+                if (isNaN(item.open) || isNaN(item.high) || isNaN(item.low) || isNaN(item.close)) return false;
+                return true;
             });
             
-            // 设置K线数据
-            candlestickSeries.setData(chartData);
+            // 调试日志：输出第一条和最后一条数据（包含原始时间戳）
+            if (chartData.length > 0) {
+                const firstItem = chartData[0];
+                const lastItem = chartData[chartData.length - 1];
+                console.log('[drawKlines] ✅ 数据转换成功:', {
+                    总数: chartData.length,
+                    第一条: {
+                        time: firstItem.time,
+                        时间字符串: new Date(firstItem.time * 1000).toISOString(),
+                        原始timestamp: data[0] ? data[0].timestamp : 'N/A',
+                        open: firstItem.open, high: firstItem.high, low: firstItem.low, close: firstItem.close
+                    },
+                    最后一条: {
+                        time: lastItem.time,
+                        时间字符串: new Date(lastItem.time * 1000).toISOString(),
+                        原始timestamp: data[data.length - 1] ? data[data.length - 1].timestamp : 'N/A'
+                    }
+                });
+            } else {
+                console.warn('[drawKlines] ⚠️ 警告：转换后数据为空，原始数据数量:', data ? data.length : 0);
+            }
+            
+            // 设置K线数据（最终验证，确保没有 null 值且时间戳合理）
+            if (chartData.length > 0) {
+                // 最终验证：确保数组中没有任何 null 值或无效值，且时间戳合理（不能是1970年）
+                const MIN_VALID_TIMESTAMP = 946684800; // 2000-01-01 00:00:00 UTC (秒级)
+                const finalData = chartData.filter(function(item, index) {
+                    if (!item) {
+                        console.error('[drawKlines] ❌ 第', index, '项为 null');
+                        return false;
+                    }
+                    if (item.time == null || isNaN(item.time) || item.time <= 0 || !isFinite(item.time)) {
+                        console.error('[drawKlines] ❌ 第', index, '项时间戳无效:', item.time);
+                        return false;
+                    }
+                    // 检查时间戳是否合理（不能是1970年）
+                    if (item.time < MIN_VALID_TIMESTAMP) {
+                        console.error('[drawKlines] ❌ 第', index, '项时间戳过小（可能是1970年）:', item.time, '日期:', new Date(item.time * 1000).toISOString());
+                        return false;
+                    }
+                    if (item.open == null || isNaN(item.open) || !isFinite(item.open)) {
+                        console.error('[drawKlines] ❌ 第', index, '项 open 无效:', item.open);
+                        return false;
+                    }
+                    if (item.high == null || isNaN(item.high) || !isFinite(item.high)) {
+                        console.error('[drawKlines] ❌ 第', index, '项 high 无效:', item.high);
+                        return false;
+                    }
+                    if (item.low == null || isNaN(item.low) || !isFinite(item.low)) {
+                        console.error('[drawKlines] ❌ 第', index, '项 low 无效:', item.low);
+                        return false;
+                    }
+                    if (item.close == null || isNaN(item.close) || !isFinite(item.close)) {
+                        console.error('[drawKlines] ❌ 第', index, '项 close 无效:', item.close);
+                        return false;
+                    }
+                    return true;
+                });
+                
+                if (finalData.length > 0) {
+                    console.log('[drawKlines] ✅ 最终验证通过，准备渲染', finalData.length, '根K线（过滤掉', chartData.length - finalData.length, '根无效数据）');
+                    // 再次检查第一条数据
+                    if (finalData[0]) {
+                        console.log('[drawKlines] 第一条有效数据:', {
+                            time: finalData[0].time,
+                            时间: new Date(finalData[0].time * 1000).toISOString(),
+                            open: finalData[0].open, high: finalData[0].high, low: finalData[0].low, close: finalData[0].close
+                        });
+                    }
+                    try {
+                        candlestickSeries.setData(finalData);
+                        console.log('[drawKlines] ✅ setData 调用成功');
+                    } catch (err) {
+                        console.error('[drawKlines] ❌ setData 失败:', err);
+                        console.error('[drawKlines] 失败的数据（前3条）:', finalData.slice(0, 3));
+                        console.error('[drawKlines] 失败的数据（后3条）:', finalData.slice(-3));
+                    }
+                } else {
+                    console.error('[drawKlines] ❌ 错误：最终验证后没有有效数据，原始数据数量:', chartData.length);
+                    console.error('[drawKlines] 原始数据示例（前3条）:', chartData.slice(0, 3));
+                    candlestickSeries.setData([]);
+                }
+            } else {
+                console.error('[drawKlines] ❌ 错误：没有有效数据可以渲染');
+                candlestickSeries.setData([]);
+            }
             
             // 如果有成交量数据，也更新成交量系列
             // if (volumeSeries && sortedData[0].volume !== undefined) {
@@ -1719,13 +1879,23 @@
                 stompClient = Stomp.over(socket);
                 
                 stompClient.connect({}, function(frame) {
-                    console.log('WebSocket连接成功');
+                    console.log('[WebSocket] 连接成功，订阅交易对:', symbol);
                     updateConnectionStatus(true);
                     
                     // 订阅K线数据
                     stompClient.subscribe('/topic/kline/' + symbol, function(message) {
-                        const kline = JSON.parse(message.body);
-                        handleRealtimeKline(kline);
+                        try {
+                            const kline = JSON.parse(message.body);
+                            console.log('[WebSocket] 收到K线数据:', {
+                                symbol: kline.symbol,
+                                interval: kline.interval,
+                                timestamp: kline.timestamp,
+                                close: kline.close
+                            });
+                            handleRealtimeKline(kline);
+                        } catch (err) {
+                            console.error('[WebSocket] 解析K线数据失败:', err, message.body);
+                        }
                     });
                 }, function(error) {
                     console.error('WebSocket连接失败:', error);
@@ -1769,15 +1939,66 @@
             
             if (!candlestickSeries || !tvChart) return;
             
+            // 确保 timestamp 是数字类型
+            let timestampMs = kline.timestamp;
+            if (timestampMs == null) {
+                console.error('[handleRealtimeKline] ❌ 时间戳为 null 或 undefined:', kline);
+                return;
+            }
+            if (typeof timestampMs === 'string') {
+                timestampMs = parseInt(timestampMs, 10);
+            }
+            timestampMs = Number(timestampMs);
+            
+            if (isNaN(timestampMs) || timestampMs <= 0 || !isFinite(timestampMs)) {
+                console.error('[handleRealtimeKline] ❌ 无效的时间戳:', kline.timestamp, '转换后:', timestampMs, '原始数据:', kline);
+                return;
+            }
+            
             // 后端返回的timestamp是UTC时间戳（毫秒级），转换为TradingView需要的秒级
-            const time = Math.floor(kline.timestamp / 1000);
+            const time = Math.floor(timestampMs / 1000);
+            
+            // 验证并转换价格数据（使用 Number 而不是 parseFloat，更严格）
+            const open = (kline.open != null && kline.open !== '') ? Number(kline.open) : NaN;
+            const high = (kline.high != null && kline.high !== '') ? Number(kline.high) : NaN;
+            const low = (kline.low != null && kline.low !== '') ? Number(kline.low) : NaN;
+            const close = (kline.close != null && kline.close !== '') ? Number(kline.close) : NaN;
+            
+            // 验证价格数据有效性（确保是有效数字且有限）
+            if (isNaN(open) || !isFinite(open) || 
+                isNaN(high) || !isFinite(high) || 
+                isNaN(low) || !isFinite(low) || 
+                isNaN(close) || !isFinite(close)) {
+                console.error('[handleRealtimeKline] ❌ 无效的价格数据:', {
+                    open: kline.open, high: kline.high, low: kline.low, close: kline.close,
+                    转换后: {open, high, low, close},
+                    原始数据: kline
+                });
+                return;
+            }
+            
+            // 最终验证：确保所有值都不是 null、NaN 或 Infinity
+            if (time == null || isNaN(time) || !isFinite(time) || time <= 0 || 
+                open == null || isNaN(open) || !isFinite(open) || 
+                high == null || isNaN(high) || !isFinite(high) || 
+                low == null || isNaN(low) || !isFinite(low) || 
+                close == null || isNaN(close) || !isFinite(close)) {
+                console.error('[handleRealtimeKline] ❌ 最终验证失败，数据包含 null、NaN 或 Infinity:', {
+                    time, open, high, low, close, timestampMs, 原始数据: kline
+                });
+                return;
+            }
+            
             const chartKline = {
                 time: time,
-                open: kline.open,
-                high: kline.high,
-                low: kline.low,
-                close: kline.close
+                open: open,
+                high: high,
+                low: low,
+                close: close
             };
+            
+            // 更新 kline 对象的 timestamp 为数字类型
+            kline.timestamp = timestampMs;
             
             // 查找是否存在相同时间的K线
             let updated = false;
@@ -1785,12 +2006,16 @@
             
             if (klinesData.length > 0) {
                 const lastKline = klinesData[klinesData.length - 1];
-                if (lastKline.timestamp === kline.timestamp) {
+                if (lastKline.timestamp === timestampMs) {
                     // 更新最后一根K线（K线还未完成）
                     klinesData[klinesData.length - 1] = kline;
-                    candlestickSeries.update(chartKline);
-                    updated = true;
-                } else if (kline.timestamp > lastKline.timestamp) {
+                    try {
+                        candlestickSeries.update(chartKline);
+                        updated = true;
+                    } catch (err) {
+                        console.error('[handleRealtimeKline] ❌ update 失败:', err, '数据:', chartKline);
+                    }
+                } else if (timestampMs > lastKline.timestamp) {
                     // 新增K线（新的一根K线开始）
                     klinesData.push(kline);
                     isNewKline = true;
@@ -1810,16 +2035,24 @@
                         }
                     }
                     
-                    candlestickSeries.update(chartKline);
-                    updated = true;
+                    try {
+                        candlestickSeries.update(chartKline);
+                        updated = true;
+                    } catch (err) {
+                        console.error('[handleRealtimeKline] ❌ update 失败:', err, '数据:', chartKline);
+                    }
                 }
             } else {
                 // 首次数据
                 klinesData.push(kline);
                 dataWindow.updateBoundaries([kline]);
-                candlestickSeries.update(chartKline);
-                updated = true;
-                isNewKline = true;
+                try {
+                    candlestickSeries.update(chartKline);
+                    updated = true;
+                    isNewKline = true;
+                } catch (err) {
+                    console.error('[handleRealtimeKline] ❌ update 失败:', err, '数据:', chartKline);
+                }
             }
             
             if (updated) {
@@ -2012,8 +2245,13 @@
                 method: 'GET'
             }).then(function(res) {
                 if (res.data && res.data.length > 0) {
-                    // 后端已经返回升序数据（从旧到新），直接使用
-                    const newData = res.data;
+                    // 后端已经返回升序数据（从旧到新），确保 timestamp 是数字类型
+                    const newData = res.data.map(function(k) {
+                        if (typeof k.timestamp === 'string') {
+                            k.timestamp = parseInt(k.timestamp, 10);
+                        }
+                        return k;
+                    });
                     
                     // 简化日志：只使用UTC时间戳和UTC时间字符串
                     if (newData.length > 0) {
@@ -2070,18 +2308,88 @@
                         
                         // 更新图表数据
                         const chartData = klinesData.map(function(k) {
+                            // 首先检查整个对象是否有效
+                            if (!k || typeof k !== 'object') {
+                                return null;
+                            }
+                            
+                            // 确保 timestamp 是数字类型
+                            let timestampMs = k.timestamp;
+                            if (timestampMs == null) {
+                                return null;
+                            }
+                            if (typeof timestampMs === 'string') {
+                                timestampMs = parseInt(timestampMs, 10);
+                            }
+                            timestampMs = Number(timestampMs);
+                            
+                            // 验证时间戳有效性
+                            if (isNaN(timestampMs) || timestampMs <= 0 || !isFinite(timestampMs)) {
+                                return null;
+                            }
+                            
+                            // 验证并转换价格数据（使用 Number 而不是 parseFloat，更严格）
+                            const open = (k.open != null && k.open !== '') ? Number(k.open) : NaN;
+                            const high = (k.high != null && k.high !== '') ? Number(k.high) : NaN;
+                            const low = (k.low != null && k.low !== '') ? Number(k.low) : NaN;
+                            const close = (k.close != null && k.close !== '') ? Number(k.close) : NaN;
+                            
+                            // 验证价格数据有效性（确保是有效数字且有限）
+                            if (isNaN(open) || !isFinite(open) || 
+                                isNaN(high) || !isFinite(high) || 
+                                isNaN(low) || !isFinite(low) || 
+                                isNaN(close) || !isFinite(close)) {
+                                return null;
+                            }
+                            
+                            // 计算秒级时间戳
+                            const timeSec = Math.floor(timestampMs / 1000);
+                            
+                            // 最终验证：确保所有值都不是 null、NaN 或 Infinity
+                            if (timeSec == null || isNaN(timeSec) || !isFinite(timeSec) || timeSec <= 0 ||
+                                open == null || isNaN(open) || !isFinite(open) ||
+                                high == null || isNaN(high) || !isFinite(high) ||
+                                low == null || isNaN(low) || !isFinite(low) ||
+                                close == null || isNaN(close) || !isFinite(close)) {
+                                return null;
+                            }
+                            
                             return {
-                                time: Math.floor(k.timestamp / 1000), // TradingView使用秒级时间戳
-                                open: k.open,
-                                high: k.high,
-                                low: k.low,
-                                close: k.close
+                                time: timeSec, // TradingView使用秒级时间戳
+                                open: open,
+                                high: high,
+                                low: low,
+                                close: close
                             };
+                        }).filter(function(item) {
+                            // 过滤掉无效数据（null 或包含无效值的对象）
+                            if (item === null) return false;
+                            if (item.time == null || isNaN(item.time) || !isFinite(item.time) || item.time <= 0) return false;
+                            if (item.open == null || isNaN(item.open) || !isFinite(item.open)) return false;
+                            if (item.high == null || isNaN(item.high) || !isFinite(item.high)) return false;
+                            if (item.low == null || isNaN(item.low) || !isFinite(item.low)) return false;
+                            if (item.close == null || isNaN(item.close) || !isFinite(item.close)) return false;
+                            return true;
                         });
                         
                         if (candlestickSeries && tvChart) {
+                            // 最终验证：确保没有 null 值
+                            const finalData = chartData.filter(function(item) {
+                                if (!item) return false;
+                                if (item.time == null || isNaN(item.time) || item.time <= 0) return false;
+                                if (item.open == null || isNaN(item.open)) return false;
+                                if (item.high == null || isNaN(item.high)) return false;
+                                if (item.low == null || isNaN(item.low)) return false;
+                                if (item.close == null || isNaN(item.close)) return false;
+                                return true;
+                            });
+                            
                             // 使用setData更新全部数据（TradingView会自动优化渲染）
-                            candlestickSeries.setData(chartData);
+                            try {
+                                candlestickSeries.setData(finalData);
+                            } catch (err) {
+                                console.error('[loadEarlierKlines] ❌ setData 失败:', err, '数据数量:', finalData.length);
+                            }
                             
                             // 保持滚动位置：计算时间偏移并调整可见范围
                             if (currentVisibleRange && oldFirstTime !== klinesData[0].timestamp) {
@@ -2174,24 +2482,9 @@
                         symbolItem.innerHTML = `
                             <div class="symbol-item-row">
                                 <span class="symbol-name">${displaySymbol}</span>
-                                <span class="symbol-price">${formattedPrice}</span>
                             </div>
                             <div class="symbol-item-row">
                                 <span class="symbol-change ${changeClass}">${changeText}</span>
-                            </div>
-                            <div class="symbol-stats">
-                                <div class="symbol-stat-item">
-                                    <span class="symbol-stat-label">24h High</span>
-                                    <span class="symbol-stat-value up">${formattedHigh}</span>
-                                </div>
-                                <div class="symbol-stat-item">
-                                    <span class="symbol-stat-label">24h Low</span>
-                                    <span class="symbol-stat-value down">${formattedLow}</span>
-                                </div>
-                                <div class="symbol-stat-item">
-                                    <span class="symbol-stat-label">24h Vol</span>
-                                    <span class="symbol-stat-value">${formattedVolume}</span>
-                                </div>
                             </div>
                         `;
                         

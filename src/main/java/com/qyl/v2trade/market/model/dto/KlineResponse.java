@@ -1,5 +1,6 @@
 package com.qyl.v2trade.market.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -66,7 +67,9 @@ public class KlineResponse implements Serializable {
      * K线开盘时间（UTC）
      * 
      * <p>JSON 序列化时会自动转换为 epoch millis (long)
+     * <p>使用 @JsonFormat 注解确保序列化为数字时间戳，而不是 ISO-8601 字符串
      */
+    @JsonFormat(shape = JsonFormat.Shape.NUMBER)
     private Instant timestamp;
 
     /**
