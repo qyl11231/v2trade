@@ -1112,28 +1112,6 @@
                 if (klineIndex >= 0 && klineIndex < klinesData.length) {
                     const kline = klinesData[klineIndex];
                     
-                    // klinesData 中的时间戳需要统一转换为毫秒级
-                    let klineTime = kline.timestamp;
-                    if (typeof klineTime === 'string') {
-                        klineTime = parseInt(klineTime, 10);
-                    }
-                    klineTime = Number(klineTime);
-                    
-                    // 如果时间戳看起来是秒级（小于 10000000000），转换为毫秒级
-                    if (klineTime > 0 && klineTime < 10000000000) {
-                        klineTime = klineTime * 1000;
-                    }
-                    
-                    // 验证找到的K线是否匹配（允许一个周期内的误差）
-                    const timeframeMs = getTimeframeMs(activeTimeframe);
-                    const timeDiff = Math.abs(klineTime - timeMs);
-                    
-                    // 如果时间差太大（超过一个周期），说明查找可能有问题，不显示tooltip
-                    if (timeDiff > timeframeMs) {
-                        tooltipElement.style.display = 'none';
-                        return;
-                    }
-                    
                     // 直接使用K线的timestamp（后端返回的UTC时间戳），而不是坐标转换的时间
                     // 这样可以确保Tooltip显示的时间与K线实际时间完全一致，避免时区转换问题
                     updateTooltip(kline, kline.timestamp, x, y, rect);
@@ -1153,91 +1131,40 @@
         function findKlineByTime(targetTimeMs) {
             if (klinesData.length === 0) return -1;
             
-            // 确保目标时间是数字类型
-            targetTimeMs = Number(targetTimeMs);
-            if (isNaN(targetTimeMs)) return -1;
-            
-            // 获取第一个和最后一个时间戳（确保是数字类型，并统一转换为毫秒级）
-            let firstTime = klinesData[0].timestamp;
-            if (typeof firstTime === 'string') {
-                firstTime = parseInt(firstTime, 10);
-            }
-            firstTime = Number(firstTime);
-            // 如果时间戳看起来是秒级，转换为毫秒级
-            if (firstTime > 0 && firstTime < 10000000000) {
-                firstTime = firstTime * 1000;
-            }
-            
-            let lastTime = klinesData[klinesData.length - 1].timestamp;
-            if (typeof lastTime === 'string') {
-                lastTime = parseInt(lastTime, 10);
-            }
-            lastTime = Number(lastTime);
-            // 如果时间戳看起来是秒级，转换为毫秒级
-            if (lastTime > 0 && lastTime < 10000000000) {
-                lastTime = lastTime * 1000;
-            }
-            
             // 如果目标时间在数据范围外，返回最近的边界
-            if (targetTimeMs < firstTime) {
+            if (targetTimeMs < klinesData[0].timestamp) {
                 return 0;
             }
-            if (targetTimeMs > lastTime) {
+            if (targetTimeMs > klinesData[klinesData.length - 1].timestamp) {
                 return klinesData.length - 1;
             }
-            
-            // 计算一个周期的时间（毫秒），用于判断是否匹配
-            const timeframeMs = getTimeframeMs(activeTimeframe);
-            const tolerance = timeframeMs / 2; // 允许半个周期的误差
             
             // 二分查找最接近的K线
             let left = 0;
             let right = klinesData.length - 1;
-            let closestIndex = -1;
+            let closestIndex = 0;
             let minDiff = Infinity;
             
             while (left <= right) {
                 const mid = Math.floor((left + right) / 2);
-                let midTime = klinesData[mid].timestamp;
-                
-                // 确保时间戳是数字类型
-                if (typeof midTime === 'string') {
-                    midTime = parseInt(midTime, 10);
-                }
-                midTime = Number(midTime);
-                
-                // 如果时间戳看起来是秒级，转换为毫秒级
-                if (midTime > 0 && midTime < 10000000000) {
-                    midTime = midTime * 1000;
-                }
-                
+                const midTime = klinesData[mid].timestamp;
                 const diff = Math.abs(midTime - targetTimeMs);
                 
-                // 如果时间差在容差范围内，直接返回
-                if (diff <= tolerance) {
-                    return mid;
-                }
-                
-                // 记录最接近的索引
                 if (diff < minDiff) {
                     minDiff = diff;
                     closestIndex = mid;
                 }
                 
-                if (midTime < targetTimeMs) {
+                if (midTime === targetTimeMs) {
+                    return mid;
+                } else if (midTime < targetTimeMs) {
                     left = mid + 1;
                 } else {
                     right = mid - 1;
                 }
             }
             
-            // 如果找到了最接近的索引，且时间差在一个周期内，返回它
-            if (closestIndex >= 0 && minDiff <= timeframeMs) {
-                return closestIndex;
-            }
-            
-            // 如果时间差太大，返回 -1 表示未找到
-            return -1;
+            return closestIndex;
         }
         
         // ========== 时间格式化工具 ==========
@@ -1661,27 +1588,19 @@
             // 图表显示：左侧是旧数据，右侧是新数据（时间从左到右递增）
             
             // 直接使用后端返回的数据（已经按时间升序排列）
-            // 确保 timestamp 是数字类型，并统一转换为毫秒级
+            // 确保 timestamp 是数字类型
             klinesData = data.map(function(k) {
-                let timestamp = k.timestamp;
-                if (typeof timestamp === 'string') {
-                    timestamp = parseInt(timestamp, 10);
+                if (typeof k.timestamp === 'string') {
+                    k.timestamp = parseInt(k.timestamp, 10);
                 }
-                timestamp = Number(timestamp);
-                
-                // 如果时间戳看起来是秒级（小于 10000000000），转换为毫秒级
-                if (timestamp > 0 && timestamp < 10000000000) {
-                    timestamp = timestamp * 1000;
-                }
-                
-                // 更新对象的 timestamp 为毫秒级
-                k.timestamp = timestamp;
                 return k;
             });
             
-            // 更新数据窗口边界（确保 timestamp 是数字，并统一转换为毫秒级）
-            const normalizedData = klinesData.map(function(k) {
-                // klinesData 中的时间戳已经转换为毫秒级，直接使用
+            // 更新数据窗口边界（确保 timestamp 是数字）
+            const normalizedData = data.map(function(k) {
+                if (typeof k.timestamp === 'string') {
+                    k.timestamp = parseInt(k.timestamp, 10);
+                }
                 return k;
             });
             dataWindow.updateBoundaries(normalizedData);
@@ -1718,7 +1637,8 @@
                 // 如果时间戳看起来是秒级（小于 10000000000），转换为毫秒级
                 // 正常的时间戳：2026年 = 1735689600000 (毫秒) = 1735689600 (秒)
                 if (timestampMs > 0 && timestampMs < 10000000000) {
-                    // 可能是秒级时间戳，转换为毫秒级（静默处理，不输出警告）
+                    // 可能是秒级时间戳，转换为毫秒级
+                    console.warn('[drawKlines] ⚠️ 时间戳可能是秒级，转换为毫秒级:', timestampMs, '->', timestampMs * 1000);
                     timestampMs = timestampMs * 1000;
                 }
                 
@@ -2030,20 +1950,8 @@
             }
             timestampMs = Number(timestampMs);
             
-            // 如果时间戳看起来是秒级（小于 10000000000），转换为毫秒级
-            if (timestampMs > 0 && timestampMs < 10000000000) {
-                timestampMs = timestampMs * 1000;
-            }
-            
             if (isNaN(timestampMs) || timestampMs <= 0 || !isFinite(timestampMs)) {
                 console.error('[handleRealtimeKline] ❌ 无效的时间戳:', kline.timestamp, '转换后:', timestampMs, '原始数据:', kline);
-                return;
-            }
-            
-            // 验证时间戳有效性（必须是合理的毫秒级时间戳）
-            const MIN_VALID_TIMESTAMP_MS = 946684800000; // 2000-01-01 00:00:00 UTC (毫秒级)
-            if (timestampMs < MIN_VALID_TIMESTAMP_MS) {
-                console.error('[handleRealtimeKline] ❌ 时间戳过小（可能是1970年）:', timestampMs, '日期:', new Date(timestampMs).toISOString(), '原始数据:', kline);
                 return;
             }
             
@@ -2289,18 +2197,8 @@
                 return;
             }
             
-            // 获取当前最旧的K线时间（确保是毫秒级）
-            let oldestKlineTime = klinesData[0].timestamp;
-            if (typeof oldestKlineTime === 'string') {
-                oldestKlineTime = parseInt(oldestKlineTime, 10);
-            }
-            oldestKlineTime = Number(oldestKlineTime);
-            
-            // 如果时间戳看起来是秒级（小于 10000000000），转换为毫秒级
-            if (oldestKlineTime > 0 && oldestKlineTime < 10000000000) {
-                oldestKlineTime = oldestKlineTime * 1000;
-            }
-            
+            // 获取当前最旧的K线时间
+            const oldestKlineTime = klinesData[0].timestamp;
             const timeframeMs = getTimeframeMs(activeTimeframe);
             
             // ========== 重构：历史数据加载时间计算（后端已统一使用UTC） ==========
@@ -2347,20 +2245,11 @@
                 method: 'GET'
             }).then(function(res) {
                 if (res.data && res.data.length > 0) {
-                    // 后端已经返回升序数据（从旧到新），确保 timestamp 是数字类型，并统一转换为毫秒级
+                    // 后端已经返回升序数据（从旧到新），确保 timestamp 是数字类型
                     const newData = res.data.map(function(k) {
-                        let timestamp = k.timestamp;
-                        if (typeof timestamp === 'string') {
-                            timestamp = parseInt(timestamp, 10);
+                        if (typeof k.timestamp === 'string') {
+                            k.timestamp = parseInt(k.timestamp, 10);
                         }
-                        timestamp = Number(timestamp);
-                        
-                        // 如果时间戳看起来是秒级（小于 10000000000），转换为毫秒级
-                        if (timestamp > 0 && timestamp < 10000000000) {
-                            timestamp = timestamp * 1000;
-                        }
-                        
-                        k.timestamp = timestamp;
                         return k;
                     });
                     
@@ -2382,14 +2271,7 @@
                         }
                         
                         // 检查与现有数据的连续性（UTC时间戳直接比较，仅用于日志）
-                        let lastTime = newData[newData.length - 1].timestamp;
-                        if (typeof lastTime === 'string') {
-                            lastTime = parseInt(lastTime, 10);
-                        }
-                        lastTime = Number(lastTime);
-                        if (lastTime > 0 && lastTime < 10000000000) {
-                            lastTime = lastTime * 1000;
-                        }
+                        const lastTime = newData[newData.length - 1].timestamp;
                         const timeGap = oldestKlineTime - lastTime;
                         const expectedGap = timeframeMs; // 应该相差1个周期
                         console.log(`  - 与现有数据的时间间隔: ${timeGap}ms (期望: ${expectedGap}ms，即1个周期)`);
@@ -2397,23 +2279,8 @@
                     
                     // 数据连续性检查：新数据的最晚时间应该小于现有数据的最早时间
                     // 如果新数据的最晚时间 >= 现有数据最早时间，说明有重叠，需要过滤
-                    let existingFirstTime = klinesData[0].timestamp;
-                    if (typeof existingFirstTime === 'string') {
-                        existingFirstTime = parseInt(existingFirstTime, 10);
-                    }
-                    existingFirstTime = Number(existingFirstTime);
-                    if (existingFirstTime > 0 && existingFirstTime < 10000000000) {
-                        existingFirstTime = existingFirstTime * 1000;
-                    }
-                    
-                    let lastNewDataTime = newData[newData.length - 1].timestamp;
-                    if (typeof lastNewDataTime === 'string') {
-                        lastNewDataTime = parseInt(lastNewDataTime, 10);
-                    }
-                    lastNewDataTime = Number(lastNewDataTime);
-                    if (lastNewDataTime > 0 && lastNewDataTime < 10000000000) {
-                        lastNewDataTime = lastNewDataTime * 1000;
-                    }
+                    const existingFirstTime = klinesData[0].timestamp;
+                    const lastNewDataTime = newData[newData.length - 1].timestamp;
                     
                     // 过滤掉时间大于等于existingFirstTime的数据（去重）
                     const filteredNewData = newData.filter(function(k) {
@@ -2456,17 +2323,8 @@
                             }
                             timestampMs = Number(timestampMs);
                             
-                            // 如果时间戳看起来是秒级（小于 10000000000），转换为毫秒级
-                            if (timestampMs > 0 && timestampMs < 10000000000) {
-                                timestampMs = timestampMs * 1000;
-                            }
-                            
-                            // 验证时间戳有效性（必须是合理的毫秒级时间戳）
-                            const MIN_VALID_TIMESTAMP_MS = 946684800000; // 2000-01-01 00:00:00 UTC (毫秒级)
+                            // 验证时间戳有效性
                             if (isNaN(timestampMs) || timestampMs <= 0 || !isFinite(timestampMs)) {
-                                return null;
-                            }
-                            if (timestampMs < MIN_VALID_TIMESTAMP_MS) {
                                 return null;
                             }
                             

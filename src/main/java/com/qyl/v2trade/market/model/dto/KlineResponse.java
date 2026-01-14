@@ -1,6 +1,7 @@
 package com.qyl.v2trade.market.model.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -66,11 +67,27 @@ public class KlineResponse implements Serializable {
     /**
      * K线开盘时间（UTC）
      * 
-     * <p>JSON 序列化时会自动转换为 epoch millis (long)
-     * <p>使用 @JsonFormat 注解确保序列化为数字时间戳，而不是 ISO-8601 字符串
+     * <p>内部使用 Instant 类型，JSON 序列化时通过 getTimestamp() 方法返回毫秒级时间戳
      */
-    @JsonFormat(shape = JsonFormat.Shape.NUMBER)
+    @JsonIgnore
     private Instant timestamp;
+    
+    /**
+     * 获取时间戳（毫秒级），用于 JSON 序列化
+     * 这个方法会被 Jackson 用于序列化 timestamp 字段，返回毫秒级时间戳
+     */
+    @JsonGetter("timestamp")
+    public Long getTimestamp() {
+        return timestamp != null ? timestamp.toEpochMilli() : null;
+    }
+    
+    /**
+     * 设置时间戳（从毫秒级时间戳设置）
+     * 用于反序列化和 Builder 模式
+     */
+    public void setTimestamp(Long epochMilli) {
+        this.timestamp = epochMilli != null ? Instant.ofEpochMilli(epochMilli) : null;
+    }
 
     /**
      * 时间字符串（格式化后的时间，用于前端直接显示）
