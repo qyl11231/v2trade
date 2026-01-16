@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Strategy Logic Studio (N4 Prototype)</title>
+    <style>
+        :root{
+          --bg:#0b1020; --panel:#0f1730; --card:#101a38; --muted:#8aa0c6; --text:#e8f0ff;
+          --accent:#5dd6ff; --ok:#4ef0b4; --warn:#ffcc66; --bad:#ff5d7a; --line:#24325f;
+          --shadow: 0 10px 30px rgba(0,0,0,.35);
+          --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+          --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+          margin:0; background:radial-gradient(1200px 800px at 20% 10%, #132457 0%, var(--bg) 55%);
+          color:var(--text); font-family:var(--sans);
+          overflow:hidden;
+        }
+        .app{
+          display:grid;
+          grid-template-columns: 280px 1fr 360px;
+          grid-template-rows: 56px 1fr;
+          height:100%;
+        }
+        header{
+          grid-column:1/-1; display:flex; align-items:center; justify-content:space-between;
+          padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08);
+          background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+          backdrop-filter: blur(8px);
+        }
+        .brand{display:flex; gap:10px; align-items:center;}
+        .logo{
+          width:34px;height:34px;border-radius:10px;
+          background:linear-gradient(135deg, rgba(93,214,255,.9), rgba(78,240,180,.7));
+          box-shadow: var(--shadow);
+        }
+        .title h1{margin:0;font-size:15px;letter-spacing:.3px}
+        .title p{margin:0;color:var(--muted);font-size:12px}
+        .top-actions{display:flex; gap:10px; align-items:center}
+        button{
+          border:1px solid rgba(255,255,255,.12);
+          background:rgba(255,255,255,.06);
+          color:var(--text); padding:8px 10px; border-radius:10px;
+          cursor:pointer; font-size:12px;
+        }
+        button:hover{background:rgba(255,255,255,.10)}
+        button.primary{border-color:rgba(93,214,255,.5); background:rgba(93,214,255,.12)}
+        button.danger{border-color:rgba(255,93,122,.5); background:rgba(255,93,122,.10)}
+        .pill{
+          padding:6px 10px;border-radius:999px;font-size:12px;
+          border:1px solid rgba(255,255,255,.12); color:var(--muted);
+        }
+        .left, .right{
+          padding:12px; overflow:auto;
+          background:rgba(10,14,26,.55);
+          border-right:1px solid rgba(255,255,255,.06);
+        }
+        .right{border-right:none;border-left:1px solid rgba(255,255,255,.06)}
+        .panel{
+          background:rgba(16,26,56,.65);
+          border:1px solid rgba(255,255,255,.08);
+          border-radius:14px;
+          box-shadow: var(--shadow);
+          padding:12px;
+          margin-bottom:12px;
+        }
+        .panel h2{
+          margin:0 0 8px 0; font-size:13px; letter-spacing:.2px;
+          display:flex; align-items:center; justify-content:space-between;
+        }
+        .panel h2 span{color:var(--muted);font-weight:500;font-size:12px}
+        .palette-group{margin-top:8px}
+        .ghead{
+          display:flex; align-items:center; justify-content:space-between;
+          padding:8px 10px; border-radius:12px;
+          background:rgba(255,255,255,.05);
+          border:1px solid rgba(255,255,255,.06);
+          margin-bottom:8px;
+          user-select:none;
+        }
+        .ghead b{font-size:12px}
+        .ghead i{font-style:normal;color:var(--muted);font-size:12px}
+        .op{
+          display:flex; gap:8px; align-items:center; padding:8px 10px;
+          border-radius:12px; border:1px dashed rgba(255,255,255,.12);
+          background:rgba(255,255,255,.03);
+          margin:8px 0;
+          cursor:grab;
+          user-select:none;
+        }
+        .op:active{cursor:grabbing}
+        .tag{
+          font-size:10px; padding:3px 8px; border-radius:999px;
+          border:1px solid rgba(255,255,255,.12);
+          color:var(--muted);
+        }
+        .tag.entry{border-color:rgba(93,214,255,.5); color:rgba(93,214,255,.95)}
+        .tag.exit{border-color:rgba(255,204,102,.6); color:rgba(255,204,102,.95)}
+        .tag.pos{border-color:rgba(78,240,180,.55); color:rgba(78,240,180,.95)}
+        .desc{font-size:12px;color:var(--muted);line-height:1.35}
+
+        .center{
+          position:relative;
+          overflow:hidden;
+          background:
+            radial-gradient(circle at 30px 30px, rgba(255,255,255,.06) 1px, transparent 1px) 0 0 / 24px 24px,
+            radial-gradient(circle at 30px 30px, rgba(255,255,255,.03) 1px, transparent 1px) 12px 12px / 24px 24px;
+        }
+        .canvas-toolbar{
+          position:absolute; top:12px; left:12px; z-index:5;
+          display:flex; gap:8px; align-items:center;
+        }
+        .hint{
+          position:absolute; bottom:12px; left:12px; z-index:5;
+          color:var(--muted); font-size:12px;
+          background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.08);
+          padding:8px 10px; border-radius:12px;
+          max-width:520px;
+        }
+        #viewport{
+          position:absolute; inset:0;
+          transform-origin: 0 0;
+        }
+        svg#wires{
+          position:absolute; inset:0; pointer-events:none; overflow:visible;
+        }
+        .node{
+          position:absolute;
+          width:220px;
+          background:rgba(16,26,56,.85);
+          border:1px solid rgba(255,255,255,.10);
+          border-radius:16px;
+          box-shadow: var(--shadow);
+          padding:10px;
+          user-select:none;
+        }
+        .node.selected{outline:2px solid rgba(93,214,255,.55)}
+        .node .head{
+          display:flex; align-items:center; justify-content:space-between;
+          margin-bottom:8px;
+        }
+        .node .head .name{font-size:12px;font-weight:700; letter-spacing:.2px}
+        .node .head .mini{display:flex; gap:6px; align-items:center}
+        .node .sub{font-size:11px;color:var(--muted);line-height:1.3}
+        .port{
+          width:12px; height:12px; border-radius:999px; border:1px solid rgba(255,255,255,.22);
+          background:rgba(255,255,255,.10);
+          display:inline-block;
+        }
+        .port.out{background:rgba(93,214,255,.22); border-color:rgba(93,214,255,.55)}
+        .port.in{background:rgba(78,240,180,.18); border-color:rgba(78,240,180,.45)}
+        .ports{display:flex; align-items:center; justify-content:space-between; margin-top:8px}
+        .ports .leftp, .ports .rightp{display:flex; gap:8px; align-items:center}
+        .kbd{
+          font-family:var(--mono); font-size:11px; padding:2px 6px; border-radius:8px;
+          border:1px solid rgba(255,255,255,.12); color:var(--muted);
+          background:rgba(255,255,255,.04);
+        }
+
+        .field{
+          display:flex; justify-content:space-between; align-items:center; gap:10px;
+          margin:8px 0;
+          padding:8px 10px;
+          border-radius:12px;
+          border:1px solid rgba(255,255,255,.08);
+          background:rgba(255,255,255,.03);
+        }
+        .field label{font-size:12px;color:var(--muted)}
+        .field input, .field select{
+          width:170px;
+          background:rgba(0,0,0,.25);
+          border:1px solid rgba(255,255,255,.10);
+          color:var(--text);
+          border-radius:10px;
+          padding:6px 8px;
+          outline:none;
+          font-size:12px;
+        }
+        .warnbox{
+          border:1px solid rgba(255,93,122,.55);
+          background:rgba(255,93,122,.10);
+          border-radius:14px;
+          padding:10px;
+          color:rgba(255,220,228,.95);
+          font-size:12px;
+          line-height:1.35;
+          margin-top:8px;
+        }
+        .okbox{
+          border:1px solid rgba(78,240,180,.45);
+          background:rgba(78,240,180,.10);
+          border-radius:14px;
+          padding:10px;
+          color:rgba(210,255,240,.95);
+          font-size:12px;
+          line-height:1.35;
+          margin-top:8px;
+        }
+        pre{
+          margin:0;
+          white-space:pre;
+          overflow:auto;
+          font-family:var(--mono);
+          font-size:11px;
+          line-height:1.35;
+          background:rgba(0,0,0,.25);
+          border:1px solid rgba(255,255,255,.10);
+          border-radius:14px;
+          padding:10px;
+          max-height:320px;
+        }
+        .sm{
+          display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;
+        }
+        .phase{
+          padding:6px 10px; border-radius:999px;
+          border:1px solid rgba(255,255,255,.12);
+          background:rgba(255,255,255,.04);
+          color:var(--muted);
+          font-size:12px;
+        }
+        .phase.active{border-color:rgba(93,214,255,.6); color:rgba(93,214,255,.95); background:rgba(93,214,255,.10)}
+        .phase.bad{border-color:rgba(255,93,122,.55); color:rgba(255,93,122,.95); background:rgba(255,93,122,.08)}
+        .smallmuted{color:var(--muted); font-size:12px; line-height:1.35}
+        .row{display:flex; gap:10px; flex-wrap:wrap}
+        .row button{flex:1}
+    </style>
+</head>
+<body>
+<div class="app">
+    <header>
+        <div class="brand">
+            <div class="logo"></div>
+            <div class="title">
+                <h1>Strategy Logic Studio <span class="pill">V2-Trade · N4 Runtime Rules</span></h1>
+                <p>算子建模 · DAG 拓扑 · 实时生成 runtime_rules(JSON) · Validator 审计 Mock · 状态机联动</p>
+            </div>
+        </div>
+        <div class="top-actions">
+            <span class="pill" id="perfPill">Preview: throttled</span>
+            <button class="primary" id="btnSeed">加载示例链路</button>
+            <button id="btnExport">复制 JSON</button>
+            <button class="danger" id="btnClear">清空画布</button>
+        </div>
+    </header>
+
+    <aside class="left">
+        <div class="panel">
+            <h2>Operator Palette <span>拖到画布</span></h2>
+            <div class="desc">拒绝 CRUD：每个算子节点=RuleModel 字段映射。连线决定逻辑依赖（DAG）。</div>
+
+            <div class="palette-group">
+                <div class="ghead"><b>ENTRY 入场</b><i>多因子/时序/跨周期</i></div>
+                <div class="op" draggable="true" data-type="FactorWeight">
+                    <span class="tag entry">FactorWeight</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">多因子权重评分</div>
+                        <div class="desc">RSI/均线/信号等因子加权，阈值触发 OPEN_PENDING</div>
+                    </div>
+                </div>
+                <div class="op" draggable="true" data-type="SequentialWindow">
+                    <span class="tag entry">SeqWindow</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">时序窗口（先A后B）</div>
+                        <div class="desc">A 触发后 N 根 Bar 内，B 触发→入场意图</div>
+                    </div>
+                </div>
+                <div class="op" draggable="true" data-type="CrossTimeframe">
+                    <span class="tag entry">X-Timeframe</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">跨周期共振</div>
+                        <div class="desc">1h 趋势过滤 + 5m 择时入场</div>
+                    </div>
+                </div>
+                <div class="op" draggable="true" data-type="SignalGate">
+                    <span class="tag entry">Signal</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">外部信号门控</div>
+                        <div class="desc">允许 signalConfigId/signalId 白名单</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="palette-group">
+                <div class="ghead"><b>EXIT 离场</b><i>动态风控演化</i></div>
+                <div class="op" draggable="true" data-type="AtrStopLoss">
+                    <span class="tag exit">ATR SL</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">自适应 ATR 止损</div>
+                        <div class="desc">StopLoss = Price ± (ATR × Mult)</div>
+                    </div>
+                </div>
+                <div class="op" draggable="true" data-type="ProfitProtect">
+                    <span class="tag exit">Trail</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">盈利保护（回撤触发）</div>
+                        <div class="desc">盈利≥3% 激活追踪，回撤1%→EXIT_PENDING</div>
+                    </div>
+                </div>
+                <div class="op" draggable="true" data-type="TimeDecayExit">
+                    <span class="tag exit">TimeDecay</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">持仓衰减强制离场</div>
+                        <div class="desc">持仓超过 N 分钟未获利撤离</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="palette-group">
+                <div class="ghead"><b>POSITION 仓位</b><i>风险加权资本配置</i></div>
+                <div class="op" draggable="true" data-type="DrawdownSizer">
+                    <span class="tag pos">DD-Sizer</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">回撤系数动态仓位</div>
+                        <div class="desc">Drawdown↑ → calculated_qty↓</div>
+                    </div>
+                </div>
+                <div class="op" draggable="true" data-type="PyramidOrMartin">
+                    <span class="tag pos">Steps</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">金字塔 / 马丁加仓</div>
+                        <div class="desc">步长、倍数、max_steps 红线</div>
+                    </div>
+                </div>
+                <div class="op" draggable="true" data-type="Group">
+                    <span class="tag pos">Group</span>
+                    <div>
+                        <div style="font-size:12px;font-weight:700">逻辑组（子图）</div>
+                        <div class="desc">用于嵌套/复用/分层表达</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" style="margin-top:12px">
+                <h2>快捷键 <span>效率</span></h2>
+                <div class="smallmuted">
+                    <div><span class="kbd">单击节点</span> 选中 · <span class="kbd">Delete</span> 删除节点</div>
+                    <div><span class="kbd">点击输出点</span> → <span class="kbd">点击输入点</span> 连线（自动防环）</div>
+                    <div><span class="kbd">拖拽节点</span> 改变布局（不影响 JSON 语义）</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="center" id="center">
+        <div class="canvas-toolbar">
+            <button id="btnZoomIn">放大</button>
+            <button id="btnZoomOut">缩小</button>
+            <button id="btnFit">适配</button>
+            <span class="pill" id="zoomPill">Zoom 100%</span>
+        </div>
+
+        <div id="viewport">
+            <svg id="wires"></svg>
+            <div id="nodes"></div>
+        </div>
+
+        <div class="hint">
+            <b>操作提示：</b>
+            1) 从左侧拖算子到画布；2) 点“输出端口”再点“输入端口”连线；3) 右侧查看实时 runtime_rules JSON；
+            4) 如出现红色审计警告，说明 RuleValidator Mock 拦截到非法配置（例如：止损方向错误、ratio 越界、信号非法、成环）。
+        </div>
+    </main>
+
+    <aside class="right">
+        <div class="panel">
+            <h2>Node Inspector <span id="inspectorHint">未选中节点</span></h2>
+            <div id="inspectorBody" class="smallmuted">选择一个节点查看其“算子参数”。这不是 CRUD 表单，而是节点建模的参数映射。</div>
+            <div id="validatorBox"></div>
+        </div>
+
+        <div class="panel">
+            <h2>State Machine 联动 <span>phase 迁移预览</span></h2>
+            <div class="smallmuted">根据当前图中 ENTRY/EXIT/POSITION 组合推断的迁移路径（演示用）。</div>
+            <div class="sm" id="sm"></div>
+            <div class="smallmuted" style="margin-top:8px">
+                <b>示例语义：</b>ENTRY 命中 → OPEN_PENDING；成交后 → OPEN；EXIT 条件触发 → EXIT_PENDING；完成 → CLOSED。
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>runtime_rules JSON <span>Source of Truth</span></h2>
+            <pre id="jsonPreview">{}</pre>
+            <div class="row" style="margin-top:10px">
+                <button id="btnSimTick">模拟 2000 msg/s（10秒）</button>
+                <button id="btnStopTick">停止模拟</button>
+            </div>
+            <div class="smallmuted" style="margin-top:8px">
+                “零拷贝预览”策略：预览更新做节流（requestAnimationFrame + diff），即使 Tick 很高也不频繁重排。
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script>
+    (() => {
+      // ============
+      // Core store
+      // ============
+      const store = {
+        zoom: 1,
+        nodes: new Map(), // id -> node
+        edges: [],        // {from, to}
+        selectedId: null,
+        linking: { from: null }, // from node id
+        // runtime settings
+        allowSignals: { allowedSignalConfigIds: [101], allowedSignalIds: ["buy","sell","long","short"] },
+        // preview throttle
+        dirty: true,
+        lastJsonText: "",
+        tickTimer: null,
+        perf: { tickCount: 0 }
+      };
+
+      const el = {
+        center: document.getElementById('center'),
+        viewport: document.getElementById('viewport'),
+        wires: document.getElementById('wires'),
+        nodes: document.getElementById('nodes'),
+        jsonPreview: document.getElementById('jsonPreview'),
+        inspectorHint: document.getElementById('inspectorHint'),
+        inspectorBody: document.getElementById('inspectorBody'),
+        validatorBox: document.getElementById('validatorBox'),
+        sm: document.getElementById('sm'),
+        zoomPill: document.getElementById('zoomPill'),
+        perfPill: document.getElementById('perfPill'),
+      };
+
+      // ============
+      // Utilities
+      // ============
+      const uid = () => "n_" + Math.random().toString(16).slice(2,10);
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const now = () => performance.now();
+
+      function markDirty(){ store.dirty = true; }
+
+      // ============
+      // Node types (Operator Node definitions)
+      // ============
+      const NodeDef = {
+        FactorWeight: {
+          domain: "ENTRY",
+          title: "多因子权重评分",
+          subtitle: "weightedScore >= threshold → OPEN_PENDING",
+          params: {
+            threshold: 70,
+            factors: [
+              { kind:"RSI", id:"rsi14_5m", tf:"5m", weight: 35, expr: { op:"<", value: 30 } },
+              { kind:"EMA_CROSS", id:"ema12_ema26_5m", tf:"5m", weight: 25, expr: { dir:"UP" } },
+              { kind:"SIGNAL", id:"sig_buy", weight: 20, expr: { signalConfigId: 101, signalId:"buy" } },
+              { kind:"TREND_FILTER", id:"ema50_1h", tf:"1h", weight: 20, expr: { op:">", value:"PRICE" } }
+            ]
+          }
+        },
+        SequentialWindow: {
+          domain: "ENTRY",
+          title: "时序窗口（先A后B）",
+          subtitle: "A 触发后 N Bar 内 B 触发 → 入场",
+          params: { bars: 6, A: "FactorWeight", B: "CrossTimeframe" }
+        },
+        CrossTimeframe: {
+          domain: "ENTRY",
+          title: "跨周期共振",
+          subtitle: "1h 趋势过滤 + 5m 择时",
+          params: {
+            trendTf: "1h",
+            timingTf: "5m",
+            trend: { kind:"EMA", length: 50, op:"PRICE_ABOVE" },
+            timing: { kind:"RSI", length: 14, op:"<", value: 30 }
+          }
+        },
+        SignalGate: {
+          domain: "ENTRY",
+          title: "外部信号门控",
+          subtitle: "SIGNAL allowlist",
+          params: { signalConfigId: 101, signalId:"buy" }
+        },
+        AtrStopLoss: {
+          domain: "EXIT",
+          title: "ATR 动态止损",
+          subtitle: "SL = Price ± ATR*mult",
+          params: { atrTf:"5m", atrLen: 14, multiplier: 2.2, side: "LONG" }
+        },
+        ProfitProtect: {
+          domain: "EXIT",
+          title: "盈利保护（追踪回撤）",
+          subtitle: "profit>=3% activate; drawdown>=1% exit_pending",
+          params: { activateProfitPct: 3.0, trailDrawdownPct: 1.0, side:"LONG" }
+        },
+        TimeDecayExit: {
+          domain: "EXIT",
+          title: "持仓衰减离场",
+          subtitle: "持仓 > N 分钟未获利撤离",
+          params: { minutes: 60, requireNotProfit: true }
+        },
+        DrawdownSizer: {
+          domain: "POSITION",
+          title: "回撤系数动态仓位",
+          subtitle: "DD↑ → qty↓",
+          params: { baseRiskRatio: 0.20, ddSoft: 0.05, ddHard: 0.20, minFactor: 0.30 }
+        },
+        PyramidOrMartin: {
+          domain: "POSITION",
+          title: "金字塔/马丁加仓",
+          subtitle: "steps + multiplier + max_steps",
+          params: { mode: "PYRAMID", maxSteps: 6, stepPct: 0.8, multiplier: 1.6 }
+        },
+        Group: {
+          domain: "GROUP",
+          title: "逻辑组（子图）",
+          subtitle: "嵌套/复用/分层",
+          params: { label: "SubGraph", note: "把相关节点放进组内（演示用）" }
+        }
+      };
+
+      // ============
+      // Create node
+      // ============
+      function createNode(type, x, y){
+        const def = NodeDef[type];
+        const id = uid();
+        const node = {
+          id, type,
+          domain: def.domain,
+          title: def.title,
+          subtitle: def.subtitle,
+          x, y,
+          params: JSON.parse(JSON.stringify(def.params)),
+        };
+        store.nodes.set(id, node);
+        renderNode(node);
+        markDirty();
+        return node;
+      }
+
+      function escapeHtml(s){
+        return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+      }
+
+      function renderNode(node){
+        const div = document.createElement('div');
+        div.className = 'node';
+        div.dataset.id = node.id;
+        div.style.left = node.x + 'px';
+        div.style.top = node.y + 'px';
+
+        const tagClass = node.domain==="ENTRY" ? "entry" : node.domain==="EXIT" ? "exit" : node.domain==="POSITION" ? "pos" : "pos";
+        div.innerHTML = `
+          <div class="head">
+            <div>
+              <div class="name">${escapeHtml(node.title)}</div>
+              <div class="sub">${escapeHtml(node.subtitle)}</div>
+            </div>
+            <div class="mini">
+              <span class="tag ${tagClass}">${escapeHtml(node.type)}</span>
+            </div>
+          </div>
+          <div class="ports">
+            <div class="leftp"><span class="port in" title="输入端口"></span><span class="sub">IN</span></div>
+            <div class="rightp"><span class="sub">OUT</span><span class="port out" title="输出端口"></span></div>
+          </div>
+        `;
+
+        // drag move
+        let dragging = false, ox=0, oy=0;
+        div.addEventListener('mousedown', (e) => {
+          if (e.target.classList.contains('port')) return;
+          dragging = true;
+          const r = div.getBoundingClientRect();
+          ox = e.clientX - r.left;
+          oy = e.clientY - r.top;
+          selectNode(node.id);
+        });
+        window.addEventListener('mousemove', (e) => {
+          if (!dragging) return;
+          const vp = el.viewport.getBoundingClientRect();
+          const nx = (e.clientX - vp.left - ox) / store.zoom;
+          const ny = (e.clientY - vp.top - oy) / store.zoom;
+          node.x = nx; node.y = ny;
+          div.style.left = node.x + 'px';
+          div.style.top = node.y + 'px';
+          drawWires();
+          markDirty();
+        });
+        window.addEventListener('mouseup', () => dragging=false);
+
+        // select
+        div.addEventListener('click', (e) => {
+          if (e.target.classList.contains('port')) return;
+          selectNode(node.id);
+        });
+
+        // ports linking
+        const outPort = div.querySelector('.port.out');
+        const inPort  = div.querySelector('.port.in');
+
+        outPort.addEventListener('click', (e) => {
+          e.stopPropagation();
+          store.linking.from = node.id;
+          showValidator([{ level:"info", msg:`已选择 OUT：${node.title}，请点击目标节点 IN 完成连线` }]);
+        });
+
+        inPort.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!store.linking.from) {
+            showValidator([{ level:"warn", msg:"请先点击一个节点的 OUT 再点击 IN 完成连线" }]);
+            return;
+          }
+          const from = store.linking.from;
+          const to = node.id;
+          store.linking.from = null;
+
+          if (from === to) {
+            showValidator([{ level:"bad", msg:"禁止自连（会形成环）" }]);
+            return;
+          }
+          if (store.edges.find(ed => ed.from===from && ed.to===to)) {
+            showValidator([{ level:"warn", msg:"该连线已存在" }]);
+            return;
+          }
+          // cycle detection
+          const wouldCycle = createsCycle(from, to);
+          if (wouldCycle) {
+            showValidator([{ level:"bad", msg:"该连线会形成环（DAG 约束），已拒绝。" }]);
+            return;
+          }
+          store.edges.push({from,to});
+          drawWires();
+          markDirty();
+          showValidator([{ level:"ok", msg:`已连线：${store.nodes.get(from).type} → ${store.nodes.get(to).type}` }]);
+        });
+
+        el.nodes.appendChild(div);
+      }
+
+      function selectNode(id){
+        store.selectedId = id;
+        [...el.nodes.querySelectorAll('.node')].forEach(n => n.classList.toggle('selected', n.dataset.id===id));
+        renderInspector();
+        markDirty();
+      }
+
+      function deleteSelected(){
+        const id = store.selectedId;
+        if (!id) return;
+        store.nodes.delete(id);
+        store.edges = store.edges.filter(e => e.from!==id && e.to!==id);
+        const dom = el.nodes.querySelector(`.node[data-id="${id}"]`);
+        if (dom) dom.remove();
+        store.selectedId = null;
+        drawWires();
+        renderInspector();
+        markDirty();
+      }
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Delete') deleteSelected();
+      });
+
+      // ============
+      // Drag from palette
+      // ============
+      document.querySelectorAll('.op').forEach(op => {
+        op.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', op.dataset.type);
+        });
+      });
+
+      el.center.addEventListener('dragover', (e) => e.preventDefault());
+      el.center.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const type = e.dataTransfer.getData('text/plain');
+        if (!type) return;
+        const vp = el.viewport.getBoundingClientRect();
+        const x = (e.clientX - vp.left) / store.zoom;
+        const y = (e.clientY - vp.top) / store.zoom;
+        const n = createNode(type, x-110, y-60);
+        selectNode(n.id);
+        drawWires();
+      });
+
+      // ============
+      // Zoom controls
+      // ============
+      function applyZoom(){
+        el.viewport.style.transform = `scale(${store.zoom})`;
+        el.zoomPill.textContent = `Zoom ${Math.round(store.zoom*100)}%`;
+        drawWires();
+      }
+      document.getElementById('btnZoomIn').onclick = () => { store.zoom = clamp(store.zoom*1.1, 0.6, 1.8); applyZoom(); };
+      document.getElementById('btnZoomOut').onclick = () => { store.zoom = clamp(store.zoom/1.1, 0.6, 1.8); applyZoom(); };
+      document.getElementById('btnFit').onclick = () => { store.zoom = 1; applyZoom(); };
+
+      // ============
+      // Wires drawing (SVG paths)
+      // ============
+      function nodePortPos(id, which){
+        const dom = el.nodes.querySelector(`.node[data-id="${id}"]`);
+        if (!dom) return {x:0,y:0};
+        const vp = el.viewport.getBoundingClientRect();
+        const port = dom.querySelector(which === 'out' ? '.port.out' : '.port.in').getBoundingClientRect();
+        const x = (port.left + port.width/2 - vp.left) / store.zoom;
+        const y = (port.top + port.height/2 - vp.top) / store.zoom;
+        return {x,y};
+      }
+
+      function drawWires(){
+        el.wires.setAttribute('width', '100%');
+        el.wires.setAttribute('height', '100%');
+        el.wires.innerHTML = '';
+        for (const ed of store.edges){
+          const a = nodePortPos(ed.from, 'out');
+          const b = nodePortPos(ed.to, 'in');
+          const dx = Math.max(60, Math.abs(b.x - a.x) * 0.5);
+          const p = document.createElementNS("http://www.w3.org/2000/svg","path");
+          const d = `M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`;
+          p.setAttribute('d', d);
+          p.setAttribute('fill', 'none');
+          p.setAttribute('stroke', 'rgba(93,214,255,.55)');
+          p.setAttribute('stroke-width', '2');
+          p.setAttribute('stroke-linecap', 'round');
+          el.wires.appendChild(p);
+        }
+      }
+      window.addEventListener('resize', drawWires);
+
+      // ============
+      // DAG cycle detection
+      // ============
+      function createsCycle(from, to){
+        // Would add edge from->to. Check if to can reach from.
+        const adj = new Map();
+        for (const [id] of store.nodes) adj.set(id, []);
+        for (const ed of store.edges){
+          adj.get(ed.from)?.push(ed.to);
+        }
+        // add prospective
+        adj.get(from)?.push(to);
+
+        const target = from;
+        const stack = [to];
+        const seen = new Set();
+        while (stack.length){
+          const cur = stack.pop();
+          if (cur === target) return true;
+          if (seen.has(cur)) continue;
+          seen.add(cur);
+          const nxt = adj.get(cur) || [];
+          for (const n of nxt) stack.push(n);
+        }
+        return false;
+      }
+
+      // ============
+      // Inspector rendering (node parameters)
+      // ============
+      function renderInspector(){
+        const id = store.selectedId;
+        if (!id){
+          el.inspectorHint.textContent = "未选中节点";
+          el.inspectorBody.innerHTML = "选择一个节点查看其“算子参数”。";
+          el.validatorBox.innerHTML = "";
+          return;
+        }
+        const n = store.nodes.get(id);
+        el.inspectorHint.textContent = `${n.type} · ${n.domain}`;
+        const body = [];
+
+        body.push(`<div class="smallmuted">节点 ID：<span class="kbd">${n.id}</span></div>`);
+
+        if (n.type === "FactorWeight"){
+          body.push(fieldNumber("入场阈值 threshold", n.params.threshold, 0, 200, 1, "threshold"));
+          body.push(`<div class="smallmuted" style="margin-top:6px"><b>因子权重（示例）</b>：RSI/均线/信号/趋势过滤（可继续扩展为子节点化）。</div>`);
+          (n.params.factors||[]).forEach((f, idx) => {
+            body.push(`
+              <div class="field">
+                <label>因子#${idx+1} ${escapeHtml(f.kind)} 权重</label>
+                <input type="number" value="${f.weight}" data-fw="${idx}" step="1" min="0" max="200"/>
+              </div>
+            `);
+          });
+          body.push(`<div class="okbox">命中语义：weightedScore ≥ ${n.params.threshold} → OPEN_PENDING</div>`);
+        }
+
+        if (n.type === "SequentialWindow"){
+          body.push(fieldNumber("窗口 bars", n.params.bars, 1, 100, 1, "bars"));
+          body.push(fieldText("先触发 A (type)", n.params.A, "A"));
+          body.push(fieldText("后触发 B (type)", n.params.B, "B"));
+        }
+
+        if (n.type === "CrossTimeframe"){
+          body.push(fieldText("趋势周期 trendTf", n.params.trendTf, "trendTf"));
+          body.push(fieldText("择时周期 timingTf", n.params.timingTf, "timingTf"));
+          body.push(fieldNumber("趋势 EMA length", n.params.trend.length, 1, 500, 1, "trendLen"));
+          body.push(fieldNumber("择时 RSI length", n.params.timing.length, 1, 200, 1, "timingLen"));
+          body.push(fieldNumber("择时 RSI 阈值", n.params.timing.value, 1, 99, 1, "timingVal"));
+        }
+
+        if (n.type === "SignalGate"){
+          body.push(fieldNumber("signalConfigId", n.params.signalConfigId, 1, 999999, 1, "signalConfigId"));
+          body.push(fieldText("signalId", n.params.signalId, "signalId"));
+          body.push(`<div class="smallmuted">allowlist：configIds=${store.allowSignals.allowedSignalConfigIds.join(',')} · ids=${store.allowSignals.allowedSignalIds.join(',')}</div>`);
+        }
+
+        if (n.type === "AtrStopLoss"){
+          body.push(fieldSelect("side", n.params.side, ["LONG","SHORT"], "side"));
+          body.push(fieldText("ATR timeframe", n.params.atrTf, "atrTf"));
+          body.push(fieldNumber("ATR length", n.params.atrLen, 1, 200, 1, "atrLen"));
+          body.push(fieldNumber("Multiplier", n.params.multiplier, 0.1, 10, 0.1, "multiplier"));
+          body.push(`<div class="okbox">公式预览：StopLoss = Price ${n.params.side==="LONG" ? "-" : "+"} (ATR × ${n.params.multiplier})</div>`);
+        }
+
+        if (n.type === "ProfitProtect"){
+          body.push(fieldSelect("side", n.params.side, ["LONG","SHORT"], "side"));
+          body.push(fieldNumber("激活盈利% activateProfitPct", n.params.activateProfitPct, 0.1, 50, 0.1, "activateProfitPct"));
+          body.push(fieldNumber("回撤% trailDrawdownPct", n.params.trailDrawdownPct, 0.1, 50, 0.1, "trailDrawdownPct"));
+        }
+
+        if (n.type === "TimeDecayExit"){
+          body.push(fieldNumber("分钟 minutes", n.params.minutes, 1, 1440, 1, "minutes"));
+          body.push(fieldSelect("requireNotProfit", String(n.params.requireNotProfit), ["true","false"], "requireNotProfit"));
+        }
+
+        if (n.type === "DrawdownSizer"){
+          body.push(fieldNumber("baseRiskRatio (0,1]", n.params.baseRiskRatio, 0.01, 1, 0.01, "baseRiskRatio"));
+          body.push(fieldNumber("ddSoft", n.params.ddSoft, 0.0, 1, 0.01, "ddSoft"));
+          body.push(fieldNumber("ddHard", n.params.ddHard, 0.0, 1, 0.01, "ddHard"));
+          body.push(fieldNumber("minFactor", n.params.minFactor, 0.0, 1, 0.01, "minFactor"));
+          body.push(simDrawdownBox(n));
+        }
+
+        if (n.type === "PyramidOrMartin"){
+          body.push(fieldSelect("mode", n.params.mode, ["PYRAMID","MARTIN"], "mode"));
+          body.push(fieldNumber("maxSteps (安全红线)", n.params.maxSteps, 0, 50, 1, "maxSteps"));
+          body.push(fieldNumber("stepPct", n.params.stepPct, 0.1, 50, 0.1, "stepPct"));
+          body.push(fieldNumber("multiplier", n.params.multiplier, 1.0, 5.0, 0.1, "multiplier"));
+        }
+
+        if (n.type === "Group"){
+          body.push(fieldText("label", n.params.label, "label"));
+          body.push(fieldText("note", n.params.note, "note"));
+          body.push(`<div class="smallmuted">Group 当前只做“语义嵌套标记”（原型）。后续可扩展为框选吸附形成子图。</div>`);
+        }
+
+        el.inspectorBody.innerHTML = body.join("");
+
+        // bind factor weights
+        el.inspectorBody.querySelectorAll('input[data-fw]').forEach(inp => {
+          inp.addEventListener('input', () => {
+            const idx = Number(inp.dataset.fw);
+            const v = Number(inp.value);
+            if (!Number.isFinite(v)) return;
+            n.params.factors[idx].weight = v;
+            markDirty();
+          });
+        });
+
+        // bind generic inputs/selects via data-path
+        el.inspectorBody.querySelectorAll('[data-path]').forEach(inp => {
+          const path = inp.dataset.path;
+          const on = inp.tagName === 'SELECT' ? 'change' : 'input';
+          inp.addEventListener(on, () => {
+            const vRaw = inp.value;
+            applyPathUpdate(n, path, vRaw);
+            markDirty();
+            // 更新“公式预览 / DD 模拟”等即时文本
+            renderInspector();
+          });
+        });
+
+        const issues = validateAll();
+        showValidator(issues);
+        renderStateMachine(issues);
+      }
+
+      function fieldNumber(label, value, min, max, step, path){
+        return `
+          <div class="field">
+            <label>${escapeHtml(label)}</label>
+            <input data-path="${escapeHtml(path)}" type="number" value="${value}" min="${min}" max="${max}" step="${step}">
+          </div>
+        `;
+      }
+      function fieldText(label, value, path){
+        return `
+          <div class="field">
+            <label>${escapeHtml(label)}</label>
+            <input data-path="${escapeHtml(path)}" type="text" value="${escapeHtml(value)}">
+          </div>
+        `;
+      }
+      function fieldSelect(label, value, options, path){
+        const opts = options.map(o => `<option value="${escapeHtml(o)}" ${String(o)===String(value) ? 'selected':''}>${escapeHtml(o)}</option>`).join('');
+        return `
+          <div class="field">
+            <label>${escapeHtml(label)}</label>
+            <select data-path="${escapeHtml(path)}">${opts}</select>
+          </div>
+        `;
+      }
+
+      function applyPathUpdate(node, path, vRaw){
+        // node.params 的确定性更新（不再用 heuristic）
+        const vNum = Number(vRaw);
+        const v = Number.isFinite(vNum) && vRaw.trim() !== "" ? vNum : vRaw;
+
+        if (node.type === "FactorWeight" && path === "threshold") node.params.threshold = clamp(Number(v), 0, 200);
+
+        if (node.type === "SequentialWindow"){
+          if (path === "bars") node.params.bars = clamp(Number(v), 1, 100);
+          if (path === "A") node.params.A = String(vRaw).trim();
+          if (path === "B") node.params.B = String(vRaw).trim();
+        }
+
+        if (node.type === "CrossTimeframe"){
+          if (path === "trendTf") node.params.trendTf = String(vRaw).trim();
+          if (path === "timingTf") node.params.timingTf = String(vRaw).trim();
+          if (path === "trendLen") node.params.trend.length = clamp(Number(v), 1, 500);
+          if (path === "timingLen") node.params.timing.length = clamp(Number(v), 1, 200);
+          if (path === "timingVal") node.params.timing.value = clamp(Number(v), 1, 99);
+        }
+
+        if (node.type === "SignalGate"){
+          if (path === "signalConfigId") node.params.signalConfigId = Number(v);
+          if (path === "signalId") node.params.signalId = String(vRaw).trim();
+        }
+
+        if (node.type === "AtrStopLoss"){
+          if (path === "side") node.params.side = String(vRaw);
+          if (path === "atrTf") node.params.atrTf = String(vRaw).trim();
+          if (path === "atrLen") node.params.atrLen = clamp(Number(v), 1, 200);
+          if (path === "multiplier") node.params.multiplier = Math.max(0.1, Number(v));
+        }
+
+        if (node.type === "ProfitProtect"){
+          if (path === "side") node.params.side = String(vRaw);
+          if (path === "activateProfitPct") node.params.activateProfitPct = Math.max(0.1, Number(v));
+          if (path === "trailDrawdownPct") node.params.trailDrawdownPct = Math.max(0.1, Number(v));
+        }
+
+        if (node.type === "TimeDecayExit"){
+          if (path === "minutes") node.params.minutes = clamp(Number(v), 1, 1440);
+          if (path === "requireNotProfit") node.params.requireNotProfit = (String(vRaw) === "true");
+        }
+
+        if (node.type === "DrawdownSizer"){
+          if (path === "baseRiskRatio") node.params.baseRiskRatio = clamp(Number(v), 0.01, 1);
+          if (path === "ddSoft") node.params.ddSoft = clamp(Number(v), 0, 1);
+          if (path === "ddHard") node.params.ddHard = clamp(Number(v), 0, 1);
+          if (path === "minFactor") node.params.minFactor = clamp(Number(v), 0, 1);
+        }
+
+        if (node.type === "PyramidOrMartin"){
+          if (path === "mode") node.params.mode = String(vRaw);
+          if (path === "maxSteps") node.params.maxSteps = clamp(Number(v), 0, 50);
+          if (path === "stepPct") node.params.stepPct = Math.max(0.1, Number(v));
+          if (path === "multiplier") node.params.multiplier = clamp(Number(v), 1.0, 5.0);
+        }
+
+        if (node.type === "Group"){
+          if (path === "label") node.params.label = String(vRaw);
+          if (path === "note") node.params.note = String(vRaw);
+        }
+      }
+
+      function simDrawdownBox(n){
+        const dd = 0.12; // demo
+        const factor =
+          dd <= n.params.ddSoft ? 1 :
+          dd >= n.params.ddHard ? n.params.minFactor :
+          (1 - (dd - n.params.ddSoft) / (n.params.ddHard - n.params.ddSoft) * (1 - n.params.minFactor));
+        const qtyBase = 1.0;
+        const qty = qtyBase * n.params.baseRiskRatio * factor;
+        return `<div class="okbox">
+          模拟：Drawdown=12% → factor=${factor.toFixed(3)} → calculated_qty ≈ ${qty.toFixed(4)}
+        </div>`;
+      }
+
+      // ============
+      // Validator Mock (RuleValidator-like)
+      // ============
+      function validateAll(){
+        const issues = [];
+
+        for (const n of store.nodes.values()){
+          if (n.type === "DrawdownSizer"){
+            if (!(n.params.baseRiskRatio > 0 && n.params.baseRiskRatio <= 1)){
+              issues.push({level:"bad", msg:"POSITION.baseRiskRatio 必须在 (0,1]，否则拒绝入库"});
+            }
+            if (n.params.ddHard < n.params.ddSoft){
+              issues.push({level:"bad", msg:"ddHard 必须 >= ddSoft（回撤区间非法）"});
+            }
+          }
+          if (n.type === "PyramidOrMartin"){
+            if (n.params.maxSteps > 12){
+              issues.push({level:"warn", msg:"maxSteps 过大：建议 <= 12（演示：强制安全红线可在后端拦截）"});
+            }
+          }
+          if (n.type === "ProfitProtect"){
+            if (n.params.trailDrawdownPct >= n.params.activateProfitPct){
+              issues.push({level:"bad", msg:"盈利保护非法：回撤阈值必须小于激活盈利阈值"});
+            }
+          }
+          if (n.type === "SignalGate"){
+            if (!store.allowSignals.allowedSignalConfigIds

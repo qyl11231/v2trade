@@ -1,0 +1,1684 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>N1 策略模块 - 可交互前端UI原型（HTML）</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#111a33;
+      --panel2:#0f1730;
+      --text:#e6e9f2;
+      --muted:#9aa3b2;
+      --line:#223055;
+      --brand:#6aa9ff;
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+      --radius2:12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% -10%, rgba(106,169,255,.18), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, rgba(34,197,94,.12), transparent 50%),
+        radial-gradient(900px 500px at 70% 100%, rgba(245,158,11,.10), transparent 55%),
+        var(--bg);
+      min-height:100vh;
+    }
+    a{color:inherit}
+    .app{
+      display:grid;
+      grid-template-columns: 280px 1fr;
+      min-height:100vh;
+    }
+    aside{
+      border-right:1px solid rgba(255,255,255,.06);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      padding:18px 16px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      background: rgba(0,0,0,.15);
+      box-shadow: var(--shadow);
+    }
+    .dot{
+      width:12px;height:12px;border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #fff, var(--brand));
+      box-shadow: 0 0 0 4px rgba(106,169,255,.15);
+    }
+    .brand h1{
+      font-size:14px; margin:0; line-height:1.1;
+      letter-spacing:.2px;
+    }
+    .brand p{
+      margin:2px 0 0;
+      font-size:12px; color:var(--muted);
+    }
+    .nav{
+      margin-top:14px;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .nav a{
+      text-decoration:none;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.08);
+      transition:.15s;
+    }
+    .nav a:hover{transform: translateY(-1px); border-color: rgba(106,169,255,.35)}
+    .nav a.active{border-color: rgba(106,169,255,.55); background: rgba(106,169,255,.10)}
+    .pill{
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      color:var(--muted);
+    }
+    .sidebarCard{
+      margin-top:14px;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.10);
+    }
+    .sidebarCard h3{margin:0 0 6px; font-size:13px}
+    .kv{display:grid; grid-template-columns: 1fr auto; gap:6px; font-size:12px; color:var(--muted)}
+    .kv b{color:var(--text); font-family:var(--mono); font-weight:600}
+    main{padding:20px}
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      margin-bottom:14px;
+    }
+    .crumbs{font-size:13px; color:var(--muted)}
+    .crumbs b{color:var(--text)}
+    .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    button, .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.15);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      transition:.15s;
+      font-size:13px;
+    }
+    button:hover, .btn:hover{border-color: rgba(106,169,255,.45); transform: translateY(-1px)}
+    .btn.primary{
+      border-color: rgba(106,169,255,.55);
+      background: rgba(106,169,255,.14);
+    }
+    .btn.danger{
+      border-color: rgba(239,68,68,.55);
+      background: rgba(239,68,68,.12);
+    }
+    .btn.ghost{background:transparent}
+    .layout{
+      display:grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap:14px;
+      align-items:start;
+    }
+    .card{
+      border:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .cardHeader h2{margin:0; font-size:14px}
+    .cardHeader p{margin:6px 0 0; font-size:12px; color:var(--muted)}
+    .cardBody{padding:14px}
+    .toolbar{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .field{
+      display:flex; flex-direction:column; gap:6px;
+      font-size:12px; color:var(--muted);
+    }
+    input, select, textarea{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+      color:var(--text);
+      outline:none;
+    }
+    textarea{min-height:80px; resize:vertical; font-family:var(--mono); font-size:12px}
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      overflow:hidden;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.10);
+    }
+    th, td{
+      padding:10px 10px;
+      font-size:12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      vertical-align:middle;
+    }
+    th{
+      text-align:left;
+      color:var(--muted);
+      font-weight:600;
+      background: rgba(255,255,255,.03);
+    }
+    tr:hover td{background: rgba(106,169,255,.06)}
+    .mono{font-family:var(--mono)}
+    .muted{color:var(--muted)}
+    .tag{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.12);
+      color:var(--muted);
+    }
+    .status{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .status .sDot{
+      width:8px;height:8px;border-radius:50%;
+      background: var(--muted);
+    }
+    .status.on{border-color: rgba(34,197,94,.35); color: rgba(34,197,94,.95); background: rgba(34,197,94,.08)}
+    .status.on .sDot{background: var(--ok)}
+    .status.off{border-color: rgba(239,68,68,.35); color: rgba(239,68,68,.95); background: rgba(239,68,68,.08)}
+    .status.off .sDot{background: var(--bad)}
+    .miniBtns{display:flex; gap:8px; flex-wrap:wrap}
+    .miniBtns .btn{padding:7px 10px; border-radius:10px; font-size:12px}
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      font-size:13px;
+      opacity:0;
+      pointer-events:none;
+      transition:.2s;
+      max-width:min(680px, calc(100vw - 30px));
+      white-space:pre-wrap;
+    }
+    .toast.show{opacity:1; transform:translateX(-50%) translateY(-2px)}
+    .modalMask{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modalMask.show{display:flex}
+    .modal{
+      width:min(760px, 100%);
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(17,26,51,.98), rgba(15,23,48,.98));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modalHeader{
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    }
+    .modalHeader h3{margin:0; font-size:14px}
+    .modalHeader p{margin:6px 0 0; font-size:12px; color:var(--muted)}
+    .modalBody{padding:14px}
+    .modalFooter{
+      padding:12px 14px;
+      border-top:1px solid rgba(255,255,255,.06);
+      display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;
+    }
+    .empty{
+      padding:18px;
+      border:1px dashed rgba(255,255,255,.14);
+      border-radius:14px;
+      color:var(--muted);
+      font-size:13px;
+      background: rgba(0,0,0,.10);
+    }
+    .split{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+    }
+    .help{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.55;
+    }
+    .help code{font-family:var(--mono); color:var(--text); font-size:12px}
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr}
+      aside{position:sticky; top:0; z-index:10}
+      .layout{grid-template-columns: 1fr}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <h1>策略模块（N1）UI 原型</h1>
+        <p>Definition / Instance / History · 可交互</p>
+      </div>
+    </div>
+
+    <div class="nav" id="nav">
+      <a href="#/strategies" data-route="/strategies">
+        <span>策略定义列表</span><span class="pill" id="pillStrategies">0</span>
+      </a>
+      <a href="#/instances" data-route="/instances">
+        <span>策略实例总览</span><span class="pill" id="pillInstances">0</span>
+      </a>
+      <a href="#/about" data-route="/about">
+        <span>说明 / 验收点</span><span class="pill">N1</span>
+      </a>
+    </div>
+
+    <div class="sidebarCard">
+      <h3>模拟用户上下文</h3>
+      <div class="kv">
+        <span>Header: X-User-Id</span><b id="userIdShow">10001</b>
+        <span>signal_config_id=0</span><b>未绑定</b>
+        <span>唯一性</span><b class="mono">user+strategy+pair+signal</b>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn" id="seedBtn">一键生成样例数据</button>
+        <button class="btn danger" id="resetBtn">清空数据</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div class="actions" id="topActions"></div>
+    </div>
+
+    <div id="view"></div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modalMask" id="modalMask" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modalHeader">
+      <div>
+        <h3 id="modalTitle">弹窗</h3>
+        <p id="modalDesc">说明</p>
+      </div>
+      <button class="btn ghost" id="modalClose">✕</button>
+    </div>
+    <div class="modalBody" id="modalBody"></div>
+    <div class="modalFooter" id="modalFooter"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/** -----------------------------
+ * N1 策略模块：可交互 UI 原型
+ * - 数据层：localStorage 模拟后端
+ * - 页面：策略定义列表/详情，实例总览/详情/历史
+ * - 能力：CRUD + 启停 + 版本历史
+ * ----------------------------- */
+
+const LS_KEY = "n1_strategy_prototype_v1";
+const ctx = {
+  userId: 10001,
+  state: loadState(),
+};
+
+function nowIso(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function uid(prefix=""){
+  return prefix + Math.floor(Date.now() + Math.random()*1000);
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultState(), parsed);
+  }catch(e){
+    return defaultState();
+  }
+}
+
+function saveState(){
+  localStorage.setItem(LS_KEY, JSON.stringify(ctx.state));
+  refreshBadges();
+}
+
+function defaultState(){
+  return {
+    tradingPairs: [
+      { id: 1, symbol: "BTC-USDT", marketType: "SPOT" },
+      { id: 2, symbol: "ETH-USDT", marketType: "SPOT" },
+      { id: 3, symbol: "BTC-USDT", marketType: "SWAP" },
+      { id: 4, symbol: "SOL-USDT", marketType: "SPOT" },
+    ],
+    signalConfigs: [
+      { id: 0, name: "未绑定(0)" },
+      { id: 11, name: "EMA Cross Signal" },
+      { id: 12, name: "Funding Spike Signal" },
+      { id: 13, name: "Breakout Alert" },
+    ],
+    definitions: [],
+    instances: [],
+    instanceHistory: [], // { id, instanceId, version, snapshot, createdAt }
+  };
+}
+
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove("show"), 2200);
+}
+
+function confirmX(msg){
+  return window.confirm(msg);
+}
+
+function fmtEnabled(enabled){
+  return enabled ? `<span class="status on"><span class="sDot"></span>启用</span>`
+                 : `<span class="status off"><span class="sDot"></span>禁用</span>`;
+}
+
+function getStrategyById(id){
+  return ctx.state.definitions.find(d => d.id === Number(id));
+}
+
+function getInstanceById(id){
+  return ctx.state.instances.find(i => i.id === Number(id));
+}
+
+function getPairById(id){
+  return ctx.state.tradingPairs.find(p => p.id === Number(id));
+}
+
+function getSignalById(id){
+  return ctx.state.signalConfigs.find(s => s.id === Number(id));
+}
+
+function computeStrategySymbol(pair){
+  if(!pair) return "";
+  const sym = pair.symbol;
+  const t = pair.marketType;
+  if((t === "SWAP" || t === "FUTURES") && !sym.endsWith("-SWAP")){
+    return sym + "-SWAP";
+  }
+  return sym;
+}
+
+/** ------------- 数据操作（模拟后端约束） ------------- */
+function validateDefinition(input, excludeId=null){
+  const name = (input.strategyName||"").trim();
+  if(!name) return "策略名称必填";
+  if(name.length>64) return "策略名称最多64字符";
+  const type = input.strategyType;
+  const pattern = input.strategyPattern;
+  const allowedType = ["Martin","Grid","Trend","Arbitrage"];
+  const allowedPattern = ["SIGNAL_DRIVEN","INDICATOR_DRIVEN","HYBRID"];
+  if(!allowedType.includes(type)) return "策略类型不合法";
+  if(!allowedPattern.includes(pattern)) return "策略模式不合法";
+  const dup = ctx.state.definitions.find(d => d.userId===ctx.userId && d.strategyName===name && d.id!==excludeId);
+  if(dup) return "同一用户下策略名称不能重复";
+  return null;
+}
+
+function createDefinition(input){
+  const err = validateDefinition(input);
+  if(err) throw new Error(err);
+  const d = {
+    id: uid("1"),
+    userId: ctx.userId,
+    strategyName: input.strategyName.trim(),
+    strategyType: input.strategyType,
+    strategyPattern: input.strategyPattern,
+    enabled: input.enabled ? 1 : 0,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+  ctx.state.definitions.unshift(d);
+  saveState();
+  return d;
+}
+
+function updateDefinition(id, input){
+  const cur = getStrategyById(id);
+  if(!cur) throw new Error("策略不存在");
+  if(cur.userId !== ctx.userId) throw new Error("无权限");
+  const err = validateDefinition(input, cur.id);
+  if(err) throw new Error(err);
+  cur.strategyName = input.strategyName.trim();
+  cur.strategyType = input.strategyType;
+  cur.strategyPattern = input.strategyPattern;
+  if(typeof input.enabled === "number") cur.enabled = input.enabled;
+  cur.updatedAt = nowIso();
+  saveState();
+  return cur;
+}
+
+function toggleDefinition(id){
+  const cur = getStrategyById(id);
+  if(!cur) throw new Error("策略不存在");
+  if(cur.userId !== ctx.userId) throw new Error("无权限");
+  cur.enabled = cur.enabled ? 0 : 1;
+  cur.updatedAt = nowIso();
+  saveState();
+  return cur;
+}
+
+function validateInstance(input, excludeId=null){
+  const strategyId = Number(input.strategyId);
+  const tradingPairId = Number(input.tradingPairId);
+  const signalConfigId = (input.signalConfigId==null) ? 0 : Number(input.signalConfigId);
+
+  const def = getStrategyById(strategyId);
+  if(!def) return "strategyId 不存在";
+  if(def.userId !== ctx.userId) return "无权限（策略不属于该用户）";
+
+  const pair = getPairById(tradingPairId);
+  if(!pair) return "tradingPairId 不存在";
+
+  const sig = getSignalById(signalConfigId);
+  if(!sig) return "signalConfigId 不存在";
+
+  const initialCapital = Number(input.initialCapital);
+  if(!isFinite(initialCapital) || initialCapital <= 0) return "初始资金必须>0";
+
+  const tp = input.takeProfitRatio==="" || input.takeProfitRatio==null ? null : Number(input.takeProfitRatio);
+  const sl = input.stopLossRatio==="" || input.stopLossRatio==null ? null : Number(input.stopLossRatio);
+  if(tp!=null && (!isFinite(tp) || tp<0 || tp>1)) return "止盈比例必须在 0~1";
+  if(sl!=null && (!isFinite(sl) || sl<0 || sl>1)) return "止损比例必须在 0~1";
+
+  // 唯一性：user+strategy+pair+signal
+  const dup = ctx.state.instances.find(i =>
+    i.userId===ctx.userId &&
+    i.strategyId===strategyId &&
+    i.tradingPairId===tradingPairId &&
+    i.signalConfigId===signalConfigId &&
+    i.id!==excludeId
+  );
+  if(dup) return "唯一性冲突：同一策略+交易对+信号配置 已存在实例";
+
+  return null;
+}
+
+function createInstance(input){
+  const err = validateInstance(input);
+  if(err) throw new Error(err);
+  const pair = getPairById(input.tradingPairId);
+  const inst = {
+    id: uid("2"),
+    userId: ctx.userId,
+    strategyId: Number(input.strategyId),
+    signalConfigId: (input.signalConfigId==null) ? 0 : Number(input.signalConfigId),
+    tradingPairId: Number(input.tradingPairId),
+    strategySymbol: computeStrategySymbol(pair),
+    initialCapital: Number(input.initialCapital),
+    runtimeRules: input.runtimeRules || "",
+    takeProfitRatio: input.takeProfitRatio==="" || input.takeProfitRatio==null ? null : Number(input.takeProfitRatio),
+    stopLossRatio: input.stopLossRatio==="" || input.stopLossRatio==null ? null : Number(input.stopLossRatio),
+    version: 1,
+    enabled: input.enabled ? 1 : 0,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+  ctx.state.instances.unshift(inst);
+  saveState();
+  return inst;
+}
+
+function pushHistorySnapshot(instance){
+  ctx.state.instanceHistory.unshift({
+    id: uid("9"),
+    instanceId: instance.id,
+    version: instance.version,
+    snapshot: JSON.parse(JSON.stringify(instance)),
+    createdAt: nowIso(),
+  });
+}
+
+function updateInstance(id, input){
+  const cur = getInstanceById(id);
+  if(!cur) throw new Error("实例不存在");
+  if(cur.userId !== ctx.userId) throw new Error("无权限");
+
+  const merged = Object.assign({}, cur, input);
+  // 处理 null -> 0
+  if(merged.signalConfigId==null) merged.signalConfigId = 0;
+
+  const err = validateInstance(merged, cur.id);
+  if(err) throw new Error(err);
+
+  // 保存历史快照（旧版本）
+  pushHistorySnapshot(cur);
+
+  // 更新字段
+  cur.strategyId = Number(merged.strategyId);
+  cur.tradingPairId = Number(merged.tradingPairId);
+  cur.signalConfigId = Number(merged.signalConfigId);
+  const pair = getPairById(cur.tradingPairId);
+  cur.strategySymbol = computeStrategySymbol(pair);
+  cur.initialCapital = Number(merged.initialCapital);
+  cur.takeProfitRatio = merged.takeProfitRatio==="" ? null : merged.takeProfitRatio;
+  cur.stopLossRatio = merged.stopLossRatio==="" ? null : merged.stopLossRatio;
+  cur.runtimeRules = merged.runtimeRules || cur.runtimeRules || "";
+  cur.version = (cur.version || 1) + 1;
+  cur.updatedAt = nowIso();
+  saveState();
+  return cur;
+}
+
+function toggleInstance(id){
+  const cur = getInstanceById(id);
+  if(!cur) throw new Error("实例不存在");
+  if(cur.userId !== ctx.userId) throw new Error("无权限");
+  cur.enabled = cur.enabled ? 0 : 1;
+  cur.updatedAt = nowIso();
+  saveState();
+  return cur;
+}
+
+/** ------------- 路由与视图渲染 ------------- */
+function parseHash(){
+  const h = location.hash.replace(/^#/, "") || "/strategies";
+  const parts = h.split("/").filter(Boolean);
+  return { raw:h, parts };
+}
+
+function setCrumbs(text){
+  document.getElementById("crumbs").innerHTML = `路径：<b>${text}</b>`;
+}
+
+function setTopActions(html){
+  document.getElementById("topActions").innerHTML = html || "";
+}
+
+function setNavActive(routeBase){
+  const nav = document.getElementById("nav");
+  [...nav.querySelectorAll("a")].forEach(a=>{
+    const r = a.dataset.route;
+    a.classList.toggle("active", r === routeBase);
+  });
+}
+
+function refreshBadges(){
+  document.getElementById("pillStrategies").textContent = ctx.state.definitions.length;
+  document.getElementById("pillInstances").textContent = ctx.state.instances.length;
+}
+
+function render(){
+  document.getElementById("userIdShow").textContent = String(ctx.userId);
+  refreshBadges();
+
+  const { parts } = parseHash();
+  const view = document.getElementById("view");
+
+  // routes:
+  // /strategies
+  // /strategies/:id
+  // /instances
+  // /instances/:id
+  // /instances/:id/history
+  // /about
+  if(parts.length===0 || parts[0]==="strategies"){
+    setNavActive("/strategies");
+    if(parts.length===1){
+      setCrumbs("/strategies");
+      setTopActions(`<button class="btn primary" onclick="openDefinitionModal()">+ 新建策略</button>`);
+      view.innerHTML = strategiesListView();
+      wireStrategiesList();
+      return;
+    }
+    if(parts.length===2){
+      const id = parts[1];
+      setCrumbs(`/strategies/${id}`);
+      setTopActions(`
+        <button class="btn" onclick="location.hash='#/strategies'">← 返回列表</button>
+        <button class="btn primary" onclick="openDefinitionModal(${id})">编辑策略</button>
+        <button class="btn" onclick="openInstanceModal(null, ${id})">+ 新建实例</button>
+      `);
+      view.innerHTML = strategyDetailView(id);
+      wireStrategyDetail(id);
+      return;
+    }
+  }
+
+  if(parts[0]==="instances"){
+    setNavActive("/instances");
+    if(parts.length===1){
+      setCrumbs("/instances");
+      setTopActions(`<button class="btn primary" onclick="openInstanceModal()">+ 新建实例</button>`);
+      view.innerHTML = instancesListView();
+      wireInstancesList();
+      return;
+    }
+    if(parts.length===2){
+      const id = parts[1];
+      setCrumbs(`/instances/${id}`);
+      setTopActions(`
+        <button class="btn" onclick="location.hash='#/instances'">← 返回总览</button>
+        <button class="btn primary" onclick="openInstanceModal(${id})">编辑实例</button>
+        <button class="btn" onclick="location.hash='#/instances/${id}/history'">查看历史</button>
+      `);
+      view.innerHTML = instanceDetailView(id);
+      return;
+    }
+    if(parts.length===3 && parts[2]==="history"){
+      const id = parts[1];
+      setCrumbs(`/instances/${id}/history`);
+      setTopActions(`
+        <button class="btn" onclick="location.hash='#/instances/${id}'">← 返回实例详情</button>
+      `);
+      view.innerHTML = instanceHistoryView(id);
+      wireInstanceHistory(id);
+      return;
+    }
+  }
+
+  if(parts[0]==="about"){
+    setNavActive("/about");
+    setCrumbs("/about");
+    setTopActions("");
+    view.innerHTML = aboutView();
+    return;
+  }
+
+  // fallback
+  setNavActive("/strategies");
+  location.hash = "#/strategies";
+}
+
+function strategiesListView(){
+  return `
+  <div class="layout">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>策略定义列表</h2>
+        </div>
+      </div>
+      <div class="cardBody">
+        <div class="toolbar">
+          <div class="field" style="min-width:220px;">
+            <span>状态筛选</span>
+            <select id="defFilter">
+              <option value="all">全部</option>
+              <option value="1">启用</option>
+              <option value="0">禁用</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1; min-width:240px;">
+            <span>搜索（策略名称）</span>
+            <input id="defSearch" placeholder="例如：BTC 趋势 / 网格 / 马丁..." />
+          </div>
+          <div class="field" style="min-width:180px;">
+            <span>快速动作</span>
+            <div style="display:flex; gap:10px;">
+              <button class="btn" onclick="seedIfEmpty()">填充样例</button>
+              <button class="btn" onclick="exportJson()">导出JSON</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="defTableWrap"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>字段提示（与 N1 对齐）</h2>
+          <p class="muted">用于产品验收/前后端联调口径统一</p>
+        </div>
+        <div class="tag">约束</div>
+      </div>
+      <div class="cardBody">
+        <div class="help">
+          <div>• 策略名唯一：<code>unique(user_id, strategy_name)</code></div>
+          <div>• 启停：definition 与 instance 都支持 enabled(1/0)</div>
+          <div>• strategyPattern：<code>SIGNAL_DRIVEN / INDICATOR_DRIVEN / HYBRID</code></div>
+          <div>• strategyType：<code>Martin / Grid / Trend / Arbitrage</code></div>
+          <hr style="border:0;border-top:1px solid rgba(255,255,255,.08); margin:12px 0;">
+          <div class="muted">提示：点击某条策略的“详情”，进入 definition 详情页并展示 instances 列表。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function wireStrategiesList(){
+  const filter = document.getElementById("defFilter");
+  const search = document.getElementById("defSearch");
+  const rerender = ()=> {
+    const f = filter.value;
+    const q = search.value.trim().toLowerCase();
+    let defs = ctx.state.definitions.filter(d => d.userId===ctx.userId);
+    if(f!=="all") defs = defs.filter(d => String(d.enabled)===f);
+    if(q) defs = defs.filter(d => (d.strategyName||"").toLowerCase().includes(q));
+    document.getElementById("defTableWrap").innerHTML = definitionTable(defs);
+  };
+  filter.addEventListener("change", rerender);
+  search.addEventListener("input", rerender);
+  rerender();
+}
+
+function definitionTable(defs){
+  if(!defs.length){
+    return `<div class="empty">暂无策略定义。点击右上角“+ 新建策略”开始。</div>`;
+  }
+  return `
+  <table>
+    <thead>
+      <tr>
+        <th style="width:80px;">ID</th>
+        <th>策略名称</th>
+        <th style="width:120px;">类型</th>
+        <th style="width:160px;">模式</th>
+        <th style="width:110px;">状态</th>
+        <th style="width:170px;">更新时间</th>
+        <th style="width:240px;">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${defs.map(d => {
+        const instCount = ctx.state.instances.filter(i=>i.strategyId===d.id && i.userId===ctx.userId).length;
+        return `
+          <tr>
+            <td class="mono">${d.id}</td>
+            <td>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <b>${escapeHtml(d.strategyName)}</b>
+                <span class="pill">实例 ${instCount}</span>
+              </div>
+              <div class="muted" style="font-size:12px; margin-top:4px;">createdAt: <span class="mono">${d.createdAt}</span></div>
+            </td>
+            <td><span class="tag">${d.strategyType}</span></td>
+            <td><span class="tag">${d.strategyPattern}</span></td>
+            <td>${fmtEnabled(d.enabled)}</td>
+            <td class="mono muted">${d.updatedAt}</td>
+            <td>
+              <div class="miniBtns">
+                <button class="btn" onclick="location.hash='#/strategies/${d.id}'">详情</button>
+                <button class="btn" onclick="openDefinitionModal(${d.id})">编辑</button>
+                <button class="btn ${d.enabled? "danger": ""}" onclick="uiToggleDefinition(${d.id})">${d.enabled? "禁用":"启用"}</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("")}
+    </tbody>
+  </table>
+  `;
+}
+
+function strategyDetailView(id){
+  const d = getStrategyById(id);
+  if(!d) return `<div class="empty">策略不存在或已被删除。<a href="#/strategies">返回列表</a></div>`;
+  const instances = ctx.state.instances.filter(i => i.userId===ctx.userId && i.strategyId===Number(id));
+  return `
+  <div class="split">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>策略定义详情</h2>
+          <p>definition 基本信息 + instances 列表（N1 交付核心闭环）</p>
+        </div>
+        <div>${fmtEnabled(d.enabled)}</div>
+      </div>
+      <div class="cardBody">
+        <div class="row">
+          <div class="field">
+            <span>策略名称</span>
+            <input value="${escapeAttr(d.strategyName)}" disabled />
+          </div>
+          <div class="field">
+            <span>策略ID</span>
+            <input class="mono" value="${d.id}" disabled />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="field">
+            <span>策略类型</span>
+            <input value="${escapeAttr(d.strategyType)}" disabled />
+          </div>
+          <div class="field">
+            <span>策略模式</span>
+            <input value="${escapeAttr(d.strategyPattern)}" disabled />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="field">
+            <span>创建时间</span>
+            <input class="mono" value="${d.createdAt}" disabled />
+          </div>
+          <div class="field">
+            <span>更新时间</span>
+            <input class="mono" value="${d.updatedAt}" disabled />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+          <button class="btn ${d.enabled? "danger": "primary"}" onclick="uiToggleDefinition(${d.id})">${d.enabled? "禁用策略":"启用策略"}</button>
+          <button class="btn" onclick="openInstanceModal(null, ${d.id})">+ 新建实例（绑定交易对/信号/资金）</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>该策略的实例列表</h2>
+          <p class="muted">实例唯一性：user + strategy + pair + signal（signal=0 表示未绑定）</p>
+        </div>
+        <div class="tag">N1 · Instance</div>
+      </div>
+      <div class="cardBody">
+        ${instanceTable(instances, { inStrategyDetail:true })}
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function wireStrategyDetail(id){
+  // 当前 view 渲染里按钮已经绑定 onclick，无需额外 wire
+}
+
+function instancesListView(){
+  const inst = ctx.state.instances.filter(i => i.userId===ctx.userId);
+  return `
+  <div class="layout">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>策略实例总览</h2>
+          <p>跨策略查看实例（用于 N2 之前管理核对）</p>
+        </div>
+        <div class="tag">N1 · Instance</div>
+      </div>
+      <div class="cardBody">
+        <div class="toolbar">
+          <div class="field" style="min-width:220px;">
+            <span>状态筛选</span>
+            <select id="instFilter">
+              <option value="all">全部</option>
+              <option value="1">启用</option>
+              <option value="0">禁用</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1; min-width:240px;">
+            <span>搜索（symbol / strategyId）</span>
+            <input id="instSearch" placeholder="例如：BTC-USDT-SWAP 或 1xxxx..." />
+          </div>
+        </div>
+        <div id="instTableWrap"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>实例字段口径（对齐后端）</h2>
+          <p class="muted">initialCapital / TP / SL / version / enabled</p>
+        </div>
+        <div class="tag">校验</div>
+      </div>
+      <div class="cardBody">
+        <div class="help">
+          <div>• <code>signal_config_id</code>：null → 0（未绑定）</div>
+          <div>• 初始资金：<code>&gt; 0</code></div>
+          <div>• TP/SL：<code>0 ~ 1</code>（可为空）</div>
+          <div>• strategySymbol：由 tradingPair 生成，SWAP/FUTURES 自动追加 <code>-SWAP</code></div>
+          <div>• 更新实例会写入 history，并且 version 自增</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function wireInstancesList(){
+  const filter = document.getElementById("instFilter");
+  const search = document.getElementById("instSearch");
+  const rerender = ()=> {
+    const f = filter.value;
+    const q = search.value.trim().toLowerCase();
+    let inst = ctx.state.instances.filter(i => i.userId===ctx.userId);
+    if(f!=="all") inst = inst.filter(i => String(i.enabled)===f);
+    if(q){
+      inst = inst.filter(i =>
+        String(i.strategyId).includes(q) ||
+        String(i.id).includes(q) ||
+        (i.strategySymbol||"").toLowerCase().includes(q)
+      );
+    }
+    document.getElementById("instTableWrap").innerHTML = instanceTable(inst, { inStrategyDetail:false });
+  };
+  filter.addEventListener("change", rerender);
+  search.addEventListener("input", rerender);
+  rerender();
+}
+
+function instanceTable(instances, opt){
+  if(!instances.length){
+    return `<div class="empty">暂无实例。点击右上角“+ 新建实例”开始。</div>`;
+  }
+  return `
+  <table>
+    <thead>
+      <tr>
+        <th style="width:80px;">ID</th>
+        <th>交易对</th>
+        <th style="width:130px;">信号配置</th>
+        <th style="width:120px;">初始资金</th>
+        <th style="width:110px;">TP/SL</th>
+        <th style="width:90px;">版本</th>
+        <th style="width:110px;">状态</th>
+        <th style="width:220px;">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${instances.map(i => {
+        const pair = getPairById(i.tradingPairId);
+        const sig = getSignalById(i.signalConfigId) || { id:i.signalConfigId, name:"?" };
+        const tp = i.takeProfitRatio==null ? "-" : i.takeProfitRatio;
+        const sl = i.stopLossRatio==null ? "-" : i.stopLossRatio;
+        return `
+        <tr>
+          <td class="mono">${i.id}</td>
+          <td>
+            <b class="mono">${escapeHtml(i.strategySymbol || computeStrategySymbol(pair))}</b>
+            <div class="muted" style="margin-top:4px;">pairId: <span class="mono">${i.tradingPairId}</span> · strategyId: <span class="mono">${i.strategyId}</span></div>
+          </td>
+          <td>${sig.id===0 ? `<span class="tag">未绑定(0)</span>` : `<span class="tag">${escapeHtml(sig.name)}</span>`}</td>
+          <td class="mono">${Number(i.initialCapital).toFixed(2)}</td>
+          <td class="mono">${tp} / ${sl}</td>
+          <td class="mono">${i.version}</td>
+          <td>${fmtEnabled(i.enabled)}</td>
+          <td>
+            <div class="miniBtns">
+              <button class="btn" onclick="location.hash='#/instances/${i.id}'">详情</button>
+              <button class="btn" onclick="openInstanceModal(${i.id}${opt.inStrategyDetail? ","+i.strategyId : ""})">编辑</button>
+              <button class="btn ${i.enabled? "danger": ""}" onclick="uiToggleInstance(${i.id})">${i.enabled? "禁用":"启用"}</button>
+            </div>
+          </td>
+        </tr>
+        `;
+      }).join("")}
+    </tbody>
+  </table>
+  `;
+}
+
+function instanceDetailView(id){
+  const i = getInstanceById(id);
+  if(!i) return `<div class="empty">实例不存在或已被删除。<a href="#/instances">返回总览</a></div>`;
+  const d = getStrategyById(i.strategyId);
+  const pair = getPairById(i.tradingPairId);
+  const sig = getSignalById(i.signalConfigId);
+  return `
+  <div class="layout">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>实例详情</h2>
+          <p>展示：实例参数 + 关联策略/交易对/信号配置（N1 联调口径）</p>
+        </div>
+        <div>${fmtEnabled(i.enabled)}</div>
+      </div>
+      <div class="cardBody">
+        <div class="row">
+          <div class="field">
+            <span>实例ID</span>
+            <input class="mono" value="${i.id}" disabled />
+          </div>
+          <div class="field">
+            <span>版本号</span>
+            <input class="mono" value="${i.version}" disabled />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field">
+            <span>策略ID / 名称</span>
+            <input value="${d ? (d.id + " / " + d.strategyName) : (i.strategyId + " / ?")}" disabled />
+          </div>
+          <div class="field">
+            <span>策略交易对（strategySymbol）</span>
+            <input class="mono" value="${escapeAttr(i.strategySymbol)}" disabled />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field">
+            <span>交易对</span>
+            <input value="${pair ? (pair.id + " / " + pair.symbol + " (" + pair.marketType + ")") : (i.tradingPairId + " / ?")}" disabled />
+          </div>
+          <div class="field">
+            <span>信号配置</span>
+            <input value="${sig ? (sig.id + " / " + sig.name) : (i.signalConfigId + " / ?")}" disabled />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field">
+            <span>初始资金 initialCapital</span>
+            <input class="mono" value="${Number(i.initialCapital).toFixed(2)}" disabled />
+          </div>
+          <div class="field">
+            <span>TP / SL</span>
+            <input class="mono" value="${i.takeProfitRatio==null? "-" : i.takeProfitRatio} / ${i.stopLossRatio==null? "-" : i.stopLossRatio}" disabled />
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:10px;">
+          <span>runtimeRules（N4 才使用，N1 可为空）</span>
+          <textarea disabled>${escapeHtml(i.runtimeRules || "")}</textarea>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field">
+            <span>创建时间</span>
+            <input class="mono" value="${i.createdAt}" disabled />
+          </div>
+          <div class="field">
+            <span>更新时间</span>
+            <input class="mono" value="${i.updatedAt}" disabled />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+          <button class="btn ${i.enabled? "danger":"primary"}" onclick="uiToggleInstance(${i.id})">${i.enabled? "禁用实例":"启用实例"}</button>
+          <button class="btn" onclick="location.hash='#/instances/${i.id}/history'">查看历史版本</button>
+          <button class="btn" onclick="location.hash='#/strategies/${i.strategyId}'">回到所属策略</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>验收点（N1）</h2>
+          <p class="muted">对照：创建/查询/启停/权限/版本历史</p>
+        </div>
+        <div class="tag">DoD</div>
+      </div>
+      <div class="cardBody">
+        <div class="help">
+          <div>✅ 实例更新：写入 history，并且 <code>version = version + 1</code></div>
+          <div>✅ signal_config_id：null 归一为 <code>0</code>（未绑定）</div>
+          <div>✅ 唯一性：<code>user + strategy + tradingPair + signal</code></div>
+          <div>✅ 启停：enabled(1/0) 二次确认</div>
+          <hr style="border:0;border-top:1px solid rgba(255,255,255,.08); margin:12px 0;">
+          <div class="muted">提示：该原型用 localStorage 模拟后端，便于你做产品走查。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function instanceHistoryView(instanceId){
+  const inst = getInstanceById(instanceId);
+  if(!inst) return `<div class="empty">实例不存在。<a href="#/instances">返回总览</a></div>`;
+  const list = ctx.state.instanceHistory.filter(h => String(h.instanceId)===String(instanceId));
+  return `
+  <div class="card">
+    <div class="cardHeader">
+      <div>
+        <h2>实例历史版本</h2>
+        <p>instanceId: <span class="mono">${instanceId}</span> · 当前版本：<span class="mono">${inst.version}</span></p>
+      </div>
+      <div class="tag">History</div>
+    </div>
+    <div class="cardBody">
+      ${list.length ? `
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px;">版本</th>
+              <th style="width:190px;">保存时间</th>
+              <th>关键参数快照</th>
+              <th style="width:120px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map(h=>{
+              const s = h.snapshot;
+              return `
+                <tr>
+                  <td class="mono">v${h.version}</td>
+                  <td class="mono muted">${h.createdAt}</td>
+                  <td class="mono">
+                    capital=${Number(s.initialCapital).toFixed(2)} · tp=${s.takeProfitRatio==null? "-" : s.takeProfitRatio} · sl=${s.stopLossRatio==null? "-" : s.stopLossRatio}
+                    · pairId=${s.tradingPairId} · signalId=${s.signalConfigId}
+                  </td>
+                  <td>
+                    <button class="btn" onclick="toggleHistoryDetail('${h.id}')">展开详情</button>
+                  </td>
+                </tr>
+                <tr id="hist_${h.id}" style="display:none;">
+                  <td colspan="4" style="background: rgba(0,0,0,.12);">
+                    <div class="row">
+                      <div class="field">
+                        <span>strategySymbol</span>
+                        <input class="mono" value="${escapeAttr(s.strategySymbol)}" disabled />
+                      </div>
+                      <div class="field">
+                        <span>enabled / version</span>
+                        <input class="mono" value="${s.enabled} / ${s.version}" disabled />
+                      </div>
+                    </div>
+                    <div class="row" style="margin-top:10px;">
+                      <div class="field">
+                        <span>createdAt</span>
+                        <input class="mono" value="${s.createdAt}" disabled />
+                      </div>
+                      <div class="field">
+                        <span>updatedAt</span>
+                        <input class="mono" value="${s.updatedAt}" disabled />
+                      </div>
+                    </div>
+                    <div class="field" style="margin-top:10px;">
+                      <span>runtimeRules</span>
+                      <textarea disabled>${escapeHtml(s.runtimeRules||"")}</textarea>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      ` : `<div class="empty">暂无历史记录。编辑实例后会自动生成历史快照。</div>`}
+    </div>
+  </div>
+  `;
+}
+
+function wireInstanceHistory(instanceId){
+  // 展开逻辑在全局函数里
+}
+
+function aboutView(){
+  return `
+  <div class="layout">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>说明 / N1 验收清单</h2>
+          <p>这份原型用于“产品图走查 + 前后端联调对齐”</p>
+        </div>
+        <div class="tag">About</div>
+      </div>
+      <div class="cardBody">
+        <div class="help">
+          <div><b>覆盖范围：</b></div>
+          <div>1) 策略定义 CRUD + 启停</div>
+          <div>2) 策略详情：definition 信息 + instances 列表</div>
+          <div>3) 策略实例 CRUD + 启停</div>
+          <div>4) 实例历史版本：更新时自动写快照 + 版本自增</div>
+
+          <hr style="border:0;border-top:1px solid rgba(255,255,255,.08); margin:12px 0;">
+
+          <div><b>关键约束（与 N1 文档一致）：</b></div>
+          <div>• definition 名称唯一：<code>unique(user_id, strategy_name)</code></div>
+          <div>• instance 唯一：<code>unique(user_id, strategy_id, trading_pair_id, signal_config_id)</code></div>
+          <div>• <code>signal_config_id</code>：null → 0（未绑定）</div>
+          <div>• 初始资金 <code>&gt; 0</code>；TP/SL <code>0~1</code> 可为空</div>
+
+          <hr style="border:0;border-top:1px solid rgba(255,255,255,.08); margin:12px 0;">
+
+          <div class="muted">
+            如果你后续要 N2/N3：建议在实例详情页加一个“运行态监控”tab（phase/side/qty/avgEntry 等），但 N1 先不做。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>联调提示（给前后端）</h2>
+          <p class="muted">把 localStorage 当成临时 DB</p>
+        </div>
+        <div class="tag">Tips</div>
+      </div>
+      <div class="cardBody">
+        <div class="help">
+          <div>• 真实接口接入时，你只需把 create/update/list/toggle 的数据层替换成 API 调用。</div>
+          <div>• UI 路由已按 <code>#/strategies</code> / <code>#/strategies/:id</code> / <code>#/instances/:id</code> 组织，便于映射后端接口。</div>
+          <div>• 如果需要更“产品图”风格（标注+热区）：可以在此基础上叠加注释层（hover 标注验收点）。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+/** ------------- Modal：Definition / Instance ------------- */
+const modalMask = document.getElementById("modalMask");
+const modalTitle = document.getElementById("modalTitle");
+const modalDesc = document.getElementById("modalDesc");
+const modalBody = document.getElementById("modalBody");
+const modalFooter = document.getElementById("modalFooter");
+document.getElementById("modalClose").addEventListener("click", closeModal);
+modalMask.addEventListener("click", (e)=>{ if(e.target===modalMask) closeModal(); });
+
+function openModal({title, desc, bodyHtml, footerHtml}){
+  modalTitle.textContent = title;
+  modalDesc.textContent = desc || "";
+  modalBody.innerHTML = bodyHtml || "";
+  modalFooter.innerHTML = footerHtml || "";
+  modalMask.classList.add("show");
+}
+function closeModal(){
+  modalMask.classList.remove("show");
+  modalBody.innerHTML = "";
+  modalFooter.innerHTML = "";
+}
+
+function openDefinitionModal(id=null){
+  const editing = id!=null;
+  const cur = editing ? getStrategyById(id) : null;
+  openModal({
+    title: editing ? "编辑策略定义" : "新建策略定义",
+    desc: "字段对齐：strategyName / strategyType / strategyPattern / enabled",
+    bodyHtml: `
+      <div class="row">
+        <div class="field">
+          <span>策略名称 strategyName *</span>
+          <input id="def_name" placeholder="例如：BTC 趋势策略" value="${cur? escapeAttr(cur.strategyName): ""}" />
+        </div>
+        <div class="field">
+          <span>状态 enabled</span>
+          <select id="def_enabled">
+            <option value="1" ${cur && cur.enabled? "selected": (!cur ? "selected" : "")}>启用</option>
+            <option value="0" ${cur && !cur.enabled? "selected": ""}>禁用</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <span>策略类型 strategyType *</span>
+          <select id="def_type">
+            ${["Martin","Grid","Trend","Arbitrage"].map(t=>`<option value="${t}" ${(cur && cur.strategyType===t) ? "selected": ""}>${t}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <span>策略模式 strategyPattern *</span>
+          <select id="def_pattern">
+            ${[
+              ["SIGNAL_DRIVEN","SIGNAL_DRIVEN（信号驱动）"],
+              ["INDICATOR_DRIVEN","INDICATOR_DRIVEN（指标驱动）"],
+              ["HYBRID","HYBRID（混合）"],
+            ].map(([v,txt])=>`<option value="${v}" ${(cur && cur.strategyPattern===v) ? "selected": ""}>${txt}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="help" style="margin-top:10px;">
+        • 唯一性：同一 userId 下 <code>strategyName</code> 不可重复。<br/>
+        • 启停会影响后续 N2 事件路由（这里只做管理闭环）。
+      </div>
+    `,
+    footerHtml: `
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="${editing ? `submitDefinitionUpdate(${id})` : `submitDefinitionCreate()`}">${editing ? "保存修改" : "创建策略"}</button>
+    `
+  });
+}
+
+function submitDefinitionCreate(){
+  try{
+    const payload = {
+      strategyName: document.getElementById("def_name").value,
+      strategyType: document.getElementById("def_type").value,
+      strategyPattern: document.getElementById("def_pattern").value,
+      enabled: document.getElementById("def_enabled").value === "1",
+    };
+    const d = createDefinition(payload);
+    closeModal();
+    toast("创建成功：strategyId=" + d.id);
+    location.hash = "#/strategies/" + d.id;
+  }catch(e){
+    toast("创建失败：" + e.message);
+  }
+}
+
+function submitDefinitionUpdate(id){
+  try{
+    const payload = {
+      strategyName: document.getElementById("def_name").value,
+      strategyType: document.getElementById("def_type").value,
+      strategyPattern: document.getElementById("def_pattern").value,
+      enabled: Number(document.getElementById("def_enabled").value),
+    };
+    const d = updateDefinition(id, payload);
+    closeModal();
+    toast("更新成功：strategyId=" + d.id);
+    render();
+  }catch(e){
+    toast("更新失败：" + e.message);
+  }
+}
+
+function openInstanceModal(instanceId=null, forceStrategyId=null){
+  const editing = instanceId!=null;
+  const cur = editing ? getInstanceById(instanceId) : null;
+  const defs = ctx.state.definitions.filter(d=>d.userId===ctx.userId);
+  if(!defs.length){
+    toast("请先创建策略定义");
+    location.hash = "#/strategies";
+    return;
+  }
+  const pairs = ctx.state.tradingPairs;
+  const signals = ctx.state.signalConfigs;
+
+  const strategyId = forceStrategyId!=null ? Number(forceStrategyId) : (cur ? cur.strategyId : defs[0].id);
+
+  openModal({
+    title: editing ? "编辑策略实例" : "新建策略实例",
+    desc: "字段对齐：strategyId / tradingPairId / signalConfigId / initialCapital / TP/SL / runtimeRules / enabled",
+    bodyHtml: `
+      <div class="row">
+        <div class="field">
+          <span>所属策略 strategyId *</span>
+          <select id="inst_strategy" ${forceStrategyId!=null ? "disabled": ""} onchange="onInstStrategyChange()">
+            ${defs.map(d=>`<option value="${d.id}" ${(String(d.id)===String(strategyId)) ? "selected": ""}>${escapeHtml(d.strategyName)} (#${d.id})</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <span>状态 enabled</span>
+          <select id="inst_enabled">
+            <option value="1" ${cur && cur.enabled? "selected": (!cur ? "selected" : "")}>启用</option>
+            <option value="0" ${cur && !cur.enabled? "selected": ""}>禁用</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <span>交易对 tradingPairId *</span>
+          <select id="inst_pair" onchange="onInstPairChange()">
+            ${pairs.map(p=>{
+              const sym = computeStrategySymbol(p);
+              const selected = cur ? (cur.tradingPairId===p.id) : (p.id===pairs[0].id);
+              return `<option value="${p.id}" ${selected ? "selected": ""}>${p.id} / ${p.symbol} (${p.marketType}) → ${sym}</option>`;
+            }).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <span>信号配置 signalConfigId（可选）</span>
+          <select id="inst_signal">
+            ${signals.map(s=>{
+              const selected = cur ? (cur.signalConfigId===s.id) : (s.id===0);
+              return `<option value="${s.id}" ${selected ? "selected": ""}>${s.id} / ${escapeHtml(s.name)}</option>`;
+            }).join("")}
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <span>初始资金 initialCapital *</span>
+          <input id="inst_capital" type="number" step="0.01" min="0" placeholder="例如：1000" value="${cur ? cur.initialCapital : 1000}" />
+        </div>
+        <div class="field">
+          <span>strategySymbol（自动生成）</span>
+          <input id="inst_symbol" class="mono" value="${cur ? escapeAttr(cur.strategySymbol) : escapeAttr(computeStrategySymbol(getPairById(pairs[0].id)))}" disabled />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <span>止盈比例 takeProfitRatio（0~1，可空）</span>
+          <input id="inst_tp" type="number" step="0.0001" min="0" max="1" placeholder="例如：0.03" value="${cur && cur.takeProfitRatio!=null ? cur.takeProfitRatio : ""}" />
+        </div>
+        <div class="field">
+          <span>止损比例 stopLossRatio（0~1，可空）</span>
+          <input id="inst_sl" type="number" step="0.0001" min="0" max="1" placeholder="例如：0.01" value="${cur && cur.stopLossRatio!=null ? cur.stopLossRatio : ""}" />
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:10px;">
+        <span>runtimeRules（N4 使用，N1 允许为空）</span>
+        <textarea id="inst_rules" placeholder='例如：{"entry":{"type":"SIGNAL","id":11}}'>${cur ? escapeHtml(cur.runtimeRules||"") : ""}</textarea>
+      </div>
+
+      <div class="help" style="margin-top:10px;">
+        • 唯一性：<code>user + strategy + pair + signal</code> 必须唯一（signal=0 表示未绑定）。<br/>
+        • 更新实例会生成历史快照，并自动 <code>version + 1</code>。
+      </div>
+    `,
+    footerHtml: `
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="${editing ? `submitInstanceUpdate(${instanceId})` : `submitInstanceCreate(${forceStrategyId!=null ? Number(forceStrategyId) : "null"})`}">${editing ? "保存修改" : "创建实例"}</button>
+    `
+  });
+}
+
+function onInstPairChange(){
+  const pairId = Number(document.getElementById("inst_pair").value);
+  const pair = getPairById(pairId);
+  document.getElementById("inst_symbol").value = computeStrategySymbol(pair);
+}
+function onInstStrategyChange(){ /* 预留：未来可按策略过滤可选交易对/信号 */ }
+
+function submitInstanceCreate(forceStrategyId){
+  try{
+    const payload = {
+      strategyId: forceStrategyId!=null ? Number(forceStrategyId) : Number(document.getElementById("inst_strategy").value),
+      tradingPairId: Number(document.getElementById("inst_pair").value),
+      signalConfigId: Number(document.getElementById("inst_signal").value),
+      initialCapital: Number(document.getElementById("inst_capital").value),
+      takeProfitRatio: document.getElementById("inst_tp").value,
+      stopLossRatio: document.getElementById("inst_sl").value,
+      runtimeRules: document.getElementById("inst_rules").value,
+      enabled: document.getElementById("inst_enabled").value === "1",
+    };
+    const inst = createInstance(payload);
+    closeModal();
+    toast("创建实例成功：instanceId=" + inst.id);
+    location.hash = "#/instances/" + inst.id;
+  }catch(e){
+    toast("创建失败：" + e.message);
+  }
+}
+
+function submitInstanceUpdate(instanceId){
+  try{
+    const payload = {
+      strategyId: Number(document.getElementById("inst_strategy").value),
+      tradingPairId: Number(document.getElementById("inst_pair").value),
+      signalConfigId: Number(document.getElementById("inst_signal").value),
+      initialCapital: Number(document.getElementById("inst_capital").value),
+      takeProfitRatio: document.getElementById("inst_tp").value,
+      stopLossRatio: document.getElementById("inst_sl").value,
+      runtimeRules: document.getElementById("inst_rules").value,
+    };
+    const inst = updateInstance(instanceId, payload);
+    closeModal();
+    toast(`更新成功：instanceId=${inst.id}，version=${inst.version}`);
+    render();
+  }catch(e){
+    toast("更新失败：" + e.message);
+  }
+}
+
+/** ------------- UI Actions ------------- */
+function uiToggleDefinition(id){
+  try{
+    const d = getStrategyById(id);
+    if(!d) return toast("策略不存在");
+    const ok = confirmX(`确认${d.enabled? "禁用":"启用"}策略【${d.strategyName}】吗？`);
+    if(!ok) return;
+    toggleDefinition(id);
+    toast("已切换策略状态");
+    render();
+  }catch(e){
+    toast("操作失败：" + e.message);
+  }
+}
+
+function uiToggleInstance(id){
+  try{
+    const i = getInstanceById(id);
+    if(!i) return toast("实例不存在");
+    const ok = confirmX(`确认${i.enabled? "禁用":"启用"}实例【${i.strategySymbol}】吗？`);
+    if(!ok) return;
+    toggleInstance(id);
+    toast("已切换实例状态");
+    render();
+  }catch(e){
+    toast("操作失败：" + e.message);
+  }
+}
+
+function toggleHistoryDetail(histId){
+  const row = document.getElementById("hist_" + histId);
+  if(!row) return;
+  row.style.display = (row.style.display==="none" || !row.style.display) ? "table-row" : "none";
+}
+
+/** ------------- Seed / Reset / Export ------------- */
+function seedIfEmpty(){
+  if(ctx.state.definitions.length || ctx.state.instances.length){
+    toast("已有数据，无需填充");
+    return;
+  }
+  seedData();
+  toast("已生成样例数据");
+  render();
+}
+
+function seedData(){
+  // definitions
+  const d1 = createDefinition({strategyName:"BTC 趋势策略", strategyType:"Trend", strategyPattern:"INDICATOR_DRIVEN", enabled:true});
+  const d2 = createDefinition({strategyName:"ETH 网格策略", strategyType:"Grid", strategyPattern:"HYBRID", enabled:true});
+  const d3 = createDefinition({strategyName:"资金费率套利", strategyType:"Arbitrage", strategyPattern:"SIGNAL_DRIVEN", enabled:false});
+
+  // instances
+  createInstance({strategyId:d1.id, tradingPairId:3, signalConfigId:0, initialCapital:5000, takeProfitRatio:0.03, stopLossRatio:0.01, runtimeRules:"", enabled:true});
+  const i2 = createInstance({strategyId:d2.id, tradingPairId:2, signalConfigId:11, initialCapital:2000, takeProfitRatio:"", stopLossRatio:"", runtimeRules:'{"grid":{"step":0.002,"layers":8}}', enabled:true});
+  // make some history
+  updateInstance(i2.id, {strategyId:d2.id, tradingPairId:2, signalConfigId:11, initialCapital:2500, takeProfitRatio:"", stopLossRatio:"", runtimeRules:'{"grid":{"step":0.002,"layers":10}}'});
+}
+
+function exportJson(){
+  const data = JSON.stringify(ctx.state, null, 2);
+  navigator.clipboard?.writeText(data).then(()=>{
+    toast("已复制 JSON 到剪贴板（可粘贴到后端/接口Mock）");
+  }).catch(()=>{
+    toast("复制失败：浏览器权限限制，可在控制台手动获取");
+    console.log(data);
+  });
+}
+
+/** ------------- Escaping ------------- */
+function escapeHtml(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function escapeAttr(s){
+  return escapeHtml(s).replaceAll("\n"," ");
+}
+
+/** ------------- Global bindings ------------- */
+window.openDefinitionModal = openDefinitionModal;
+window.submitDefinitionCreate = submitDefinitionCreate;
+window.submitDefinitionUpdate = submitDefinitionUpdate;
+window.uiToggleDefinition = uiToggleDefinition;
+
+window.openInstanceModal = openInstanceModal;
+window.submitInstanceCreate = submitInstanceCreate;
+window.submitInstanceUpdate = submitInstanceUpdate;
+window.uiToggleInstance = uiToggleInstance;
+
+window.toggleHistoryDetail = toggleHistoryDetail;
+window.seedIfEmpty = seedIfEmpty;
+window.exportJson = exportJson;
+
+/** ------------- Sidebar buttons ------------- */
+document.getElementById("seedBtn").addEventListener("click", ()=>{
+  seedData();
+  toast("已生成样例数据");
+  render();
+});
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  const ok = confirmX("确认清空所有数据？（localStorage）");
+  if(!ok) return;
+  localStorage.removeItem(LS_KEY);
+  ctx.state = defaultState();
+  saveState();
+  toast("已清空");
+  render();
+});
+
+/** ------------- Init ------------- */
+window.addEventListener("hashchange", render);
+saveState();
+if(!location.hash) location.hash = "#/strategies";
+render();
+</script>
+</body>
+</html>

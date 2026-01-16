@@ -9,6 +9,7 @@ import com.qyl.v2trade.business.signal.model.entity.Signal;
 import com.qyl.v2trade.business.signal.model.entity.SignalConfig;
 import com.qyl.v2trade.business.signal.service.SignalConfigService;
 import com.qyl.v2trade.business.signal.service.SignalService;
+import com.qyl.v2trade.business.strategy.runtime.ingress.SignalReceivedIngressAdapter;
 import com.qyl.v2trade.common.constants.EnabledStatus;
 import com.qyl.v2trade.common.constants.SignalDirectionHint;
 import com.qyl.v2trade.common.constants.TradingViewAction;
@@ -36,6 +37,9 @@ public class SignalServiceImpl extends ServiceImpl<SignalMapper, Signal> impleme
 
     @Autowired
     private ObjectMapper objectMapper;
+    
+    @Autowired(required = false)
+    private SignalReceivedIngressAdapter signalReceivedAdapter;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -60,6 +64,16 @@ public class SignalServiceImpl extends ServiceImpl<SignalMapper, Signal> impleme
         
         logger.info("信号入库成功: signalId={}, signalName={}, symbol={}", 
                 signal.getId(), signal.getSignalName(), signal.getSymbol());
+        
+        // 4. 发送信号事件到策略系统（N2 事件接入）
+        if (signalReceivedAdapter != null) {
+            try {
+                signalReceivedAdapter.onSignalReceived(signal);
+            } catch (Exception e) {
+                logger.error("发送信号事件到策略系统失败，但不影响信号入库: signalId={}", signal.getId(), e);
+                // 不抛出异常，确保信号入库不受影响
+            }
+        }
         
         return signal;
     }

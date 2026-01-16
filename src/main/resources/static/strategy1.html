@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>策略管理 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        /* 基础样式 */
+        body { margin: 0; padding: 0; background: #f5f7fa; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+        .layui-body { background: #f5f7fa; }
+        .layui-elem-field { background: #fff; border-radius: 8px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .layui-field-box { padding: 20px; }
+        
+        /* 统计信息区 */
+        .stats-box {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            background: #ffffff;
+            padding: 20px 28px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #1a73e8;
+            min-width: 140px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-item:nth-child(1) { border-left-color: #1a73e8; }
+        .stat-item:nth-child(2) { border-left-color: #1890ff; }
+        .stat-item:nth-child(3) { border-left-color: #fa8c16; }
+        .stat-item:nth-child(4) { border-left-color: #52c41a; }
+        
+        .stat-item .num {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a73e8;
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+        
+        .stat-item:nth-child(1) .num { color: #1a73e8; }
+        .stat-item:nth-child(2) .num { color: #1890ff; }
+        .stat-item:nth-child(3) .num { color: #fa8c16; }
+        .stat-item:nth-child(4) .num { color: #52c41a; }
+        
+        .stat-item .label {
+            color: #8c8c8c;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        /* 筛选和操作栏 */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: #fafbfc;
+            border-radius: 8px;
+            border: 1px solid #e8eaed;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        
+        .filter-bar .layui-form {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .filter-bar .layui-form-label {
+            padding: 0;
+            width: auto;
+            font-size: 13px;
+            color: #5f6368;
+            font-weight: 500;
+            margin-left: 0 !important;
+        }
+        
+        .filter-bar select {
+            height: 38px;
+            line-height: 38px;
+            border-radius: 6px;
+            border: 1px solid #dadce0;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-buttons .layui-btn {
+            height: 38px;
+            line-height: 38px;
+            padding: 0 18px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 13px;
+        }
+        
+        /* 策略详情卡片 */
+        .strategy-detail-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        
+        .strategy-detail-card h3 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            color: #1a1a1a;
+            border-bottom: 2px solid #1a73e8;
+            padding-bottom: 10px;
+        }
+        
+        .detail-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .detail-item {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .detail-item label {
+            display: block;
+            color: #8c8c8c;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+        
+        .detail-item .value {
+            color: #1a1a1a;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* 实例列表表格 */
+        .instance-table-wrapper {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        
+        .instance-table-wrapper h3 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            color: #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* 状态标签 */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-enabled {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        
+        .status-disabled {
+            background: #fff7e6;
+            color: #fa8c16;
+        }
+        
+        /* 策略类型标签 */
+        .type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .type-martin { background: #fff1f0; color: #ff4d4f; }
+        .type-grid { background: #f6ffed; color: #52c41a; }
+        .type-trend { background: #e6f7ff; color: #1890ff; }
+        .type-arbitrage { background: #f9f0ff; color: #722ed1; }
+        
+        /* 策略模式标签 */
+        .pattern-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .pattern-signal { background: #e6f7ff; color: #1890ff; }
+        .pattern-indicator { background: #f6ffed; color: #52c41a; }
+        .pattern-hybrid { background: #fff7e6; color: #fa8c16; }
+    </style>
+</head>
+<body>
+    <!-- 布局容器 -->
+    <div class="layui-layout layui-layout-admin">
+        <!-- 头部 -->
+        <div class="layui-header">
+            <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+            <ul class="layui-nav layui-layout-left">
+                <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                    <i class="layui-icon layui-icon-spread-left"></i>
+                </li>
+            </ul>
+            <ul class="layui-nav layui-layout-right">
+                <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+                    <a href="javascript:;">
+                        <i class="layui-icon layui-icon-username"></i>
+                        <span id="userName">用户</span>
+                    </a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/settings.html">个人设置</a></dd>
+                        <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- 侧边栏 -->
+        <div class="layui-side layui-bg-black">
+            <div class="layui-side-scroll">
+                <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                    <li class="layui-nav-item">
+                        <a href="javascript:;">系统管理</a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="/users.html">用户管理</a></dd>
+                            <dd><a href="/apikey.html">API密钥管理</a></dd>
+                            <dd><a href="/trading-pair.html">交易对管理</a></dd>
+                            <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+                        </dl>
+                    </li>
+                    <li class="layui-nav-item">
+                        <a href="javascript:;">信号模块</a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="/signal-config.html">信号配置管理</a></dd>
+                            <dd><a href="/signal-list.html">信号查询</a></dd>
+                        </dl>
+                    </li>
+                    <li class="layui-nav-item layui-nav-itemed">
+                        <a href="javascript:;">策略模块</a>
+                        <dl class="layui-nav-child">
+                            <dd class="layui-this"><a href="/strategy.html">策略管理</a></dd>
+                        </dl>
+                    </li>
+                    <li class="layui-nav-item">
+                        <a href="javascript:;">指标管理</a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="/indicator/dashboard.html">仪表盘</a></dd>
+                            <dd><a href="/indicator/definitions.html">指标定义</a></dd>
+                            <dd><a href="/indicator/subscriptions.html">指标订阅</a></dd>
+                            <dd><a href="/indicator/values.html">指标结果</a></dd>
+                            <dd><a href="/indicator/logs.html">计算日志</a></dd>
+                        </dl>
+                    </li>
+                    <li class="layui-nav-item">
+                        <a href="javascript:;">行情模块</a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="/market-center.html">行情中心</a></dd>
+                            <dd><a href="/market-calibration.html">行情校准</a></dd>
+                        </dl>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 主体内容 -->
+        <div class="layui-body" style="left: 200px; padding: 20px;">
+            <!-- 统计信息 -->
+            <div class="stats-box">
+                <div class="stat-item">
+                    <div class="num" id="totalStrategies">0</div>
+                    <div class="label">策略总数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="num" id="enabledStrategies">0</div>
+                    <div class="label">已启用</div>
+                </div>
+                <div class="stat-item">
+                    <div class="num" id="totalInstances">0</div>
+                    <div class="label">实例总数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="num" id="enabledInstances">0</div>
+                    <div class="label">实例已启用</div>
+                </div>
+            </div>
+            
+            <!-- 筛选和操作栏 -->
+            <div class="filter-bar">
+                <form class="layui-form" lay-filter="filterForm">
+                    <label class="layui-form-label">状态筛选：</label>
+                    <select name="enabled" id="enabledFilter">
+                        <option value="">全部</option>
+                        <option value="1">已启用</option>
+                        <option value="0">已禁用</option>
+                    </select>
+                    <button type="button" class="layui-btn layui-btn-primary" onclick="loadStrategyList()">查询</button>
+                </form>
+                <div class="action-buttons">
+                    <button class="layui-btn layui-btn-normal" onclick="showCreateStrategyDialog()">
+                        <i class="layui-icon layui-icon-add-1"></i> 创建策略
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 策略列表表格 -->
+            <div class="layui-field-box">
+                <table class="layui-table" lay-filter="strategyTable" id="strategyTable"></table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 创建/编辑策略弹窗 -->
+    <div id="strategyDialog" style="display: none; padding: 20px;">
+        <form class="layui-form" lay-filter="strategyForm" id="strategyForm">
+            <input type="hidden" name="id" id="strategyId">
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">策略名称 <span style="color: red;">*</span></label>
+                <div class="layui-input-block">
+                    <input type="text" name="strategyName" lay-verify="required" placeholder="请输入策略名称" class="layui-input" maxlength="64">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">策略类型 <span style="color: red;">*</span></label>
+                <div class="layui-input-block">
+                    <select name="strategyType" lay-verify="required">
+                        <option value="">请选择策略类型</option>
+                        <option value="Martin">马丁策略</option>
+                        <option value="Grid">网格策略</option>
+                        <option value="Trend">趋势策略</option>
+                        <option value="Arbitrage">套利策略</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">策略模式 <span style="color: red;">*</span></label>
+                <div class="layui-input-block">
+                    <select name="strategyPattern" lay-verify="required">
+                        <option value="">请选择策略模式</option>
+                        <option value="SIGNAL_DRIVEN">信号驱动</option>
+                        <option value="INDICATOR_DRIVEN">指标/因子驱动</option>
+                        <option value="HYBRID">混合策略</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">启用状态</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" name="enabled" lay-skin="switch" lay-text="启用|禁用" checked>
+                </div>
+            </div>
+            
+            <div class="layui-form-item" style="text-align: right; margin-top: 30px;">
+                <button class="layui-btn" lay-submit lay-filter="submitStrategy">确定</button>
+                <button type="button" class="layui-btn layui-btn-primary" onclick="closeStrategyDialog()">取消</button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 创建实例弹窗 -->
+    <div id="instanceDialog" style="display: none; padding: 20px;">
+        <form class="layui-form" lay-filter="instanceForm" id="instanceForm">
+            <input type="hidden" name="strategyId" id="instanceStrategyId">
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">策略名称</label>
+                <div class="layui-input-block">
+                    <input type="text" id="instanceStrategyName" class="layui-input" readonly style="background: #f5f5f5;">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">交易对 <span style="color: red;">*</span></label>
+                <div class="layui-input-block">
+                    <select name="tradingPairId" lay-verify="required" id="tradingPairSelect">
+                        <option value="">请选择交易对</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">信号配置</label>
+                <div class="layui-input-block">
+                    <select name="signalConfigId" id="signalConfigSelect">
+                        <option value="">不绑定信号（可选）</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">初始资金 <span style="color: red;">*</span></label>
+                <div class="layui-input-block">
+                    <input type="number" name="initialCapital" lay-verify="required|number" placeholder="请输入初始资金" class="layui-input" step="0.00000001" min="0.00000001">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">止盈比例</label>
+                <div class="layui-input-block">
+                    <input type="number" name="takeProfitRatio" placeholder="0-1之间，如：0.05表示5%" class="layui-input" step="0.0001" min="0" max="1">
+                </div>
+            </div>
+            
+            <div class="layui-form-item">
+                <label class="layui-form-label">止损比例</label>
+                <div class="layui-input-block">
+                    <input type="number" name="stopLossRatio" placeholder="0-1之间，如：0.03表示3%" class="layui-input" step="0.0001" min="0" max="1">
+                </div>
+            </div>
+            
+            <div class="layui-form-item" style="text-align: right; margin-top: 30px;">
+                <button class="layui-btn" lay-submit lay-filter="submitInstance">确定</button>
+                <button type="button" class="layui-btn layui-btn-primary" onclick="closeInstanceDialog()">取消</button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 策略详情弹窗 -->
+    <div id="detailDialog" style="display: none; padding: 20px; max-width: 900px;">
+        <!-- 策略基本信息 -->
+        <div class="strategy-detail-card">
+            <h3>策略基本信息</h3>
+            <div class="detail-row">
+                <div class="detail-item">
+                    <label>策略名称</label>
+                    <div class="value" id="detailStrategyName">-</div>
+                </div>
+                <div class="detail-item">
+                    <label>策略类型</label>
+                    <div class="value" id="detailStrategyType">-</div>
+                </div>
+                <div class="detail-item">
+                    <label>策略模式</label>
+                    <div class="value" id="detailStrategyPattern">-</div>
+                </div>
+                <div class="detail-item">
+                    <label>启用状态</label>
+                    <div class="value" id="detailEnabled">-</div>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-item">
+                    <label>创建时间</label>
+                    <div class="value" id="detailCreatedAt">-</div>
+                </div>
+                <div class="detail-item">
+                    <label>更新时间</label>
+                    <div class="value" id="detailUpdatedAt">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 实例列表 -->
+        <div class="instance-table-wrapper">
+            <h3>
+                <span>策略实例列表</span>
+                <button class="layui-btn layui-btn-sm layui-btn-normal" onclick="showCreateInstanceDialog()">
+                    <i class="layui-icon layui-icon-add-1"></i> 创建实例
+                </button>
+            </h3>
+            <table class="layui-table" lay-filter="instanceTable" id="instanceTable"></table>
+        </div>
+    </div>
+    
+    <!-- 历史记录弹窗 -->
+    <div id="historyDialog" style="display: none; padding: 20px; max-width: 800px;">
+        <h3 style="margin: 0 0 20px 0;">历史记录列表</h3>
+        <table class="layui-table" lay-filter="historyTable" id="historyTable"></table>
+    </div>
+    
+    <!-- 引入 Layui 和公共 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+    <script src="/js/common.js"></script>
+    
+    <script>
+        let strategyTable;
+        let instanceTable;
+        let historyTable;
+        let currentStrategyId = null;
+        let currentInstanceId = null;
+        
+        // 页面加载
+        layui.use(['table', 'form', 'layer', 'element'], function(){
+            var table = layui.table;
+            var form = layui.form;
+            var layer = layui.layer;
+            var element = layui.element;
+            
+            // 检查登录
+            if (!checkLogin()) {
+                return;
+            }
+            
+            // 设置用户名
+            var user = getCurrentUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.username || '用户';
+            }
+            
+            // 初始化策略列表表格
+            strategyTable = table.render({
+                elem: '#strategyTable',
+                url: '/api/strategy/definition/list',
+                headers: getUserHeader(),
+                page: true,
+                request: {
+                    pageName: 'page',
+                    limitName: 'limit'
+                },
+                cols: [[
+                    {field: 'id', title: 'ID', width: 80, sort: true},
+                    {field: 'strategyName', title: '策略名称', width: 200},
+                    {field: 'strategyType', title: '策略类型', width: 120, templet: function(d){
+                        var typeMap = {
+                            'Martin': '<span class="type-badge type-martin">马丁策略</span>',
+                            'Grid': '<span class="type-badge type-grid">网格策略</span>',
+                            'Trend': '<span class="type-badge type-trend">趋势策略</span>',
+                            'Arbitrage': '<span class="type-badge type-arbitrage">套利策略</span>'
+                        };
+                        return typeMap[d.strategyType] || d.strategyType;
+                    }},
+                    {field: 'strategyPattern', title: '策略模式', width: 150, templet: function(d){
+                        var patternMap = {
+                            'SIGNAL_DRIVEN': '<span class="pattern-badge pattern-signal">信号驱动</span>',
+                            'INDICATOR_DRIVEN': '<span class="pattern-badge pattern-indicator">指标驱动</span>',
+                            'HYBRID': '<span class="pattern-badge pattern-hybrid">混合策略</span>'
+                        };
+                        return patternMap[d.strategyPattern] || d.strategyPattern;
+                    }},
+                    {field: 'enabled', title: '状态', width: 100, templet: function(d){
+                        return d.enabled === 1 
+                            ? '<span class="status-badge status-enabled">已启用</span>'
+                            : '<span class="status-badge status-disabled">已禁用</span>';
+                    }},
+                    {field: 'createdAt', title: '创建时间', width: 180, templet: function(d){
+                        return d.createdAt ? new Date(d.createdAt).toLocaleString() : '-';
+                    }},
+                    {title: '操作', width: 280, toolbar: '#strategyToolbar', fixed: 'right'}
+                ]],
+                response: {
+                    statusName: 'code',
+                    statusCode: 200,
+                    msgName: 'message',
+                    countName: 'count',
+                    dataName: 'data'
+                },
+                done: function(res, curr, count){
+                    // 更新统计信息
+                    updateStats(res.data || []);
+                }
+            });
+            
+            // 表格工具栏
+            table.on('tool(strategyTable)', function(obj){
+                var data = obj.data;
+                if(obj.event === 'detail'){
+                    showStrategyDetail(data.id);
+                } else if(obj.event === 'edit'){
+                    showEditStrategyDialog(data);
+                } else if(obj.event === 'toggle'){
+                    toggleStrategy(data.id, data.enabled === 1 ? 0 : 1);
+                }
+            });
+            
+            // 表单提交
+            form.on('submit(submitStrategy)', function(data){
+                // 从表单数据中获取ID（如果存在）
+                var strategyId = '';
+                // 尝试从layero中获取表单元素
+                var formEl = null;
+                if (data.elem && data.elem.form) {
+                    formEl = data.elem.form;
+                } else {
+                    formEl = document.querySelector('form#strategyForm');
+                }
+                if (formEl) {
+                    var idInput = formEl.querySelector('#strategyId');
+                    if (idInput) strategyId = idInput.value;
+                }
+                
+                var isEdit = !!strategyId;
+                var url = isEdit 
+                    ? '/api/strategy/definition/' + strategyId
+                    : '/api/strategy/definition';
+                var method = isEdit ? 'PUT' : 'POST';
+                
+                request({
+                    url: url,
+                    method: method,
+                    data: {
+                        strategyName: data.field.strategyName,
+                        strategyType: data.field.strategyType,
+                        strategyPattern: data.field.strategyPattern,
+                        enabled: data.field.enabled === 'on' || data.field.enabled === true ? 1 : 0
+                    }
+                }).then(function(res){
+                    layer.msg(isEdit ? '更新成功' : '创建成功', {icon: 1});
+                    closeStrategyDialog();
+                    loadStrategyList();
+                }).catch(function(err){
+                    console.error('提交失败:', err);
+                });
+                return false;
+            });
+            
+            form.on('submit(submitInstance)', function(data){
+                var url = '/api/strategy/instance';
+                
+                // 获取策略ID（从隐藏字段或当前策略ID）
+                var strategyId = currentStrategyId;
+                // 尝试从表单中获取
+                var formEl = null;
+                if (data.elem && data.elem.form) {
+                    formEl = data.elem.form;
+                } else {
+                    formEl = document.querySelector('form#instanceForm');
+                }
+                if (formEl) {
+                    var idInput = formEl.querySelector('#instanceStrategyId');
+                    if (idInput && idInput.value) {
+                        strategyId = parseInt(idInput.value);
+                    }
+                }
+                
+                if (!strategyId) {
+                    layer.msg('策略ID不能为空', {icon: 2});
+                    return false;
+                }
+                
+                request({
+                    url: url,
+                    method: 'POST',
+                    data: {
+                        strategyId: strategyId,
+                        tradingPairId: parseInt(data.field.tradingPairId),
+                        signalConfigId: data.field.signalConfigId ? parseInt(data.field.signalConfigId) : null,
+                        initialCapital: parseFloat(data.field.initialCapital),
+                        takeProfitRatio: data.field.takeProfitRatio ? parseFloat(data.field.takeProfitRatio) : null,
+                        stopLossRatio: data.field.stopLossRatio ? parseFloat(data.field.stopLossRatio) : null
+                    }
+                }).then(function(res){
+                    layer.msg('创建成功', {icon: 1});
+                    closeInstanceDialog();
+                    if (currentStrategyId) {
+                        showStrategyDetail(currentStrategyId);
+                    }
+                }).catch(function(err){
+                    console.error('提交失败:', err);
+                });
+                return false;
+            });
+            
+            // 加载交易对列表
+            loadTradingPairs();
+            // 加载信号配置列表
+            loadSignalConfigs();
+            // 加载策略列表
+            loadStrategyList();
+        });
+        
+        // 加载策略列表
+        function loadStrategyList() {
+            var enabledFilter = document.getElementById('enabledFilter');
+            var enabled = enabledFilter ? enabledFilter.value : '';
+            var params = enabled ? {enabled: parseInt(enabled)} : {};
+            
+            if (strategyTable) {
+                strategyTable.reload({
+                    where: params,
+                    url: '/api/strategy/definition/list',
+                    headers: getUserHeader()
+                });
+            }
+        }
+        
+        // 显示创建策略弹窗
+        function showCreateStrategyDialog() {
+            var dialogEl = document.getElementById('strategyDialog');
+            if (!dialogEl) return;
+            
+            // 获取HTML内容并重置表单字段
+            var htmlContent = dialogEl.innerHTML;
+            // 创建一个临时容器来操作HTML
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            // 重置表单
+            var form = tempDiv.querySelector('#strategyForm');
+            if (form) form.reset();
+            var strategyIdInput = tempDiv.querySelector('#strategyId');
+            if (strategyIdInput) strategyIdInput.value = '';
+            
+            // 获取处理后的HTML
+            var finalHtml = tempDiv.innerHTML;
+            
+            layui.layer.open({
+                type: 1,
+                title: '创建策略',
+                area: ['500px', '400px'],
+                content: finalHtml,
+                success: function(layero, index){
+                    layui.form.render();
+                }
+            });
+        }
+        
+        // 显示编辑策略弹窗
+        function showEditStrategyDialog(data) {
+            var dialogEl = document.getElementById('strategyDialog');
+            if (!dialogEl) return;
+            
+            // 获取HTML内容
+            var htmlContent = dialogEl.innerHTML;
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            // 填充表单数据
+            var form = tempDiv.querySelector('#strategyForm');
+            if (form) {
+                var strategyIdInput = tempDiv.querySelector('#strategyId');
+                if (strategyIdInput) strategyIdInput.value = data.id;
+                var nameInput = form.querySelector('input[name="strategyName"]');
+                if (nameInput) nameInput.value = data.strategyName || '';
+                var typeSelect = form.querySelector('select[name="strategyType"]');
+                if (typeSelect) typeSelect.value = data.strategyType || '';
+                var patternSelect = form.querySelector('select[name="strategyPattern"]');
+                if (patternSelect) patternSelect.value = data.strategyPattern || '';
+                var enabledInput = form.querySelector('input[name="enabled"]');
+                if (enabledInput) enabledInput.checked = data.enabled === 1;
+            }
+            
+            var finalHtml = tempDiv.innerHTML;
+            
+            layui.layer.open({
+                type: 1,
+                title: '编辑策略',
+                area: ['500px', '400px'],
+                content: finalHtml,
+                success: function(layero, index){
+                    layui.form.render();
+                }
+            });
+        }
+        
+        // 关闭策略弹窗
+        function closeStrategyDialog() {
+            layui.layer.closeAll();
+        }
+        
+        // 显示策略详情
+        function showStrategyDetail(strategyId) {
+            currentStrategyId = strategyId;
+            request({
+                url: '/api/strategy/definition/' + strategyId,
+                method: 'GET'
+            }).then(function(res){
+                var data = res.data;
+                var detailDialogEl = document.getElementById('detailDialog');
+                if (!detailDialogEl) return;
+                
+                // 获取HTML内容并在临时容器中填充数据
+                var htmlContent = detailDialogEl.innerHTML;
+                var tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlContent;
+                
+                // 填充基本信息
+                var detailName = tempDiv.querySelector('#detailStrategyName');
+                if (detailName) detailName.textContent = data.strategyName || '-';
+                var detailType = tempDiv.querySelector('#detailStrategyType');
+                if (detailType) detailType.textContent = data.strategyType || '-';
+                var detailPattern = tempDiv.querySelector('#detailStrategyPattern');
+                if (detailPattern) detailPattern.textContent = data.strategyPattern || '-';
+                var detailEnabled = tempDiv.querySelector('#detailEnabled');
+                if (detailEnabled) {
+                    detailEnabled.innerHTML = data.enabled === 1 
+                        ? '<span class="status-badge status-enabled">已启用</span>'
+                        : '<span class="status-badge status-disabled">已禁用</span>';
+                }
+                var detailCreatedAt = tempDiv.querySelector('#detailCreatedAt');
+                if (detailCreatedAt) detailCreatedAt.textContent = data.createdAt ? new Date(data.createdAt).toLocaleString() : '-';
+                var detailUpdatedAt = tempDiv.querySelector('#detailUpdatedAt');
+                if (detailUpdatedAt) detailUpdatedAt.textContent = data.updatedAt ? new Date(data.updatedAt).toLocaleString() : '-';
+                
+                var finalHtml = tempDiv.innerHTML;
+                
+                layui.layer.open({
+                    type: 1,
+                    title: '策略详情',
+                    area: ['900px', '600px'],
+                    content: finalHtml,
+                    success: function(layero, index){
+                        // 初始化实例表格
+                        if (!instanceTable) {
+                            initInstanceTable();
+                        }
+                        // 加载实例列表
+                        loadInstanceList(strategyId, data.instances || []);
+                    }
+                });
+            });
+        }
+        
+        // 初始化实例表格
+        function initInstanceTable() {
+            // 延迟一下确保DOM已渲染
+            setTimeout(function(){
+                instanceTable = layui.table.render({
+                    elem: '#instanceTable',
+                    page: false,
+                    cols: [[
+                        {field: 'id', title: 'ID', width: 80},
+                        {field: 'tradingPairSymbol', title: '交易对', width: 120},
+                        {field: 'signalConfigName', title: '信号配置', width: 150, templet: function(d){
+                            return d.signalConfigName || '-';
+                        }},
+                        {field: 'initialCapital', title: '初始资金', width: 120, templet: function(d){
+                            return d.initialCapital ? parseFloat(d.initialCapital).toFixed(8) : '-';
+                        }},
+                        {field: 'takeProfitRatio', title: '止盈比例', width: 100, templet: function(d){
+                            return d.takeProfitRatio ? (parseFloat(d.takeProfitRatio) * 100).toFixed(2) + '%' : '-';
+                        }},
+                        {field: 'stopLossRatio', title: '止损比例', width: 100, templet: function(d){
+                            return d.stopLossRatio ? (parseFloat(d.stopLossRatio) * 100).toFixed(2) + '%' : '-';
+                        }},
+                        {field: 'version', title: '版本', width: 80},
+                        {field: 'enabled', title: '状态', width: 100, templet: function(d){
+                            return d.enabled === 1 
+                                ? '<span class="status-badge status-enabled">已启用</span>'
+                                : '<span class="status-badge status-disabled">已禁用</span>';
+                        }},
+                        {title: '操作', width: 200, toolbar: '#instanceToolbar'}
+                    ]]
+                });
+                
+                // 实例表格工具栏
+                layui.table.on('tool(instanceTable)', function(obj){
+                    var data = obj.data;
+                    if(obj.event === 'detail'){
+                        showInstanceDetail(data.id);
+                    } else if(obj.event === 'toggle'){
+                        toggleInstance(data.id, data.enabled === 1 ? 0 : 1);
+                    } else if(obj.event === 'history'){
+                        showInstanceHistory(data.id);
+                    }
+                });
+            }, 100);
+        }
+        
+        // 加载实例列表
+        function loadInstanceList(strategyId, instances) {
+            // 延迟执行，确保表格已初始化
+            setTimeout(function(){
+                if (instances && instances.length > 0) {
+                    if (instanceTable) {
+                        instanceTable.reload({
+                            data: instances
+                        });
+                    }
+                } else {
+                    request({
+                        url: '/api/strategy/instance/list',
+                        method: 'GET',
+                        params: {strategyId: strategyId}
+                    }).then(function(res){
+                        if (instanceTable) {
+                            instanceTable.reload({
+                                data: res.data || []
+                            });
+                        }
+                    });
+                }
+            }, 200);
+        }
+        
+        // 显示创建实例弹窗
+        function showCreateInstanceDialog() {
+            if (!currentStrategyId) {
+                layui.layer.msg('请先选择策略', {icon: 2});
+                return;
+            }
+            
+            // 获取策略信息
+            request({
+                url: '/api/strategy/definition/' + currentStrategyId,
+                method: 'GET'
+            }).then(function(res){
+                var instanceDialogEl = document.getElementById('instanceDialog');
+                if (!instanceDialogEl) return;
+                
+                // 获取HTML内容
+                var htmlContent = instanceDialogEl.innerHTML;
+                var tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlContent;
+                
+                // 填充表单数据
+                var instanceForm = tempDiv.querySelector('#instanceForm');
+                if (instanceForm) instanceForm.reset();
+                var instanceStrategyId = tempDiv.querySelector('#instanceStrategyId');
+                if (instanceStrategyId) instanceStrategyId.value = currentStrategyId;
+                var instanceStrategyName = tempDiv.querySelector('#instanceStrategyName');
+                if (instanceStrategyName) instanceStrategyName.value = res.data.strategyName || '';
+                
+                var finalHtml = tempDiv.innerHTML;
+                
+                layui.layer.open({
+                    type: 1,
+                    title: '创建策略实例',
+                    area: ['600px', '500px'],
+                    content: finalHtml,
+                    success: function(layero, index){
+                        layui.form.render();
+                    }
+                });
+            });
+        }
+        
+        // 关闭实例弹窗
+        function closeInstanceDialog() {
+            layui.layer.closeAll();
+        }
+        
+        // 切换策略状态
+        function toggleStrategy(id, enabled) {
+            var msg = enabled === 1 ? '确定要启用该策略吗？' : '确定要禁用该策略吗？';
+            layui.layer.confirm(msg, {icon: 3, title: '提示'}, function(index){
+                request({
+                    url: '/api/strategy/definition/' + id + '/toggle',
+                    method: 'PUT',
+                    data: {enabled: enabled}
+                }).then(function(res){
+                    layui.layer.msg('操作成功', {icon: 1});
+                    layui.layer.close(index);
+                    loadStrategyList();
+                });
+            });
+        }
+        
+        // 切换实例状态
+        function toggleInstance(id, enabled) {
+            var msg = enabled === 1 ? '确定要启用该实例吗？' : '确定要禁用该实例吗？';
+            layui.layer.confirm(msg, {icon: 3, title: '提示'}, function(index){
+                request({
+                    url: '/api/strategy/instance/' + id + '/toggle',
+                    method: 'PUT',
+                    data: {enabled: enabled}
+                }).then(function(res){
+                    layui.layer.msg('操作成功', {icon: 1});
+                    layui.layer.close(index);
+                    if (currentStrategyId) {
+                        showStrategyDetail(currentStrategyId);
+                    }
+                });
+            });
+        }
+        
+        // 显示实例详情
+        function showInstanceDetail(instanceId) {
+            request({
+                url: '/api/strategy/instance/' + instanceId,
+                method: 'GET'
+            }).then(function(res){
+                var data = res.data;
+                var content = '<div style="padding: 20px;">' +
+                    '<div class="layui-row">' +
+                    '<div class="layui-col-md6"><label>实例ID：</label>' + data.id + '</div>' +
+                    '<div class="layui-col-md6"><label>策略名称：</label>' + (data.strategyName || '-') + '</div>' +
+                    '</div>' +
+                    '<div class="layui-row">' +
+                    '<div class="layui-col-md6"><label>交易对：</label>' + (data.tradingPairSymbol || '-') + '</div>' +
+                    '<div class="layui-col-md6"><label>信号配置：</label>' + (data.signalConfigName || '未绑定') + '</div>' +
+                    '</div>' +
+                    '<div class="layui-row">' +
+                    '<div class="layui-col-md6"><label>初始资金：</label>' + (data.initialCapital ? parseFloat(data.initialCapital).toFixed(8) : '-') + '</div>' +
+                    '<div class="layui-col-md6"><label>版本号：</label>' + (data.version || 1) + '</div>' +
+                    '</div>' +
+                    '<div class="layui-row">' +
+                    '<div class="layui-col-md6"><label>止盈比例：</label>' + (data.takeProfitRatio ? (parseFloat(data.takeProfitRatio) * 100).toFixed(2) + '%' : '-') + '</div>' +
+                    '<div class="layui-col-md6"><label>止损比例：</label>' + (data.stopLossRatio ? (parseFloat(data.stopLossRatio) * 100).toFixed(2) + '%' : '-') + '</div>' +
+                    '</div>' +
+                    '</div>';
+                
+                layui.layer.open({
+                    type: 1,
+                    title: '实例详情',
+                    area: ['600px', '400px'],
+                    content: content
+                });
+            });
+        }
+        
+        // 显示实例历史记录
+        function showInstanceHistory(instanceId) {
+            currentInstanceId = instanceId;
+            request({
+                url: '/api/strategy/instance/' + instanceId + '/history',
+                method: 'GET'
+            }).then(function(res){
+                var historyDialogEl = document.getElementById('historyDialog');
+                if (!historyDialogEl) return;
+                
+                // 使用HTML字符串
+                var htmlContent = historyDialogEl.innerHTML;
+                
+                layui.layer.open({
+                    type: 1,
+                    title: '历史记录',
+                    area: ['800px', '500px'],
+                    content: htmlContent,
+                    success: function(layero, index){
+                        // 延迟初始化表格，确保DOM已渲染
+                        setTimeout(function(){
+                            if (!historyTable) {
+                                historyTable = layui.table.render({
+                                    elem: '#historyTable',
+                                    page: false,
+                                    cols: [[
+                                        {field: 'version', title: '版本号', width: 100, sort: true},
+                                        {field: 'initialCapital', title: '初始资金', width: 120, templet: function(d){
+                                            return d.initialCapital ? parseFloat(d.initialCapital).toFixed(8) : '-';
+                                        }},
+                                        {field: 'takeProfitRatio', title: '止盈比例', width: 100, templet: function(d){
+                                            return d.takeProfitRatio ? (parseFloat(d.takeProfitRatio) * 100).toFixed(2) + '%' : '-';
+                                        }},
+                                        {field: 'stopLossRatio', title: '止损比例', width: 100, templet: function(d){
+                                            return d.stopLossRatio ? (parseFloat(d.stopLossRatio) * 100).toFixed(2) + '%' : '-';
+                                        }},
+                                        {field: 'createdAt', title: '创建时间', width: 180, templet: function(d){
+                                            return d.createdAt ? new Date(d.createdAt).toLocaleString() : '-';
+                                        }},
+                                        {title: '操作', width: 100, toolbar: '#historyToolbar'}
+                                    ]]
+                                });
+                                
+                                // 历史记录表格工具栏
+                                layui.table.on('tool(historyTable)', function(obj){
+                                    var data = obj.data;
+                                    if(obj.event === 'detail'){
+                                        showHistoryDetail(data.id);
+                                    }
+                                });
+                            }
+                            
+                            // 加载数据
+                            if (historyTable) {
+                                historyTable.reload({
+                                    data: res.data || []
+                                });
+                            }
+                        }, 100);
+                    }
+                });
+            });
+        }
+        
+        // 显示历史记录详情
+        function showHistoryDetail(historyId) {
+            request({
+                url: '/api/strategy/instance/history/' + historyId,
+                method: 'GET'
+            }).then(function(res){
+                var data = res.data;
+                var content = '<div style="padding: 20px;">' +
+                    '<div class="layui-row">' +
+                    '<div class="layui-col-md6"><label>版本号：</label>' + (data.version || '-') + '</div>' +
+                    '<div class="layui-col-md6"><label>交易对：</label>' + (data.tradingPairSymbol || '-') + '</div>' +
+                    '</div>' +
+                    '<div class="layui-row">' +
+                    '<div class="layui-col-md6"><label>信号配置：</label>' + (data.signalConfigName || '未绑定') + '</div>' +
+                    '<div class="layui-col-md6"><label>初始资金：</label>' + (data.initialCapital ? parseFloat(data.initialCapital).toFixed(8) : '-') + '</div>' +
+                    '</div>' +
+                    '<div class="layui-row">' +
+                    '<div class="layui-col-md6"><label>止盈比例：</label>' + (data.takeProfitRatio ? (parseFloat(data.takeProfitRatio) * 100).toFixed(2) + '%' : '-') + '</div>' +
+                    '<div class="layui-col-md6"><label>止损比例：</label>' + (data.stopLossRatio ? (parseFloat(data.stopLossRatio) * 100).toFixed(2) + '%' : '-') + '</div>' +
+                    '</div>' +
+                    '<div class="layui-row">' +
+                    '<div class="layui-col-md12"><label>创建时间：</label>' + (data.createdAt ? new Date(data.createdAt).toLocaleString() : '-') + '</div>' +
+                    '</div>' +
+                    '</div>';
+                
+                layui.layer.open({
+                    type: 1,
+                    title: '历史记录详情',
+                    area: ['600px', '400px'],
+                    content: content
+                });
+            });
+        }
+        
+        // 加载交易对列表
+        function loadTradingPairs() {
+            request({
+                url: '/api/trading-pair/list',
+                method: 'GET',
+                params: {enabled: 1}
+            }).then(function(res){
+                var html = '<option value="">请选择交易对</option>';
+                (res.data || []).forEach(function(item){
+                    html += '<option value="' + item.id + '">' + item.symbol + ' - ' + item.marketType + '</option>';
+                });
+                var tradingPairSelect = document.getElementById('tradingPairSelect');
+                if (tradingPairSelect) tradingPairSelect.innerHTML = html;
+                layui.form.render('select');
+            });
+        }
+        
+        // 加载信号配置列表
+        function loadSignalConfigs() {
+            // 这里需要调用信号配置接口，暂时留空
+            // 如果需要，可以调用 /api/signal-config/list 接口
+            var html = '<option value="">不绑定信号（可选）</option>';
+            var signalConfigSelect = document.getElementById('signalConfigSelect');
+            if (signalConfigSelect) signalConfigSelect.innerHTML = html;
+            layui.form.render('select');
+        }
+        
+        // 更新统计信息
+        function updateStats(strategies) {
+            var total = strategies.length;
+            var enabled = strategies.filter(function(s){ return s.enabled === 1; }).length;
+            var totalStrategiesEl = document.getElementById('totalStrategies');
+            if (totalStrategiesEl) totalStrategiesEl.textContent = total;
+            var enabledStrategiesEl = document.getElementById('enabledStrategies');
+            if (enabledStrategiesEl) enabledStrategiesEl.textContent = enabled;
+            
+            // 统计实例数量（需要从实例列表获取）
+            var totalInstances = 0;
+            var enabledInstances = 0;
+            strategies.forEach(function(strategy){
+                if (strategy.instances) {
+                    totalInstances += strategy.instances.length;
+                    enabledInstances += strategy.instances.filter(function(i){ return i.enabled === 1; }).length;
+                }
+            });
+            var totalInstancesEl = document.getElementById('totalInstances');
+            if (totalInstancesEl) totalInstancesEl.textContent = totalInstances;
+            var enabledInstancesEl = document.getElementById('enabledInstances');
+            if (enabledInstancesEl) enabledInstancesEl.textContent = enabledInstances;
+        }
+    </script>
+    
+    <!-- 表格工具栏模板 -->
+    <script type="text/html" id="strategyToolbar">
+        <a class="layui-btn layui-btn-xs" lay-event="detail">详情</a>
+        <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="edit">编辑</a>
+        {{# if(d.enabled === 1){ }}
+        <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="toggle">禁用</a>
+        {{# } else { }}
+        <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="toggle">启用</a>
+        {{# } }}
+    </script>
+    
+    <script type="text/html" id="instanceToolbar">
+        <a class="layui-btn layui-btn-xs" lay-event="detail">详情</a>
+        <a class="layui-btn layui-btn-xs" lay-event="history">历史</a>
+        {{# if(d.enabled === 1){ }}
+        <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="toggle">禁用</a>
+        {{# } else { }}
+        <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="toggle">启用</a>
+        {{# } }}
+    </script>
+    
+    <script type="text/html" id="historyToolbar">
+        <a class="layui-btn layui-btn-xs" lay-event="detail">详情</a>
+    </script>
+</body>
+</html>

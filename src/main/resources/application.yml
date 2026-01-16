@@ -68,6 +68,7 @@ server:
 
 # MyBatis-Plus 配置
 mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
     # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 已关闭SQL日志输出
@@ -81,6 +82,12 @@ mybatis-plus:
 okx:
   api:
     base-url: https://www.okx.com
+
+# 策略触发器测试接口配置（仅用于开发/测试环境）
+strategy:
+  trigger:
+    test-endpoint:
+      enabled: false  # 生产环境必须设置为 false
 
 # Actuator配置（用于Metrics）
 management:

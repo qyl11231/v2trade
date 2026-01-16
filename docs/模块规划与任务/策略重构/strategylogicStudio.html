@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy Logic Studio - 量化策略编排工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .studio-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 左侧算子面板 */
+        .operator-palette {
+            width: 280px;
+            background: #252525;
+            border-right: 2px solid #333;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .palette-section {
+            margin-bottom: 24px;
+        }
+
+        .palette-section h3 {
+            color: #4a9eff;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .operator-item {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .operator-item:hover {
+            background: #353535;
+            border-color: #4a9eff;
+            transform: translateX(4px);
+        }
+
+        .operator-item:active {
+            cursor: grabbing;
+        }
+
+        .operator-item.dragging {
+            opacity: 0.5;
+        }
+
+        .operator-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .operator-name {
+            font-weight: 500;
+            color: #e0e0e0;
+        }
+
+        .operator-desc {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* 中间画布区 */
+        .canvas-area {
+            flex: 1;
+            position: relative;
+            background: #1e1e1e;
+            overflow: hidden;
+        }
+
+        #graph-canvas {
+            width: 100%;
+            height: 100%;
+            cursor: default;
+        }
+
+        .canvas-toolbar {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+        }
+
+        .toolbar-btn {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            color: #e0e0e0;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: #353535;
+            border-color: #4a9eff;
+        }
+
+        .toolbar-btn.primary {
+            background: #4a9eff;
+            border-color: #4a9eff;
+            color: white;
+        }
+
+        .toolbar-btn.danger {
+            background: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        /* 右侧属性面板 */
+        .inspector-panel {
+            width: 360px;
+            background: #252525;
+            border-left: 2px solid #333;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .inspector-header {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        .inspector-header h3 {
+            color: #4a9eff;
+            font-size: 16px;
+        }
+
+        .inspector-content {
+            font-size: 13px;
+        }
+
+        .property-group {
+            margin-bottom: 20px;
+        }
+
+        .property-group label {
+            display: block;
+            color: #aaa;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .property-group input,
+        .property-group select,
+        .property-group textarea {
+            width: 100%;
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            color: #e0e0e0;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .property-group input:focus,
+        .property-group select:focus,
+        .property-group textarea:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .property-group input[type="range"] {
+            width: 100%;
+        }
+
+        .property-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .property-row .property-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        /* JSON 预览区 */
+        .json-preview {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 240px;
+            background: #1a1a1a;
+            border-top: 2px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .json-preview-header {
+            padding: 8px 16px;
+            background: #252525;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .json-preview-header h4 {
+            color: #4a9eff;
+            font-size: 13px;
+        }
+
+        .json-preview-content {
+            flex: 1;
+            overflow: auto;
+            padding: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+            color: #d4d4d4;
+        }
+
+        .json-key {
+            color: #9cdcfe;
+        }
+
+        .json-string {
+            color: #ce9178;
+        }
+
+        .json-number {
+            color: #b5cea8;
+        }
+
+        .json-boolean {
+            color: #569cd6;
+        }
+
+        /* 节点样式 */
+        .node {
+            position: absolute;
+            min-width: 180px;
+            background: #2d2d2d;
+            border: 2px solid #404040;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: move;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .node:hover {
+            border-color: #4a9eff;
+            box-shadow: 0 0 12px rgba(74, 158, 255, 0.3);
+        }
+
+        .node.selected {
+            border-color: #4a9eff;
+            box-shadow: 0 0 16px rgba(74, 158, 255, 0.5);
+        }
+
+        .node.error {
+            border-color: #e74c3c;
+            box-shadow: 0 0 12px rgba(231, 76, 60, 0.3);
+        }
+
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #404040;
+        }
+
+        .node-title {
+            font-weight: 600;
+            color: #4a9eff;
+            font-size: 13px;
+        }
+
+        .node-type {
+            font-size: 10px;
+            color: #888;
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .node-body {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .node-port {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #4a9eff;
+            border: 2px solid #1a1a1a;
+            border-radius: 50%;
+            cursor: crosshair;
+        }
+
+        .node-port.input {
+            left: -6px;
+        }
+
+        .node-port.output {
+            right: -6px;
+        }
+
+        .node-port:hover {
+            background: #6bb6ff;
+            transform: scale(1.3);
+        }
+
+        /* 连线样式 */
+        .connection-line {
+            stroke: #4a9eff;
+            stroke-width: 2;
+            fill: none;
+            pointer-events: stroke;
+            cursor: pointer;
+        }
+
+        .connection-line:hover {
+            stroke: #6bb6ff;
+            stroke-width: 3;
+        }
+
+        /* 验证错误提示 */
+        .validation-error {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .validation-error::before {
+            content: "⚠";
+            font-size: 16px;
+        }
+
+        .validation-warning {
+            background: #f39c12;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: #888;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #404040;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="studio-container">
+        <!-- 左侧算子面板 -->
+        <div class="operator-palette">
+            <div class="palette-section">
+                <h3>📊 ENTRY - 入场算子</h3>
+                <div class="operator-item" data-type="entry" data-operator="multi_factor">
+                    <div class="operator-name">🎯 多因子加权</div>
+                    <div class="operator-desc">多因子权重配比，支持 RSI/均线/信号等</div>
+                </div>
+                <div class="operator-item" data-type="entry" data-operator="sequential_window">
+                    <div class="operator-name">⏱️ 序列化时间窗</div>
+                    <div class="operator-desc">先 A 后 B 的时序逻辑，N 根 Bar 内触发</div>
+                </div>
+                <div class="operator-item" data-type="entry" data-operator="cross_timeframe">
+                    <div class="operator-name">🔄 跨周期共振</div>
+                    <div class="operator-desc">1h 趋势过滤 + 5m 择时入场</div>
+                </div>
+                <div class="operator-item" data-type="entry" data-operator="indicator_rsi">
+                    <div class="operator-name">📈 RSI 指标</div>
+                    <div class="operator-desc">相对强弱指标，周期可配置</div>
+                </div>
+                <div class="operator-item" data-type="entry" data-operator="indicator_ma">
+                    <div class="operator-name">📊 移动平均</div>
+                    <div class="operator-desc">MA/EMA，支持多周期</div>
+                </div>
+                <div class="operator-item" data-type="entry" data-operator="signal_trigger">
+                    <div class="operator-name">🔔 外部信号</div>
+                    <div class="operator-desc">TradingView 信号触发</div>
+                </div>
+            </div>
+
+            <div class="palette-section">
+                <h3>🚪 EXIT - 离场算子</h3>
+                <div class="operator-item" data-type="exit" data-operator="atr_stoploss">
+                    <div class="operator-name">📉 ATR 动态止损</div>
+                    <div class="operator-desc">基于波动率的自适应止损</div>
+                </div>
+                <div class="operator-item" data-type="exit" data-operator="trailing_stop">
+                    <div class="operator-name">💰 盈利保护止损</div>
+                    <div class="operator-desc">盈利 3% 后激活追踪止损</div>
+                </div>
+                <div class="operator-item" data-type="exit" data-operator="time_decay">
+                    <div class="operator-name">⏰ 持仓衰减</div>
+                    <div class="operator-desc">基于时间的强制离场</div>
+                </div>
+                <div class="operator-item" data-type="exit" data-operator="take_profit">
+                    <div class="operator-name">🎯 固定止盈</div>
+                    <div class="operator-desc">固定百分比止盈</div>
+                </div>
+            </div>
+
+            <div class="palette-section">
+                <h3>💼 POSITION - 仓位算子</h3>
+                <div class="operator-item" data-type="position" data-operator="dynamic_sizing">
+                    <div class="operator-name">⚖️ 动态头寸</div>
+                    <div class="operator-desc">基于回撤的仓位调节</div>
+                </div>
+                <div class="operator-item" data-type="position" data-operator="pyramid_add">
+                    <div class="operator-name">📚 金字塔加仓</div>
+                    <div class="operator-desc">盈利后逐步加仓</div>
+                </div>
+                <div class="operator-item" data-type="position" data-operator="martingale">
+                    <div class="operator-name">🎲 马丁格尔</div>
+                    <div class="operator-desc">亏损后加倍，需设置安全红线</div>
+                </div>
+                <div class="operator-item" data-type="position" data-operator="risk_control">
+                    <div class="operator-name">🛡️ 风控审计</div>
+                    <div class="operator-desc">实时风控检查与警告</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中间画布区 -->
+        <div class="canvas-area">
+            <div class="canvas-toolbar">
+                <button class="toolbar-btn" onclick="clearCanvas()">清空画布</button>
+                <button class="toolbar-btn" onclick="exportJSON()">导出 JSON</button>
+                <button class="toolbar-btn primary" onclick="validateAndSave()">验证并保存</button>
+                <button class="toolbar-btn" onclick="loadExample()">加载示例</button>
+            </div>
+            <svg id="graph-canvas" width="100%" height="100%">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#4a9eff" />
+                    </marker>
+                </defs>
+            </svg>
+            <div class="empty-state" id="empty-state">
+                <h3>从左侧拖拽算子节点到画布</h3>
+                <p>或点击"加载示例"查看完整示例</p>
+            </div>
+        </div>
+
+        <!-- 右侧属性面板 -->
+        <div class="inspector-panel">
+            <div class="inspector-header">
+                <h3>属性编辑器</h3>
+            </div>
+            <div class="inspector-content" id="inspector-content">
+                <p style="color: #666; text-align: center; margin-top: 40px;">点击节点编辑属性</p>
+            </div>
+        </div>
+
+        <!-- JSON 预览区 -->
+        <div class="json-preview">
+            <div class="json-preview-header">
+                <h4>📄 Runtime Rules JSON (实时预览)</h4>
+                <button class="toolbar-btn" onclick="copyJSON()" style="padding: 4px 12px; font-size: 11px;">复制</button>
+            </div>
+            <div class="json-preview-content" id="json-content">
+                <pre id="json-preview-text">{}</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 全局状态 ====================
+        let nodes = [];
+        let connections = [];
+        let selectedNode = null;
+        let dragState = { isDragging: false, node: null, offset: { x: 0, y: 0 } };
+        let connectionState = { isConnecting: false, fromNode: null, fromPort: null };
+
+        const canvas = document.getElementById('graph-canvas');
+        const svgNS = 'http://www.w3.org/2000/svg';
+
+        // ==================== 算子定义 ====================
+        const operatorDefinitions = {
+            // ENTRY 算子
+            'multi_factor': {
+                title: '多因子加权',
+                type: 'entry',
+                inputs: [],
+                outputs: ['weighted_score'],
+                defaultProps: {
+                    factors: [
+                        { id: 'factor1', name: 'RSI', weight: 0.6, indicator: 'RSI', period: 14 },
+                        { id: 'factor2', name: 'MA', weight: 0.4, indicator: 'MA', period: 50 }
+                    ],
+                    threshold: 0.7,
+                    operator: 'AND'
+                },
+                renderProps: (props) => {
+                    let html = `
+                        <div class="property-group">
+                            <label>入场总阈值</label>
+                            <input type="number" step="0.01" min="0" max="1" value="${props.threshold}" 
+                                   onchange="updateNodeProperty('threshold', parseFloat(this.value))" />
+                        </div>
+                        <div class="property-group">
+                            <label>逻辑运算符</label>
+                            <select onchange="updateNodeProperty('operator', this.value)">
+                                <option value="AND" ${props.operator === 'AND' ? 'selected' : ''}>AND (全部满足)</option>
+                                <option value="OR" ${props.operator === 'OR' ? 'selected' : ''}>OR (任一满足)</option>
+                            </select>
+                        </div>
+                        <div class="property-group">
+                            <label>因子列表</label>
+                            <div id="factors-list"></div>
+                            <button class="toolbar-btn" onclick="addFactor()" style="margin-top: 8px; width: 100%;">+ 添加因子</button>
+                        </div>
+                    `;
+                    return html;
+                }
+            },
+            'sequential_window': {
+                title: '序列化时间窗',
+                type: 'entry',
+                inputs: ['trigger_a'],
+                outputs: ['trigger_b'],
+                defaultProps: {
+                    windowBars: 5,
+                    condition: 'AFTER_A'
+                },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>时间窗口 (Bar 数)</label>
+                        <input type="number" min="1" max="100" value="${props.windowBars}" 
+                               onchange="updateNodeProperty('windowBars', parseInt(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>触发条件</label>
+                        <select onchange="updateNodeProperty('condition', this.value)">
+                            <option value="AFTER_A" ${props.condition === 'AFTER_A' ? 'selected' : ''}>A 触发后 N 根 Bar 内 B 触发</option>
+                            <option value="BEFORE_A" ${props.condition === 'BEFORE_A' ? 'selected' : ''}>A 触发前 N 根 Bar 内 B 触发</option>
+                        </select>
+                    </div>
+                `
+            },
+            'cross_timeframe': {
+                title: '跨周期共振',
+                type: 'entry',
+                inputs: ['trend_filter', 'timing_signal'],
+                outputs: ['resonance'],
+                defaultProps: {
+                    trendTimeframe: '1h',
+                    timingTimeframe: '5m',
+                    trendCondition: 'UP_TREND',
+                    timingCondition: 'BREAKOUT'
+                },
+                renderProps: (props) => `
+                    <div class="property-row">
+                        <div class="property-group">
+                            <label>趋势周期</label>
+                            <select onchange="updateNodeProperty('trendTimeframe', this.value)">
+                                <option value="1h" ${props.trendTimeframe === '1h' ? 'selected' : ''}>1h</option>
+                                <option value="4h" ${props.trendTimeframe === '4h' ? 'selected' : ''}>4h</option>
+                                <option value="1d" ${props.trendTimeframe === '1d' ? 'selected' : ''}>1d</option>
+                            </select>
+                        </div>
+                        <div class="property-group">
+                            <label>择时周期</label>
+                            <select onchange="updateNodeProperty('timingTimeframe', this.value)">
+                                <option value="5m" ${props.timingTimeframe === '5m' ? 'selected' : ''}>5m</option>
+                                <option value="15m" ${props.timingTimeframe === '15m' ? 'selected' : ''}>15m</option>
+                                <option value="30m" ${props.timingTimeframe === '30m' ? 'selected' : ''}>30m</option>
+                            </select>
+                        </div>
+                    </div>
+                `
+            },
+            'indicator_rsi': {
+                title: 'RSI 指标',
+                type: 'entry',
+                inputs: [],
+                outputs: ['rsi_value'],
+                defaultProps: { period: 14, overbought: 70, oversold: 30 },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>周期</label>
+                        <input type="number" min="2" max="100" value="${props.period}" 
+                               onchange="updateNodeProperty('period', parseInt(this.value))" />
+                    </div>
+                    <div class="property-row">
+                        <div class="property-group">
+                            <label>超买线</label>
+                            <input type="number" min="0" max="100" value="${props.overbought}" 
+                                   onchange="updateNodeProperty('overbought', parseInt(this.value))" />
+                        </div>
+                        <div class="property-group">
+                            <label>超卖线</label>
+                            <input type="number" min="0" max="100" value="${props.oversold}" 
+                                   onchange="updateNodeProperty('oversold', parseInt(this.value))" />
+                        </div>
+                    </div>
+                `
+            },
+            'indicator_ma': {
+                title: '移动平均',
+                type: 'entry',
+                inputs: [],
+                outputs: ['ma_value'],
+                defaultProps: { period: 50, type: 'SMA' },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>周期</label>
+                        <input type="number" min="1" max="200" value="${props.period}" 
+                               onchange="updateNodeProperty('period', parseInt(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>类型</label>
+                        <select onchange="updateNodeProperty('type', this.value)">
+                            <option value="SMA" ${props.type === 'SMA' ? 'selected' : ''}>SMA (简单移动平均)</option>
+                            <option value="EMA" ${props.type === 'EMA' ? 'selected' : ''}>EMA (指数移动平均)</option>
+                        </select>
+                    </div>
+                `
+            },
+            'signal_trigger': {
+                title: '外部信号',
+                type: 'entry',
+                inputs: [],
+                outputs: ['signal'],
+                defaultProps: { signalConfigId: null, direction: 'LONG' },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>信号配置 ID</label>
+                        <input type="number" value="${props.signalConfigId || ''}" 
+                               onchange="updateNodeProperty('signalConfigId', this.value ? parseInt(this.value) : null)" />
+                    </div>
+                    <div class="property-group">
+                        <label>方向</label>
+                        <select onchange="updateNodeProperty('direction', this.value)">
+                            <option value="LONG" ${props.direction === 'LONG' ? 'selected' : ''}>LONG (做多)</option>
+                            <option value="SHORT" ${props.direction === 'SHORT' ? 'selected' : ''}>SHORT (做空)</option>
+                        </select>
+                    </div>
+                `
+            },
+            // EXIT 算子
+            'atr_stoploss': {
+                title: 'ATR 动态止损',
+                type: 'exit',
+                inputs: ['entry_price', 'atr_value'],
+                outputs: ['stoploss_price'],
+                defaultProps: { atrMultiplier: 2.0, timeframe: '5m' },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>ATR 倍数</label>
+                        <input type="number" step="0.1" min="0.1" max="10" value="${props.atrMultiplier}" 
+                               onchange="updateNodeProperty('atrMultiplier', parseFloat(this.value))" />
+                        <small style="color: #888;">公式: StopLoss = EntryPrice ± (ATR × Multiplier)</small>
+                    </div>
+                    <div class="property-group">
+                        <label>时间周期</label>
+                        <select onchange="updateNodeProperty('timeframe', this.value)">
+                            <option value="5m" ${props.timeframe === '5m' ? 'selected' : ''}>5m</option>
+                            <option value="15m" ${props.timeframe === '15m' ? 'selected' : ''}>15m</option>
+                            <option value="1h" ${props.timeframe === '1h' ? 'selected' : ''}>1h</option>
+                        </select>
+                    </div>
+                `
+            },
+            'trailing_stop': {
+                title: '盈利保护止损',
+                type: 'exit',
+                inputs: ['current_price', 'entry_price'],
+                outputs: ['exit_signal'],
+                defaultProps: { profitThreshold: 0.03, trailBack: 0.01 },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>盈利激活阈值 (%)</label>
+                        <input type="number" step="0.01" min="0" max="1" value="${props.profitThreshold}" 
+                               onchange="updateNodeProperty('profitThreshold', parseFloat(this.value))" />
+                        <small style="color: #888;">盈利达到此值后激活追踪止损</small>
+                    </div>
+                    <div class="property-group">
+                        <label>回撤触发 (%)</label>
+                        <input type="number" step="0.01" min="0" max="1" value="${props.trailBack}" 
+                               onchange="updateNodeProperty('trailBack', parseFloat(this.value))" />
+                        <small style="color: #888;">从最高盈利回撤此值即触发离场</small>
+                    </div>
+                `
+            },
+            'time_decay': {
+                title: '持仓衰减',
+                type: 'exit',
+                inputs: ['entry_time'],
+                outputs: ['exit_signal'],
+                defaultProps: { maxHoldMinutes: 60, requireProfit: false },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>最大持仓时间 (分钟)</label>
+                        <input type="number" min="1" max="1440" value="${props.maxHoldMinutes}" 
+                               onchange="updateNodeProperty('maxHoldMinutes', parseInt(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>是否要求盈利</label>
+                        <select onchange="updateNodeProperty('requireProfit', this.value === 'true')">
+                            <option value="false" ${!props.requireProfit ? 'selected' : ''}>否 (时间到即离场)</option>
+                            <option value="true" ${props.requireProfit ? 'selected' : ''}>是 (未盈利则强制离场)</option>
+                        </select>
+                    </div>
+                `
+            },
+            'take_profit': {
+                title: '固定止盈',
+                type: 'exit',
+                inputs: ['entry_price', 'current_price'],
+                outputs: ['exit_signal'],
+                defaultProps: { profitRatio: 0.05 },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>止盈比例 (%)</label>
+                        <input type="number" step="0.01" min="0" max="1" value="${props.profitRatio}" 
+                               onchange="updateNodeProperty('profitRatio', parseFloat(this.value))" />
+                    </div>
+                `
+            },
+            // POSITION 算子
+            'dynamic_sizing': {
+                title: '动态头寸',
+                type: 'position',
+                inputs: ['drawdown', 'base_capital'],
+                outputs: ['calculated_qty'],
+                defaultProps: { riskPerTrade: 0.01, maxDrawdown: 0.05, minQty: 0.001 },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>单笔风险 (%)</label>
+                        <input type="number" step="0.001" min="0" max="0.1" value="${props.riskPerTrade}" 
+                               onchange="updateNodeProperty('riskPerTrade', parseFloat(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>最大回撤阈值 (%)</label>
+                        <input type="number" step="0.01" min="0" max="0.5" value="${props.maxDrawdown}" 
+                               onchange="updateNodeProperty('maxDrawdown', parseFloat(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>最小仓位</label>
+                        <input type="number" step="0.001" min="0" value="${props.minQty}" 
+                               onchange="updateNodeProperty('minQty', parseFloat(this.value))" />
+                    </div>
+                `
+            },
+            'pyramid_add': {
+                title: '金字塔加仓',
+                type: 'position',
+                inputs: ['profit_pct', 'current_position'],
+                outputs: ['add_qty'],
+                defaultProps: { steps: 3, profitThreshold: 0.02, addRatio: 0.5, maxSteps: 5 },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>加仓步数</label>
+                        <input type="number" min="1" max="10" value="${props.steps}" 
+                               onchange="updateNodeProperty('steps', parseInt(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>盈利触发阈值 (%)</label>
+                        <input type="number" step="0.01" min="0" max="0.5" value="${props.profitThreshold}" 
+                               onchange="updateNodeProperty('profitThreshold', parseFloat(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>加仓比例</label>
+                        <input type="number" step="0.1" min="0.1" max="2" value="${props.addRatio}" 
+                               onchange="updateNodeProperty('addRatio', parseFloat(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>最大步数限制</label>
+                        <input type="number" min="1" max="10" value="${props.maxSteps}" 
+                               onchange="updateNodeProperty('maxSteps', parseInt(this.value))" />
+                    </div>
+                `
+            },
+            'martingale': {
+                title: '马丁格尔',
+                type: 'position',
+                inputs: ['loss_pct', 'current_position'],
+                outputs: ['add_qty'],
+                defaultProps: { multiplier: 2.0, maxSteps: 5, maxLoss: 0.2 },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>倍数</label>
+                        <input type="number" step="0.1" min="1" max="5" value="${props.multiplier}" 
+                               onchange="updateNodeProperty('multiplier', parseFloat(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>最大步数 (安全红线)</label>
+                        <input type="number" min="1" max="10" value="${props.maxSteps}" 
+                               onchange="updateNodeProperty('maxSteps', parseInt(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>最大累计亏损 (%)</label>
+                        <input type="number" step="0.01" min="0" max="1" value="${props.maxLoss}" 
+                               onchange="updateNodeProperty('maxLoss', parseFloat(this.value))" />
+                    </div>
+                    <div class="validation-warning" style="margin-top: 12px;">
+                        ⚠️ 马丁格尔策略风险极高，请谨慎使用并设置严格的安全红线
+                    </div>
+                `
+            },
+            'risk_control': {
+                title: '风控审计',
+                type: 'position',
+                inputs: ['entry_price', 'stoploss_price', 'position_qty'],
+                outputs: ['risk_score'],
+                defaultProps: { maxRiskPerTrade: 0.02, maxPositionSize: 1.0 },
+                renderProps: (props) => `
+                    <div class="property-group">
+                        <label>单笔最大风险 (%)</label>
+                        <input type="number" step="0.001" min="0" max="0.1" value="${props.maxRiskPerTrade}" 
+                               onchange="updateNodeProperty('maxRiskPerTrade', parseFloat(this.value))" />
+                    </div>
+                    <div class="property-group">
+                        <label>最大仓位大小</label>
+                        <input type="number" step="0.1" min="0" max="10" value="${props.maxPositionSize}" 
+                               onchange="updateNodeProperty('maxPositionSize', parseFloat(this.value))" />
+                    </div>
+                `
+            }
+        };
+
+        // ==================== 节点管理 ====================
+        let nodeIdCounter = 0;
+
+        function createNode(operatorType, x, y) {
+            const def = operatorDefinitions[operatorType];
+            if (!def) return null;
+
+            const node = {
+                id: `node_${++nodeIdCounter}`,
+                operator: operatorType,
+                title: def.title,
+                type: def.type,
+                x: x,
+                y: y,
+                width: 200,
+                height: 120,
+                props: JSON.parse(JSON.stringify(def.defaultProps)),
+                inputs: def.inputs || [],
+                outputs: def.outputs || [],
+                errors: []
+            };
+
+            nodes.push(node);
+            renderNode(node);
+            updateEmptyState();
+            updateJSONPreview();
+            return node;
+        }
+
+        function renderNode(node) {
+            // 创建 DOM 节点
+            let nodeEl = document.getElementById(node.id);
+            if (!nodeEl) {
+                nodeEl = document.createElement('div');
+                nodeEl.id = node.id;
+                nodeEl.className = 'node';
+                nodeEl.dataset.nodeId = node.id;
+                document.querySelector('.canvas-area').appendChild(nodeEl);
+            }
+
+            // 更新样式
+            nodeEl.className = 'node' + (selectedNode?.id === node.id ? ' selected' : '') + (node.errors.length > 0 ? ' error' : '');
+            nodeEl.style.left = node.x + 'px';
+            nodeEl.style.top = node.y + 'px';
+
+            // 更新内容
+            nodeEl.innerHTML = `
+                <div class="node-header">
+                    <span class="node-title">${node.title}</span>
+                    <span class="node-type">${node.type.toUpperCase()}</span>
+                </div>
+                <div class="node-body">
+                    ${node.errors.length > 0 ? `<div style="color: #e74c3c; font-size: 10px;">⚠ ${node.errors[0]}</div>` : ''}
+                    ${Object.keys(node.props).slice(0, 2).map(key => {
+                        const val = node.props[key];
+                        if (typeof val === 'object') return '';
+                        return `<div style="font-size: 10px; color: #888;">${key}: ${val}</div>`;
+                    }).join('')}
+                </div>
+            `;
+
+            // 添加端口
+            node.inputs.forEach((input, idx) => {
+                let port = nodeEl.querySelector(`.port-input-${idx}`);
+                if (!port) {
+                    port = document.createElement('div');
+                    port.className = `node-port input port-input-${idx}`;
+                    port.dataset.port = input;
+                    port.dataset.nodeId = node.id;
+                    port.dataset.portIndex = idx;
+                    nodeEl.appendChild(port);
+                }
+                port.style.top = `${30 + idx * 25}px`;
+            });
+
+            node.outputs.forEach((output, idx) => {
+                let port = nodeEl.querySelector(`.port-output-${idx}`);
+                if (!port) {
+                    port = document.createElement('div');
+                    port.className = `node-port output port-output-${idx}`;
+                    port.dataset.port = output;
+                    port.dataset.nodeId = node.id;
+                    port.dataset.portIndex = idx;
+                    nodeEl.appendChild(port);
+                }
+                port.style.top = `${30 + idx * 25}px`;
+            });
+
+            // 绑定事件
+            nodeEl.onmousedown = (e) => {
+                if (e.target.classList.contains('node-port')) return;
+                selectNode(node);
+                startDrag(e, node);
+            };
+
+            // 端口事件
+            nodeEl.querySelectorAll('.node-port').forEach(port => {
+                port.onmousedown = (e) => {
+                    e.stopPropagation();
+                    startConnection(e, node, port);
+                };
+            });
+        }
+
+        function deleteNode(nodeId) {
+            nodes = nodes.filter(n => n.id !== nodeId);
+            connections = connections.filter(c => c.fromNode !== nodeId && c.toNode !== nodeId);
+            const nodeEl = document.getElementById(nodeId);
+            if (nodeEl) nodeEl.remove();
+            if (selectedNode?.id === nodeId) selectedNode = null;
+            updateConnections();
+            updateEmptyState();
+            updateJSONPreview();
+        }
+
+        // ==================== 拖拽功能 ====================
+        function startDrag(e, node) {
+            dragState.isDragging = true;
+            dragState.node = node;
+            const rect = canvas.getBoundingClientRect();
+            dragState.offset.x = e.clientX - rect.left - node.x;
+            dragState.offset.y = e.clientY - rect.top - node.y;
+
+            document.onmousemove = (e) => {
+                if (!dragState.isDragging) return;
+                const rect = canvas.getBoundingClientRect();
+                node.x = e.clientX - rect.left - dragState.offset.x;
+                node.y = e.clientY - rect.top - dragState.offset.y;
+                renderNode(node);
+                updateConnections();
+            };
+
+            document.onmouseup = () => {
+                dragState.isDragging = false;
+                document.onmousemove = null;
+                document.onmouseup = null;
+            };
+        }
+
+        // ==================== 连线功能 ====================
+        function startConnection(e, node, port) {
+            connectionState.isConnecting = true;
+            connectionState.fromNode = node;
+            connectionState.fromPort = port.dataset.port;
+            connectionState.fromPortIndex = parseInt(port.dataset.portIndex);
+            connectionState.isOutput = port.classList.contains('output');
+
+            if (!connectionState.isOutput) {
+                // 如果是输入端口，检查是否有现有连接
+                const existing = connections.find(c => c.toNode === node.id && c.toPort === connectionState.fromPort);
+                if (existing) {
+                    deleteConnection(existing.id);
+                }
+            }
+
+            document.onmousemove = (e) => {
+                if (!connectionState.isConnecting) return;
+                // 绘制临时连线
+                drawTempConnection(e);
+            };
+
+            document.onmouseup = (e) => {
+                if (connectionState.isConnecting) {
+                    finishConnection(e);
+                }
+                connectionState.isConnecting = false;
+                document.onmousemove = null;
+                document.onmouseup = null;
+                clearTempConnection();
+            };
+        }
+
+        function finishConnection(e) {
+            const target = e.target;
+            if (!target.classList.contains('node-port')) return;
+
+            const toNodeId = target.dataset.nodeId;
+            const toNode = nodes.find(n => n.id === toNodeId);
+            if (!toNode) return;
+
+            const toPort = target.dataset.port;
+            const toPortIndex = parseInt(target.dataset.portIndex);
+            const isToInput = target.classList.contains('input');
+
+            // 验证连接有效性
+            if (connectionState.isOutput && !isToInput) return; // 输出只能连输入
+            if (!connectionState.isOutput && isToInput) return; // 输入只能连输出
+            if (connectionState.fromNode.id === toNodeId) return; // 不能自连
+
+            // 检查是否形成环
+            if (wouldCreateCycle(connectionState.fromNode.id, toNodeId)) {
+                alert('⚠️ 连接会形成循环，已阻止');
+                return;
+            }
+
+            // 创建连接
+            const conn = {
+                id: `conn_${Date.now()}`,
+                fromNode: connectionState.isOutput ? connectionState.fromNode.id : toNodeId,
+                fromPort: connectionState.isOutput ? connectionState.fromPort : toPort,
+                toNode: connectionState.isOutput ? toNodeId : connectionState.fromNode.id,
+                toPort: connectionState.isOutput ? toPort : connectionState.fromPort
+            };
+
+            // 移除同端口的旧连接
+            connections = connections.filter(c => 
+                !(c.toNode === conn.toNode && c.toPort === conn.toPort)
+            );
+
+            connections.push(conn);
+            updateConnections();
+            updateJSONPreview();
+            validateGraph();
+        }
+
+        function wouldCreateCycle(fromId, toId) {
+            // 简单的环检测：如果 toId 能到达 fromId，则形成环
+            const visited = new Set();
+            const queue = [toId];
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+                if (current === fromId) return true;
+                if (visited.has(current)) continue;
+                visited.add(current);
+
+                connections.filter(c => c.fromNode === current).forEach(c => {
+                    queue.push(c.toNode);
+                });
+            }
+            return false;
+        }
+
+        function updateConnections() {
+            // 清除旧连线
+            canvas.querySelectorAll('.connection-line').forEach(line => line.remove());
+
+            connections.forEach(conn => {
+                const fromNode = nodes.find(n => n.id === conn.fromNode);
+                const toNode = nodes.find(n => n.id === conn.toNode);
+                if (!fromNode || !toNode) return;
+
+                const fromPort = fromNode.outputs.indexOf(conn.fromPort);
+                const toPort = toNode.inputs.indexOf(conn.toPort);
+
+                if (fromPort === -1 || toPort === -1) return;
+
+                const x1 = fromNode.x + fromNode.width;
+                const y1 = fromNode.y + 30 + fromPort * 25;
+                const x2 = toNode.x;
+                const y2 = toNode.y + 30 + toPort * 25;
+
+                const path = document.createElementNS(svgNS, 'path');
+                const midX = (x1 + x2) / 2;
+                path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`);
+                path.setAttribute('class', 'connection-line');
+                path.setAttribute('marker-end', 'url(#arrowhead)');
+                path.onclick = () => deleteConnection(conn.id);
+                canvas.appendChild(path);
+            });
+        }
+
+        function drawTempConnection(e) {
+            clearTempConnection();
+            if (!connectionState.isConnecting) return;
+
+            const fromNode = connectionState.fromNode;
+            const fromPortIndex = connectionState.fromPortIndex;
+            const rect = canvas.getBoundingClientRect();
+            const x1 = fromNode.x + (connectionState.isOutput ? fromNode.width : 0);
+            const y1 = fromNode.y + 30 + fromPortIndex * 25;
+            const x2 = e.clientX - rect.left;
+            const y2 = e.clientY - rect.top;
+
+            const path = document.createElementNS(svgNS, 'path');
+            const midX = (x1 + x2) / 2;
+            path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`);
+            path.setAttribute('class', 'connection-line');
+            path.setAttribute('style', 'stroke-dasharray: 5,5; opacity: 0.6;');
+            path.id = 'temp-connection';
+            canvas.appendChild(path);
+        }
+
+        function clearTempConnection() {
+            const temp = document.getElementById('temp-connection');
+            if (temp) temp.remove();
+        }
+
+        function deleteConnection(connId) {
+            connections = connections.filter(c => c.id !== connId);
+            updateConnections();
+            updateJSONPreview();
+        }
+
+        // ==================== 节点选择与属性编辑 ====================
+        function selectNode(node) {
+            if (selectedNode) {
+                const prevEl = document.getElementById(selectedNode.id);
+                if (prevEl) prevEl.classList.remove('selected');
+            }
+            selectedNode = node;
+            renderNode(node);
+            showInspector(node);
+        }
+
+        function showInspector(node) {
+            const def = operatorDefinitions[node.operator];
+            if (!def) return;
+
+            const content = document.getElementById('inspector-content');
+            let html = `
+                <div class="property-group">
+                    <label>节点类型</label>
+                    <input type="text" value="${node.title}" disabled />
+                </div>
+            `;
+
+            html += def.renderProps(node.props);
+            html += `<button class="toolbar-btn danger" onclick="deleteNode('${node.id}')" style="margin-top: 16px; width: 100%;">删除节点</button>`;
+
+            content.innerHTML = html;
+        }
+
+        function updateNodeProperty(key, value) {
+            if (!selectedNode) return;
+            selectedNode.props[key] = value;
+            renderNode(selectedNode);
+            showInspector(selectedNode);
+            updateJSONPreview();
+            validateGraph();
+        }
+
+        // ==================== JSON 生成 ====================
+        function generateRuntimeRules() {
+            const rules = {
+                entry: {},
+                exit: {},
+                position: {}
+            };
+
+            nodes.forEach(node => {
+                const def = operatorDefinitions[node.operator];
+                if (!def) return;
+
+                const nodeData = {
+                    id: node.id,
+                    operator: node.operator,
+                    type: node.type,
+                    props: node.props,
+                    connections: {
+                        inputs: connections.filter(c => c.toNode === node.id).map(c => ({
+                            from: c.fromNode,
+                            port: c.fromPort
+                        })),
+                        outputs: connections.filter(c => c.fromNode === node.id).map(c => ({
+                            to: c.toNode,
+                            port: c.toPort
+                        }))
+                    }
+                };
+
+                if (node.type === 'entry') {
+                    if (!rules.entry.nodes) rules.entry.nodes = [];
+                    rules.entry.nodes.push(nodeData);
+                } else if (node.type === 'exit') {
+                    if (!rules.exit.nodes) rules.exit.nodes = [];
+                    rules.exit.nodes.push(nodeData);
+                } else if (node.type === 'position') {
+                    if (!rules.position.nodes) rules.position.nodes = [];
+                    rules.position.nodes.push(nodeData);
+                }
+            });
+
+            return rules;
+        }
+
+        function updateJSONPreview() {
+            const rules = generateRuntimeRules();
+            const jsonText = JSON.stringify(rules, null, 2);
+            const preview = document.getElementById('json-preview-text');
+            preview.textContent = jsonText;
+        }
+
+        function copyJSON() {
+            const rules = generateRuntimeRules();
+            const jsonText = JSON.stringify(rules, null, 2);
+            navigator.clipboard.writeText(jsonText).then(() => {
+                alert('JSON 已复制到剪贴板');
+            });
+        }
+
+        function exportJSON() {
+            const rules = generateRuntimeRules();
+            const blob = new Blob([JSON.stringify(rules, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `strategy-rules-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ==================== 验证功能 ====================
+        function validateGraph() {
+            // 清除所有错误
+            nodes.forEach(node => node.errors = []);
+
+            nodes.forEach(node => {
+                const def = operatorDefinitions[node.operator];
+                if (!def) return;
+
+                // 验证多因子权重
+                if (node.operator === 'multi_factor') {
+                    const totalWeight = node.props.factors?.reduce((sum, f) => sum + (f.weight || 0), 0) || 0;
+                    if (totalWeight > 1.01 || totalWeight < 0) {
+                        node.errors.push(`因子权重总和 ${totalWeight.toFixed(2)} 无效，应在 0-1 之间`);
+                    }
+                }
+
+                // 验证 ATR 止损
+                if (node.operator === 'atr_stoploss') {
+                    if (node.props.atrMultiplier > 10 || node.props.atrMultiplier < 0.1) {
+                        node.errors.push('ATR 倍数应在 0.1-10 之间');
+                    }
+                }
+
+                // 验证盈利保护
+                if (node.operator === 'trailing_stop') {
+                    if (node.props.profitThreshold <= 0 || node.props.trailBack <= 0) {
+                        node.errors.push('盈利阈值和回撤值必须大于 0');
+                    }
+                    if (node.props.trailBack >= node.props.profitThreshold) {
+                        node.errors.push('回撤值不能大于等于盈利阈值');
+                    }
+                }
+
+                // 验证马丁格尔
+                if (node.operator === 'martingale') {
+                    if (node.props.maxSteps > 10) {
+                        node.errors.push('最大步数超过安全红线 (10)');
+                    }
+                    if (node.props.multiplier > 5) {
+                        node.errors.push('倍数超过安全红线 (5)');
+                    }
+                }
+
+                // 验证金字塔加仓
+                if (node.operator === 'pyramid_add') {
+                    if (node.props.steps > node.props.maxSteps) {
+                        node.errors.push(`加仓步数 ${node.props.steps} 超过最大限制 ${node.props.maxSteps}`);
+                    }
+                }
+            });
+
+            // 检查循环
+            nodes.forEach(node => {
+                if (wouldCreateCycle(node.id, node.id)) {
+                    node.errors.push('节点参与循环连接');
+                }
+            });
+
+            // 重新渲染所有节点
+            nodes.forEach(node => renderNode(node));
+
+            // 显示验证结果
+            const errors = nodes.flatMap(n => n.errors);
+            if (errors.length > 0) {
+                const inspector = document.getElementById('inspector-content');
+                if (selectedNode && selectedNode.errors.length === 0) {
+                    // 如果有其他节点错误，显示警告
+                    const warning = document.createElement('div');
+                    warning.className = 'validation-warning';
+                    warning.innerHTML = `⚠️ 画布上有 ${errors.length} 个验证错误`;
+                    inspector.appendChild(warning);
+                }
+            }
+        }
+
+        function validateAndSave() {
+            validateGraph();
+            const errors = nodes.flatMap(n => n.errors);
+            if (errors.length > 0) {
+                alert(`❌ 验证失败，发现 ${errors.length} 个错误：\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? '\n...' : ''}`);
+                return;
+            }
+
+            if (nodes.length === 0) {
+                alert('⚠️ 画布为空，无法保存');
+                return;
+            }
+
+            const rules = generateRuntimeRules();
+            console.log('验证通过，规则：', rules);
+            alert('✅ 验证通过！规则已保存到控制台（实际应发送到后端）');
+        }
+
+        // ==================== 工具函数 ====================
+        function clearCanvas() {
+            if (confirm('确定要清空画布吗？')) {
+                nodes = [];
+                connections = [];
+                selectedNode = null;
+                document.querySelectorAll('.node').forEach(el => el.remove());
+                updateConnections();
+                updateEmptyState();
+                updateJSONPreview();
+                document.getElementById('inspector-content').innerHTML = '<p style="color: #666; text-align: center; margin-top: 40px;">点击节点编辑属性</p>';
+            }
+        }
+
+        function updateEmptyState() {
+            const emptyState = document.getElementById('empty-state');
+            if (nodes.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+            }
+        }
+
+        function loadExample() {
+            clearCanvas();
+            
+            // 创建示例节点
+            const rsi = createNode('indicator_rsi', 50, 100);
+            const ma = createNode('indicator_ma', 50, 250);
+            const multiFactor = createNode('multi_factor', 300, 150);
+            const entry = createNode('signal_trigger', 550, 150);
+            
+            const atrStop = createNode('atr_stoploss', 300, 400);
+            const trailing = createNode('trailing_stop', 550, 400);
+            
+            const dynamicSize = createNode('dynamic_sizing', 800, 150);
+            const riskControl = createNode('risk_control', 800, 400);
+
+            // 创建连接
+            setTimeout(() => {
+                // 模拟连接（实际应通过 UI 操作）
+                console.log('示例节点已创建，请手动连接');
+            }, 100);
+        }
+
+        // ==================== 拖拽算子到画布 ====================
+        document.querySelectorAll('.operator-item').forEach(item => {
+            item.onmousedown = (e) => {
+                item.classList.add('dragging');
+                const operator = item.dataset.operator;
+                
+                document.onmousemove = (e) => {
+                    // 跟随鼠标
+                };
+
+                document.onmouseup = (e) => {
+                    item.classList.remove('dragging');
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    if (x > 0 && y > 0 && x < rect.width && y < rect.height) {
+                        createNode(operator, x - 100, y - 60);
+                    }
+                    
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            };
+        });
+
+        // ==================== 初始化 ====================
+        updateEmptyState();
+        updateJSONPreview();
+
+        // 键盘快捷键
+        document.onkeydown = (e) => {
+            if (e.key === 'Delete' && selectedNode) {
+                deleteNode(selectedNode.id);
+            }
+        };
+    </script>
+</body>
+</html>
+           

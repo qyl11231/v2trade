@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.qyl.v2trade.business.strategy.mapper.StrategyInstanceMapper">
+    
+    <select id="selectEnabledByTradingPairId" resultType="com.qyl.v2trade.business.strategy.model.entity.StrategyInstance">
+        SELECT id, user_id, strategy_id, trading_pair_id, signal_config_id, strategy_symbol, enabled
+        FROM strategy_instance
+        WHERE trading_pair_id = #{tradingPairId}
+          AND enabled = 1
+    </select>
+    
+    <select id="selectEnabledBySignalConfigId" resultType="com.qyl.v2trade.business.strategy.model.entity.StrategyInstance">
+        SELECT id, user_id, strategy_id, trading_pair_id, signal_config_id, strategy_symbol, enabled
+        FROM strategy_instance
+        WHERE signal_config_id = #{signalConfigId}
+          AND enabled = 1
+    </select>
+    
+    <select id="selectAllEnabled" resultType="com.qyl.v2trade.business.strategy.model.entity.StrategyInstance">
+        SELECT id, user_id, strategy_id, trading_pair_id, signal_config_id, strategy_symbol, enabled
+        FROM strategy_instance
+        WHERE enabled = 1
+    </select>
+    
+</mapper>
+

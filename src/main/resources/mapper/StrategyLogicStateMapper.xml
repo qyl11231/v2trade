@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.qyl.v2trade.business.strategy.mapper.StrategyLogicStateMapper">
+    
+    <select id="selectByInstanceId" resultType="com.qyl.v2trade.business.strategy.model.entity.StrategyLogicState">
+        SELECT id, user_id, strategy_id, strategy_instance_id, trading_pair_id, strategy_symbol,
+               logic_position_side, logic_position_qty, avg_entry_price, state_phase,
+               unrealized_pnl, realized_pnl, updated_at, created_at
+        FROM strategy_logic_state
+        WHERE strategy_instance_id = #{instanceId}
+        LIMIT 1
+    </select>
+    
+    <select id="selectByInstanceIds" resultType="com.qyl.v2trade.business.strategy.model.entity.StrategyLogicState">
+        SELECT id, user_id, strategy_id, strategy_instance_id, trading_pair_id, strategy_symbol,
+               logic_position_side, logic_position_qty, avg_entry_price, state_phase,
+               unrealized_pnl, realized_pnl, updated_at, created_at
+        FROM strategy_logic_state
+        WHERE strategy_instance_id IN
+        <foreach collection="instanceIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    
+    <insert id="upsertState" parameterType="com.qyl.v2trade.business.strategy.model.entity.StrategyLogicState">
+        INSERT INTO strategy_logic_state (
+            user_id, strategy_id, strategy_instance_id, trading_pair_id, strategy_symbol,
+            logic_position_side, logic_position_qty, avg_entry_price, state_phase,
+            unrealized_pnl, realized_pnl, updated_at, created_at
+        ) VALUES (
+            #{userId}, #{strategyId}, #{strategyInstanceId}, #{tradingPairId}, #{strategySymbol},
+            #{logicPositionSide}, #{logicPositionQty}, #{avgEntryPrice}, #{statePhase},
+            #{unrealizedPnl}, #{realizedPnl}, NOW(), NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            logic_position_side = VALUES(logic_position_side),
+            logic_position_qty = VALUES(logic_position_qty),
+            avg_entry_price = VALUES(avg_entry_price),
+            state_phase = VALUES(state_phase),
+            updated_at = NOW()
+    </insert>
+    
+</mapper>
+

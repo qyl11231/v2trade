@@ -1,0 +1,1790 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>策略管理 - V2 Trade</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+  <style>
+    body { margin: 0; padding: 0; }
+    .layui-layout-admin .layui-header { background-color: #23262E; }
+    .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+    .layui-logo span { color: #1E9FFF; }
+    .layui-body { background: var(--bg); left: 200px; }
+    .layui-side { background: #23262E; }
+    .layui-side-scroll { background: #23262E; }
+    .layui-nav-tree .layui-nav-item a { color: rgba(255,255,255,.7); }
+    .layui-nav-tree .layui-nav-itemed > a, .layui-nav-tree .layui-nav-itemed > a:hover { color: #1E9FFF; }
+    .layui-nav-tree .layui-this > a, .layui-nav-tree .layui-this > a:hover { background-color: rgba(30,159,255,.15); color: #1E9FFF; }
+    .layui-nav-child dd.layui-this a { background-color: rgba(30,159,255,.2); color: #1E9FFF; }
+    :root{
+      --bg:#0b1020;
+      --panel:#111a33;
+      --panel2:#0f1730;
+      --text:#e6e9f2;
+      --muted:#9aa3b2;
+      --line:#223055;
+      --brand:#6aa9ff;
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+      --radius2:12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% -10%, rgba(106,169,255,.18), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, rgba(34,197,94,.12), transparent 50%),
+        radial-gradient(900px 500px at 70% 100%, rgba(245,158,11,.10), transparent 55%),
+        var(--bg);
+      min-height:100vh;
+    }
+    a{color:inherit}
+    .app{
+      min-height:100vh;
+    }
+    main{padding:20px}
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      margin-bottom:14px;
+    }
+    .crumbs{font-size:13px; color:var(--muted)}
+    .crumbs b{color:var(--text)}
+    .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    button, .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.15);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      transition:.15s;
+      font-size:13px;
+    }
+    button:hover, .btn:hover{border-color: rgba(106,169,255,.45); transform: translateY(-1px)}
+    .btn.primary{
+      border-color: rgba(106,169,255,.55);
+      background: rgba(106,169,255,.14);
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .btn.danger{
+      border-color: rgba(239,68,68,.55);
+      background: rgba(239,68,68,.12);
+    }
+    .btn.ghost{background:transparent}
+    .layout{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+      align-items:start;
+      max-width: 100%;
+    }
+    .layout.single-card {
+      grid-template-columns: 1fr;
+    }
+    .card{
+      border:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .cardHeader h2{margin:0; font-size:14px}
+    .cardHeader p{margin:6px 0 0; font-size:12px; color:var(--muted)}
+    .cardBody{padding:14px}
+    .toolbar{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .field{
+      display:flex; flex-direction:column; gap:6px;
+      font-size:12px; color:var(--muted);
+    }
+    input, select, textarea{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+      color:var(--text);
+      outline:none;
+    }
+    select {
+      background: rgba(17,26,51,.80) !important;
+      color: #e6e9f2 !important;
+      cursor: pointer;
+    }
+    select:focus {
+      background: rgba(17,26,51,.90) !important;
+      border-color: rgba(106,169,255,.45) !important;
+    }
+    select option {
+      background: rgba(17,26,51,1) !important;
+      color: #e6e9f2 !important;
+      padding: 10px 12px;
+    }
+    select option:hover {
+      background: rgba(106,169,255,.30) !important;
+      color: #ffffff !important;
+    }
+    select option:checked,
+    select option:focus {
+      background: rgba(106,169,255,.40) !important;
+      color: #ffffff !important;
+    }
+    textarea{min-height:80px; resize:vertical; font-family:var(--mono); font-size:12px}
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      overflow:hidden;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.10);
+    }
+    th, td{
+      padding:10px 10px;
+      font-size:12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      vertical-align:middle;
+    }
+    th{
+      text-align:left;
+      color:var(--muted);
+      font-weight:600;
+      background: rgba(255,255,255,.03);
+    }
+    tr:hover td{background: rgba(106,169,255,.06)}
+    .mono{font-family:var(--mono)}
+    .muted{color:var(--muted)}
+    .tag{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.12);
+      color:var(--muted);
+    }
+    .status{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:12px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .status .sDot{
+      width:8px;height:8px;border-radius:50%;
+      background: var(--muted);
+    }
+    .status.on{border-color: rgba(34,197,94,.35); color: rgba(34,197,94,.95); background: rgba(34,197,94,.08)}
+    .status.on .sDot{background: var(--ok)}
+    .status.off{border-color: rgba(239,68,68,.35); color: rgba(239,68,68,.95); background: rgba(239,68,68,.08)}
+    .status.off .sDot{background: var(--bad)}
+    .miniBtns{display:flex; gap:8px; flex-wrap:wrap}
+    .miniBtns .btn{padding:7px 10px; border-radius:10px; font-size:12px}
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      font-size:13px;
+      opacity:0;
+      pointer-events:none;
+      transition:.2s;
+      max-width:min(680px, calc(100vw - 30px));
+      white-space:pre-wrap;
+      z-index:1000;
+    }
+    .toast.show{opacity:1; transform:translateX(-50%) translateY(-2px)}
+    .modalMask{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modalMask.show{display:flex}
+    .modal{
+      width:min(760px, 100%);
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(17,26,51,.98), rgba(15,23,48,.98));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      max-height:90vh;
+      overflow-y:auto;
+    }
+    .modalHeader{
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    }
+    .modalHeader h3{margin:0; font-size:14px}
+    .modalHeader p{margin:6px 0 0; font-size:12px; color:var(--muted)}
+    .modalBody{padding:14px}
+    .modalFooter{
+      padding:12px 14px;
+      border-top:1px solid rgba(255,255,255,.06);
+      display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;
+    }
+    .empty{
+      padding:18px;
+      border:1px dashed rgba(255,255,255,.14);
+      border-radius:14px;
+      color:var(--muted);
+      font-size:13px;
+      background: rgba(0,0,0,.10);
+      text-align:center;
+    }
+    .split{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+    }
+    .help{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.55;
+    }
+    .help code{font-family:var(--mono); color:var(--text); font-size:12px}
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr}
+      aside{position:sticky; top:0; z-index:10}
+      .layout{grid-template-columns: 1fr}
+    }
+  </style>
+</head>
+<body>
+<div class="app layui-layout layui-layout-admin">
+  <div class="layui-header">
+    <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+    <ul class="layui-nav layui-layout-left">
+      <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+        <i class="layui-icon layui-icon-spread-left"></i>
+      </li>
+    </ul>
+    <ul class="layui-nav layui-layout-right">
+      <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+        <a href="javascript:;">
+          <i class="layui-icon layui-icon-username"></i>
+          <span id="userName">用户</span>
+        </a>
+        <dl class="layui-nav-child">
+          <dd><a href="/settings.html">个人设置</a></dd>
+          <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+        </dl>
+      </li>
+    </ul>
+  </div>
+  
+  <div class="layui-side layui-bg-black">
+    <div class="layui-side-scroll">
+      <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+        <li class="layui-nav-item">
+          <a href="javascript:;">系统管理</a>
+          <dl class="layui-nav-child">
+            <dd><a href="/users.html">用户管理</a></dd>
+            <dd><a href="/apikey.html">API密钥管理</a></dd>
+            <dd><a href="/trading-pair.html">交易对管理</a></dd>
+            <dd><a href="/market-subscription-config.html">行情订阅配置管理</a></dd>
+          </dl>
+        </li>
+        <li class="layui-nav-item">
+          <a href="javascript:;">信号模块</a>
+          <dl class="layui-nav-child">
+            <dd><a href="/signal-config.html">信号配置管理</a></dd>
+            <dd><a href="/signal-list.html">信号查询</a></dd>
+          </dl>
+        </li>
+        <li class="layui-nav-item layui-nav-itemed">
+          <a href="javascript:;">策略模块</a>
+          <dl class="layui-nav-child">
+            <dd id="navStrategies" class="layui-this"><a href="javascript:;" onclick="location.hash='#/strategies'">策略定义</a></dd>
+            <dd id="navInstances"><a href="javascript:;" onclick="location.hash='#/instances'">策略实例</a></dd>
+          </dl>
+        </li>
+        <li class="layui-nav-item">
+          <a href="javascript:;">指标管理</a>
+          <dl class="layui-nav-child">
+            <dd><a href="/indicator/dashboard.html">仪表盘</a></dd>
+            <dd><a href="/indicator/definitions.html">指标定义</a></dd>
+            <dd><a href="/indicator/subscriptions.html">指标订阅</a></dd>
+            <dd><a href="/indicator/values.html">指标结果</a></dd>
+            <dd><a href="/indicator/logs.html">计算日志</a></dd>
+          </dl>
+        </li>
+        <li class="layui-nav-item">
+          <a href="javascript:;">行情模块</a>
+          <dl class="layui-nav-child">
+            <dd><a href="/market-center.html">行情中心</a></dd>
+            <dd><a href="/market-calibration.html">行情校准</a></dd>
+          </dl>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="layui-body">
+    <main style="padding: 20px;">
+    <div class="topbar">
+      <div class="actions" id="topActions"></div>
+    </div>
+
+    <div id="view"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modalMask" id="modalMask" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modalHeader">
+      <div>
+        <h3 id="modalTitle">弹窗</h3>
+        <p id="modalDesc">说明</p>
+      </div>
+      <button class="btn ghost" id="modalClose" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modalBody" id="modalBody"></div>
+    <div class="modalFooter" id="modalFooter"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+/** -----------------------------
+ * N1 策略模块：前端重构版本
+ * - 数据层：后端API集成
+ * - 页面：策略定义列表/详情，实例总览/详情/历史
+ * - 能力：CRUD + 启停 + 版本历史
+ * ----------------------------- */
+
+// 全局状态
+const ctx = {
+  userId: null,
+  definitions: [],
+  instances: [],
+  tradingPairs: [],
+  signalConfigs: [],
+};
+
+// 初始化 - 使用 layui.use 确保 Layui 加载完成后再执行（参考 signal-list.html）
+console.log('Script loaded, waiting for layui...');
+layui.use(['element', 'layer'], function(){
+  console.log('layui.use callback executed');
+  var element = layui.element;
+  var layer = layui.layer;
+  
+  try {
+    console.log('Starting initialization...');
+    // 检查 common.js 是否加载
+    if (typeof checkLogin === 'undefined') {
+      var view = document.getElementById('view');
+      if (view) {
+        view.innerHTML = '<div class="empty">错误：common.js 未加载，请刷新页面</div>';
+      }
+      return;
+    }
+    
+    // 检查登录状态
+    if (!checkLogin()) {
+      // checkLogin 失败会跳转到登录页，这里不需要处理
+      return;
+    }
+    
+    // 设置用户信息
+    const user = getCurrentUser();
+    if (user) {
+      ctx.userId = user.id;
+      const userNameEl = document.getElementById('userName');
+      if (userNameEl) userNameEl.textContent = user.username || '用户';
+    }
+    
+    // 监听路由变化
+    window.addEventListener("hashchange", function() {
+      render();
+      setTimeout(function() {
+        updateMenuActive();
+      }, 50);
+    });
+    
+    // 确保策略模块菜单展开
+    const navItems = document.querySelectorAll('.layui-nav-tree .layui-nav-item');
+    navItems.forEach(function(item) {
+      const link = item.querySelector('a');
+      if (link && link.textContent.trim() === '策略模块') {
+        item.classList.add('layui-nav-itemed');
+      }
+    });
+    
+    // 渲染菜单
+    element.render('nav');
+    
+    // 更新菜单选中状态
+    updateMenuActive();
+    
+    // 加载基础数据（异步加载，不阻塞渲染）
+    loadTradingPairs();
+    loadSignalConfigs();
+    
+    // 初始化渲染：无论是否有 hash，都先渲染一次
+    // 如果没有 hash，设置默认 hash（会触发 hashchange 事件，从而调用 render）
+    // 如果有 hash，直接调用 render
+    console.log('Current hash:', location.hash);
+    if (!location.hash || location.hash === '#' || location.hash === '') {
+      console.log('No hash, setting default to #/strategies');
+      location.hash = "#/strategies";
+    } else {
+      // 有 hash，直接渲染（延迟一下确保 DOM 完全准备好）
+      console.log('Hash exists, calling render()');
+      setTimeout(function() {
+        render();
+      }, 100);
+    }
+    console.log('Initialization completed');
+  } catch (err) {
+    console.error('Initialization error:', err);
+    // 捕获所有错误并显示
+    var view = document.getElementById('view');
+    if (view) {
+      view.innerHTML = '<div class="empty">初始化错误：' + (err.message || '未知错误') + '<br/>堆栈：' + (err.stack || '无') + '</div>';
+    }
+    console.error('Strategy page initialization error:', err);
+  }
+});
+
+// 更新菜单选中状态
+function updateMenuActive() {
+  const hash = location.hash.replace(/^#/, "") || "/strategies";
+  const navStrategies = document.getElementById("navStrategies");
+  const navInstances = document.getElementById("navInstances");
+  
+  // 确保策略模块菜单项展开（找到包含"策略模块"文本的菜单项）
+  const navItems = document.querySelectorAll('.layui-nav-tree .layui-nav-item');
+  navItems.forEach(function(item) {
+    const link = item.querySelector('a');
+    if (link && link.textContent.trim() === '策略模块') {
+      item.classList.add('layui-nav-itemed');
+    }
+  });
+  
+  if (hash === "/strategies" || hash.startsWith("/strategies/")) {
+    if (navStrategies) {
+      navStrategies.classList.add("layui-this");
+      if (navInstances) navInstances.classList.remove("layui-this");
+    }
+  } else if (hash === "/instances" || hash.startsWith("/instances/")) {
+    if (navInstances) {
+      navInstances.classList.add("layui-this");
+      if (navStrategies) navStrategies.classList.remove("layui-this");
+    }
+  }
+  
+  // 重新渲染 layui 菜单
+  if (typeof layui !== 'undefined' && layui.element) {
+    layui.element.render('nav');
+  }
+}
+
+// 工具函数
+function toast(msg, type = 'info') {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast show";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => {
+    el.classList.remove("show");
+  }, 2200);
+}
+
+function fmtEnabled(enabled) {
+  const isEnabled = enabled === 1 || enabled === true;
+  return isEnabled 
+    ? `<span class="status on"><span class="sDot"></span>启用</span>`
+    : `<span class="status off"><span class="sDot"></span>禁用</span>`;
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/\n/g, " ");
+}
+
+function computeStrategySymbol(pair) {
+  if (!pair) return "";
+  const sym = pair.symbol;
+  const t = pair.marketType;
+  if ((t === "SWAP" || t === "FUTURES") && !sym.endsWith("-SWAP")) {
+    return sym + "-SWAP";
+  }
+  return sym;
+}
+
+// 路由系统
+function parseHash() {
+  const h = location.hash.replace(/^#/, "") || "/strategies";
+  const parts = h.split("/").filter(Boolean);
+  return { raw: h, parts };
+}
+
+function setCrumbs(text) {
+  const crumbsEl = document.getElementById("crumbs");
+  if (crumbsEl) {
+    crumbsEl.innerHTML = `路径：<b>${escapeHtml(text)}</b>`;
+  }
+}
+
+function setTopActions(html) {
+  const actionsEl = document.getElementById("topActions");
+  if (actionsEl) {
+    actionsEl.innerHTML = html || "";
+  }
+}
+
+function setNavActive(routeBase) {
+  // 更新菜单选中状态由 updateMenuActive 函数统一处理
+  updateMenuActive();
+}
+
+// 数据加载函数
+async function loadDefinitions(enabled = null) {
+  try {
+    const params = enabled !== null ? { enabled } : {};
+    const url = '/api/strategy/definition/list' + (enabled !== null ? '?enabled=' + enabled : '');
+    console.log('Loading definitions from:', url);
+    const res = await request({ url, method: 'GET' });
+    console.log('Definitions response:', res);
+    ctx.definitions = res.data || [];
+    console.log('Loaded definitions count:', ctx.definitions.length);
+    refreshBadges();
+    return ctx.definitions;
+  } catch (err) {
+    console.error('Error loading definitions:', err);
+    toast('加载策略列表失败: ' + (err.message || '未知错误'), 'error');
+    ctx.definitions = [];
+    return [];
+  }
+}
+
+async function loadInstances(strategyId = null) {
+  try {
+    const url = '/api/strategy/instance/list' + (strategyId ? '?strategyId=' + strategyId : '');
+    const res = await request({ url, method: 'GET' });
+    ctx.instances = res.data || [];
+    refreshBadges();
+    return ctx.instances;
+  } catch (err) {
+    toast('加载实例列表失败', 'error');
+    return [];
+  }
+}
+
+async function loadTradingPairs() {
+  try {
+    const res = await request({ url: '/api/trading-pair/list?enabled=1', method: 'GET' });
+    ctx.tradingPairs = res.data || [];
+  } catch (err) {
+    console.error('加载交易对失败:', err);
+    ctx.tradingPairs = [];
+  }
+}
+
+async function loadSignalConfigs() {
+  try {
+    // 注意：signal_config_id=0 表示未绑定
+    // 先设置默认的"未绑定"选项
+    ctx.signalConfigs = [{ id: 0, name: "未绑定(0)" }];
+    
+    // 从后端 API 获取信号配置列表
+    const res = await request({ url: '/api/signal/config/list', method: 'GET' });
+    if (res.data && res.data.length > 0) {
+      // 将 API 返回的数据转换为需要的格式
+      const configs = res.data.map(item => ({
+        id: item.id,
+        name: item.signalName || item.name || `信号配置 #${item.id}`
+      }));
+      // 合并"未绑定"选项和实际配置
+      ctx.signalConfigs = [{ id: 0, name: "未绑定(0)" }, ...configs];
+    }
+  } catch (err) {
+    console.error('加载信号配置失败:', err);
+    // 如果加载失败，至少保留"未绑定"选项
+    ctx.signalConfigs = [{ id: 0, name: "未绑定(0)" }];
+  }
+}
+
+function refreshBadges() {
+  // 可以在这里更新菜单上的徽章，如果需要的话
+  // 暂时保留函数，但不再使用 pill 元素
+}
+
+// 渲染函数
+async function render() {
+  try {
+    const { parts } = parseHash();
+    
+    const view = document.getElementById("view");
+    if (!view) {
+      // 如果 view 元素不存在，延迟重试
+      console.error('view element not found, retrying...');
+      setTimeout(render, 100);
+      return;
+    }
+    
+    // 调试信息
+    console.log('render() called, hash:', location.hash, 'parts:', parts);
+
+    // 路由处理
+    if (parts.length === 0 || parts[0] === "strategies") {
+      setNavActive("/strategies");
+      if (parts.length === 1) {
+        // 策略定义列表页
+        setCrumbs("/strategies");
+        setTopActions('<button class="btn primary" onclick="openDefinitionModal()">+ 新建策略</button>');
+        
+        // 直接调用 strategiesListView，同步返回 HTML
+        try {
+          var html = strategiesListView();
+          
+          if (html && typeof html === 'string' && html.trim().length > 0) {
+            view.innerHTML = html;
+            
+            // 确保 DOM 更新后再绑定事件和数据加载
+            setTimeout(function() {
+              try {
+                wireStrategiesList().catch(function(err) {
+                  toast('加载数据失败: ' + (err.message || '未知错误'), 'error');
+                });
+              } catch (err) {
+                toast('绑定事件失败: ' + (err.message || '未知错误'), 'error');
+              }
+            }, 200);
+          } else {
+            view.innerHTML = '<div class="empty">渲染失败：HTML 为空或格式错误<br/>HTML type: ' + typeof html + '</div>';
+          }
+        } catch (err) {
+          view.innerHTML = '<div class="empty">渲染失败：' + (err.message || '未知错误') + '<br/>错误堆栈：' + (err.stack || '无') + '</div>';
+        }
+        
+        return;
+      } else if (parts.length === 2) {
+      // 策略详情页
+      const id = parts[1];
+      setCrumbs(`/strategies/${id}`);
+      setTopActions(`
+        <button class="btn" onclick="location.hash='#/strategies'">← 返回列表</button>
+        <button class="btn primary" onclick="openDefinitionModal(${id})">编辑策略</button>
+        <button class="btn" onclick="openInstanceModal(null, ${id})">+ 新建实例</button>
+      `);
+      view.innerHTML = await strategyDetailView(id);
+      await wireStrategyDetail(id);
+      return;
+    }
+  }
+
+  if (parts[0] === "instances") {
+    setNavActive("/instances");
+    if (parts.length === 1) {
+      // 实例总览页
+      setCrumbs("/instances");
+      setTopActions(`<button class="btn primary" onclick="openInstanceModal()">+ 新建实例</button>`);
+      view.innerHTML = await instancesListView();
+      await wireInstancesList();
+      return;
+    }
+    if (parts.length === 2) {
+      // 实例详情页
+      const id = parts[1];
+      setCrumbs(`/instances/${id}`);
+      setTopActions(`
+        <button class="btn" onclick="location.hash='#/instances'">← 返回总览</button>
+        <button class="btn primary" onclick="openInstanceModal(${id})">编辑实例</button>
+        <button class="btn" onclick="location.hash='#/instances/${id}/history'">查看历史</button>
+      `);
+      view.innerHTML = await instanceDetailView(id);
+      return;
+    }
+    if (parts.length === 3 && parts[2] === "history") {
+      // 实例历史页
+      const id = parts[1];
+      setCrumbs(`/instances/${id}/history`);
+      setTopActions(`<button class="btn" onclick="location.hash='#/instances/${id}'">← 返回实例详情</button>`);
+      view.innerHTML = await instanceHistoryView(id);
+      await wireInstanceHistory(id);
+      return;
+    }
+  }
+
+    // 默认路由
+    setNavActive("/strategies");
+    location.hash = "#/strategies";
+    // 不递归调用 render，让 hashchange 事件触发
+  } catch (error) {
+    console.error('Render error:', error);
+    const view = document.getElementById("view");
+    if (view) {
+      view.innerHTML = `<div class="empty">渲染错误：${error.message || '未知错误'}</div>`;
+    }
+  }
+}
+
+// 视图函数 - 策略定义列表
+function strategiesListView() {
+  // 直接返回 HTML 结构（同步函数，不等待数据加载）
+  // 数据加载在 wireStrategiesList 中进行
+  return `
+  <div class="layout single-card">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>策略定义列表</h2>
+        </div>
+      </div>
+      <div class="cardBody">
+        <div class="toolbar">
+          <div class="field" style="min-width:220px;">
+            <span>状态筛选</span>
+            <select id="defFilter">
+              <option value="">全部</option>
+              <option value="1">启用</option>
+              <option value="0">禁用</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1; min-width:240px;">
+            <span>搜索（策略名称）</span>
+            <input id="defSearch" placeholder="例如：BTC 趋势 / 网格 / 马丁..." />
+          </div>
+        </div>
+        <div id="defTableWrap">正在加载数据...</div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+async function wireStrategiesList() {
+  const filter = document.getElementById("defFilter");
+  const search = document.getElementById("defSearch");
+  
+  if (!filter || !search) {
+    // 如果元素还没准备好，延迟重试
+    setTimeout(wireStrategiesList, 100);
+    return;
+  }
+  
+  const rerender = async () => {
+    try {
+      const f = filter.value;
+      const q = search.value.trim().toLowerCase();
+      
+      await loadDefinitions(f ? parseInt(f) : null);
+      
+      let defs = ctx.definitions.filter(d => d.userId === ctx.userId || !d.userId);
+      if (q) {
+        defs = defs.filter(d => (d.strategyName || "").toLowerCase().includes(q));
+      }
+      
+      const defTableWrap = document.getElementById("defTableWrap");
+      if (defTableWrap) {
+        defTableWrap.innerHTML = definitionTable(defs);
+      }
+    } catch (err) {
+      const defTableWrap = document.getElementById("defTableWrap");
+      if (defTableWrap) {
+        defTableWrap.innerHTML = '<div class="empty">加载失败：' + (err.message || '未知错误') + '</div>';
+      }
+      toast('加载数据失败: ' + (err.message || '未知错误'), 'error');
+    }
+  };
+  
+  // 绑定事件
+  if (filter) {
+    filter.removeEventListener("change", rerender); // 先移除，避免重复绑定
+    filter.addEventListener("change", rerender);
+  }
+  if (search) {
+    search.removeEventListener("input", rerender);
+    search.addEventListener("input", rerender);
+  }
+  
+  // 立即执行一次，加载数据
+  await rerender();
+}
+
+function definitionTable(defs) {
+  if (!defs || defs.length === 0) {
+    return `<div class="empty">暂无策略定义。点击右上角"+ 新建策略"开始。</div>`;
+  }
+  
+  const instCountMap = {};
+  ctx.instances.forEach(i => {
+    if (!instCountMap[i.strategyId]) {
+      instCountMap[i.strategyId] = 0;
+    }
+    instCountMap[i.strategyId]++;
+  });
+  
+  return `
+  <table>
+    <thead>
+      <tr>
+        <th style="width:80px;">ID</th>
+        <th>策略名称</th>
+        <th style="width:120px;">类型</th>
+        <th style="width:160px;">模式</th>
+        <th style="width:110px;">状态</th>
+        <th style="width:170px;">更新时间</th>
+        <th style="width:240px;">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${defs.map(d => {
+        const instCount = instCountMap[d.id] || 0;
+        return `
+          <tr>
+            <td class="mono">${d.id}</td>
+            <td>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <b>${escapeHtml(d.strategyName)}</b>
+                <span class="pill">实例 ${instCount}</span>
+              </div>
+              <div class="muted" style="font-size:12px; margin-top:4px;">createdAt: <span class="mono">${d.createdAt || '-'}</span></div>
+            </td>
+            <td><span class="tag">${escapeHtml(d.strategyType)}</span></td>
+            <td><span class="tag">${escapeHtml(d.strategyPattern)}</span></td>
+            <td>${fmtEnabled(d.enabled)}</td>
+            <td class="mono muted">${d.updatedAt || '-'}</td>
+            <td>
+              <div class="miniBtns">
+                <button class="btn" onclick="location.hash='#/strategies/${d.id}'">详情</button>
+                <button class="btn" onclick="openDefinitionModal(${d.id})">编辑</button>
+                <button class="btn ${d.enabled ? "danger" : ""}" onclick="uiToggleDefinition(${d.id}, ${d.enabled})">${d.enabled ? "禁用" : "启用"}</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("")}
+    </tbody>
+  </table>
+  `;
+}
+
+// 视图函数 - 策略详情
+async function strategyDetailView(id) {
+  try {
+    const res = await request({ url: `/api/strategy/definition/${id}`, method: 'GET' });
+    const d = res.data;
+    
+    if (!d) {
+      return `<div class="empty">策略不存在或已被删除。<a href="#/strategies" onclick="location.hash='#/strategies'">返回列表</a></div>`;
+    }
+    
+    const instances = d.instances || [];
+    
+    return `
+    <div class="split">
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <h2>策略定义详情</h2>
+            <p>definition 基本信息 + instances 列表（N1 交付核心闭环）</p>
+          </div>
+          <div>${fmtEnabled(d.enabled)}</div>
+        </div>
+        <div class="cardBody">
+          <div class="row">
+            <div class="field">
+              <span>策略名称</span>
+              <input value="${escapeAttr(d.strategyName)}" disabled />
+            </div>
+            <div class="field">
+              <span>策略ID</span>
+              <input class="mono" value="${d.id}" disabled />
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <span>策略类型</span>
+              <input value="${escapeAttr(d.strategyType)}" disabled />
+            </div>
+            <div class="field">
+              <span>策略模式</span>
+              <input value="${escapeAttr(d.strategyPattern)}" disabled />
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <span>创建时间</span>
+              <input class="mono" value="${d.createdAt || '-'}" disabled />
+            </div>
+            <div class="field">
+              <span>更新时间</span>
+              <input class="mono" value="${d.updatedAt || '-'}" disabled />
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+            <button class="btn ${d.enabled ? "danger" : "primary"}" onclick="uiToggleDefinition(${d.id}, ${d.enabled})">${d.enabled ? "禁用策略" : "启用策略"}</button>
+            <button class="btn" onclick="openInstanceModal(null, ${d.id})">+ 新建实例（绑定交易对/信号/资金）</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <h2>该策略的实例列表</h2>
+            <p class="muted">实例唯一性：user + strategy + pair + signal（signal=0 表示未绑定）</p>
+          </div>
+          <div class="tag">N1 · Instance</div>
+        </div>
+        <div class="cardBody">
+          ${instanceTable(instances, { inStrategyDetail: true })}
+        </div>
+      </div>
+    </div>
+    `;
+  } catch (err) {
+    return `<div class="empty">加载策略详情失败：${err.message || '未知错误'}</div>`;
+  }
+}
+
+async function wireStrategyDetail(id) {
+  // 当前 view 渲染里按钮已经绑定 onclick，无需额外 wire
+}
+
+// 视图函数 - 实例列表
+async function instancesListView() {
+  await loadInstances();
+  
+  return `
+  <div class="layout">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>策略实例总览</h2>
+          <p>跨策略查看实例（用于 N2 之前管理核对）</p>
+        </div>
+        <div class="tag">N1 · Instance</div>
+      </div>
+      <div class="cardBody">
+        <div class="toolbar">
+          <div class="field" style="min-width:220px;">
+            <span>状态筛选</span>
+            <select id="instFilter">
+              <option value="">全部</option>
+              <option value="1">启用</option>
+              <option value="0">禁用</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1; min-width:240px;">
+            <span>搜索（symbol / strategyId）</span>
+            <input id="instSearch" placeholder="例如：BTC-USDT-SWAP 或 1xxxx..." />
+          </div>
+        </div>
+        <div id="instTableWrap"></div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+async function wireInstancesList() {
+  const filter = document.getElementById("instFilter");
+  const search = document.getElementById("instSearch");
+  
+  const rerender = async () => {
+    await loadInstances();
+    
+    const f = filter.value;
+    const q = search.value.trim().toLowerCase();
+    
+    let inst = ctx.instances.filter(i => i.userId === ctx.userId || !i.userId);
+    if (f) {
+      inst = inst.filter(i => String(i.enabled) === f);
+    }
+    if (q) {
+      inst = inst.filter(i =>
+        String(i.strategyId).includes(q) ||
+        String(i.id).includes(q) ||
+        (i.strategySymbol || "").toLowerCase().includes(q)
+      );
+    }
+    
+    const instTableWrap = document.getElementById("instTableWrap");
+    if (instTableWrap) {
+      instTableWrap.innerHTML = instanceTable(inst, { inStrategyDetail: false });
+    }
+  };
+  
+  if (filter) filter.addEventListener("change", rerender);
+  if (search) search.addEventListener("input", rerender);
+  
+  await rerender();
+}
+
+function instanceTable(instances, opt) {
+  if (!instances || instances.length === 0) {
+    return `<div class="empty">暂无实例。点击右上角"+ 新建实例"开始。</div>`;
+  }
+  
+  const pairMap = {};
+  ctx.tradingPairs.forEach(p => {
+    pairMap[p.id] = p;
+  });
+  
+  const signalMap = {};
+  ctx.signalConfigs.forEach(s => {
+    signalMap[s.id] = s;
+  });
+  
+  return `
+  <table>
+    <thead>
+      <tr>
+        <th style="width:80px;">ID</th>
+        <th>交易对</th>
+        <th style="width:130px;">信号配置</th>
+        <th style="width:120px;">初始资金</th>
+        <th style="width:110px;">TP/SL</th>
+        <th style="width:90px;">版本</th>
+        <th style="width:110px;">状态</th>
+        <th style="width:220px;">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${instances.map(i => {
+        const pair = pairMap[i.tradingPairId];
+        const sig = signalMap[i.signalConfigId || 0] || { id: i.signalConfigId || 0, name: "未绑定" };
+        const tp = i.takeProfitRatio == null ? "-" : i.takeProfitRatio;
+        const sl = i.stopLossRatio == null ? "-" : i.stopLossRatio;
+        return `
+        <tr>
+          <td class="mono">${i.id}</td>
+          <td>
+            <b class="mono">${escapeHtml(i.strategySymbol || (pair ? computeStrategySymbol(pair) : '-'))}</b>
+            <div class="muted" style="margin-top:4px;">pairId: <span class="mono">${i.tradingPairId}</span> · strategyId: <span class="mono">${i.strategyId}</span></div>
+          </td>
+          <td>${sig.id === 0 ? `<span class="tag">未绑定(0)</span>` : `<span class="tag">${escapeHtml(sig.name)}</span>`}</td>
+          <td class="mono">${Number(i.initialCapital || 0).toFixed(2)}</td>
+          <td class="mono">${tp} / ${sl}</td>
+          <td class="mono">${i.version || 1}</td>
+          <td>${fmtEnabled(i.enabled)}</td>
+          <td>
+            <div class="miniBtns">
+              <button class="btn" onclick="location.hash='#/instances/${i.id}'">详情</button>
+              <button class="btn" onclick="openInstanceModal(${i.id}${opt.inStrategyDetail ? "," + i.strategyId : ""})">编辑</button>
+              <button class="btn ${i.enabled ? "danger" : ""}" onclick="uiToggleInstance(${i.id}, ${i.enabled})">${i.enabled ? "禁用" : "启用"}</button>
+            </div>
+          </td>
+        </tr>
+        `;
+      }).join("")}
+    </tbody>
+  </table>
+  `;
+}
+
+// 视图函数 - 实例详情
+async function instanceDetailView(id) {
+  try {
+    const res = await request({ url: `/api/strategy/instance/${id}`, method: 'GET' });
+    const i = res.data;
+    
+    if (!i) {
+      return `<div class="empty">实例不存在或已被删除。<a href="#/instances" onclick="location.hash='#/instances'">返回总览</a></div>`;
+    }
+    
+    const def = ctx.definitions.find(d => d.id === i.strategyId);
+    const pair = ctx.tradingPairs.find(p => p.id === i.tradingPairId);
+    const sig = ctx.signalConfigs.find(s => s.id === (i.signalConfigId || 0));
+    
+    return `
+    <div class="layout">
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <h2>实例详情</h2>
+            <p>展示：实例参数 + 关联策略/交易对/信号配置（N1 联调口径）</p>
+          </div>
+          <div>${fmtEnabled(i.enabled)}</div>
+        </div>
+        <div class="cardBody">
+          <div class="row">
+            <div class="field">
+              <span>实例ID</span>
+              <input class="mono" value="${i.id}" disabled />
+            </div>
+            <div class="field">
+              <span>版本号</span>
+              <input class="mono" value="${i.version || 1}" disabled />
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <span>策略ID / 名称</span>
+              <input value="${def ? (def.id + " / " + def.strategyName) : (i.strategyId + " / ?")}" disabled />
+            </div>
+            <div class="field">
+              <span>策略交易对（strategySymbol）</span>
+              <input class="mono" value="${escapeAttr(i.strategySymbol)}" disabled />
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <span>交易对</span>
+              <input value="${pair ? (pair.id + " / " + pair.symbol + " (" + pair.marketType + ")") : (i.tradingPairId + " / ?")}" disabled />
+            </div>
+            <div class="field">
+              <span>信号配置</span>
+              <input value="${sig ? (sig.id + " / " + sig.name) : ((i.signalConfigId || 0) + " / 未绑定")}" disabled />
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <span>初始资金 initialCapital</span>
+              <input class="mono" value="${Number(i.initialCapital || 0).toFixed(2)}" disabled />
+            </div>
+            <div class="field">
+              <span>TP / SL</span>
+              <input class="mono" value="${i.takeProfitRatio == null ? "-" : i.takeProfitRatio} / ${i.stopLossRatio == null ? "-" : i.stopLossRatio}" disabled />
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <span>runtimeRules（N4 才使用，N1 可为空）</span>
+            <textarea disabled>${escapeHtml(i.runtimeRules || "")}</textarea>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <span>创建时间</span>
+              <input class="mono" value="${i.createdAt || '-'}" disabled />
+            </div>
+            <div class="field">
+              <span>更新时间</span>
+              <input class="mono" value="${i.updatedAt || '-'}" disabled />
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+            <button class="btn ${i.enabled ? "danger" : "primary"}" onclick="uiToggleInstance(${i.id}, ${i.enabled})">${i.enabled ? "禁用实例" : "启用实例"}</button>
+            <button class="btn" onclick="location.hash='#/instances/${i.id}/history'">查看历史版本</button>
+            <button class="btn" onclick="location.hash='#/strategies/${i.strategyId}'">回到所属策略</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    `;
+  } catch (err) {
+    return `<div class="empty">加载实例详情失败：${err.message || '未知错误'}</div>`;
+  }
+}
+
+// 视图函数 - 实例历史
+async function instanceHistoryView(instanceId) {
+  try {
+    const res = await request({ url: `/api/strategy/instance/${instanceId}/history`, method: 'GET' });
+    const list = res.data || [];
+    
+    // 获取当前实例信息
+    let inst = null;
+    try {
+      const instRes = await request({ url: `/api/strategy/instance/${instanceId}`, method: 'GET' });
+      inst = instRes.data;
+    } catch (e) {
+      console.error('获取实例信息失败:', e);
+    }
+    
+    return `
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h2>实例历史版本</h2>
+          <p>instanceId: <span class="mono">${instanceId}</span> · 当前版本：<span class="mono">${inst ? (inst.version || 1) : '-'}</span></p>
+        </div>
+        <div class="tag">History</div>
+      </div>
+      <div class="cardBody">
+        ${list.length ? `
+          <table>
+            <thead>
+              <tr>
+                <th style="width:90px;">版本</th>
+                <th style="width:190px;">保存时间</th>
+                <th>关键参数快照</th>
+                <th style="width:120px;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.map(h => {
+                return `
+                  <tr>
+                    <td class="mono">v${h.version}</td>
+                    <td class="mono muted">${h.createdAt || '-'}</td>
+                    <td class="mono">
+                      capital=${Number(h.initialCapital || 0).toFixed(2)} · tp=${h.takeProfitRatio == null ? "-" : h.takeProfitRatio} · sl=${h.stopLossRatio == null ? "-" : h.stopLossRatio}
+                      · pairId=${h.tradingPairId} · signalId=${h.signalConfigId || 0}
+                    </td>
+                    <td>
+                      <button class="btn" onclick="showHistoryDetail(${h.id})">展开详情</button>
+                    </td>
+                  </tr>
+                  <tr id="hist_${h.id}" style="display:none;">
+                    <td colspan="4" style="background: rgba(0,0,0,.12);">
+                      <div class="row">
+                        <div class="field">
+                          <span>strategySymbol</span>
+                          <input class="mono" value="${escapeAttr(h.strategySymbol || '')}" disabled />
+                        </div>
+                        <div class="field">
+                          <span>enabled / version</span>
+                          <input class="mono" value="${h.enabled || 0} / ${h.version}" disabled />
+                        </div>
+                      </div>
+                      <div class="row" style="margin-top:10px;">
+                        <div class="field">
+                          <span>createdAt</span>
+                          <input class="mono" value="${h.createdAt || '-'}" disabled />
+                        </div>
+                        <div class="field">
+                          <span>updatedAt</span>
+                          <input class="mono" value="${h.updatedAt || '-'}" disabled />
+                        </div>
+                      </div>
+                      <div class="field" style="margin-top:10px;">
+                        <span>runtimeRules</span>
+                        <textarea disabled>${escapeHtml(h.runtimeRules || "")}</textarea>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        ` : `<div class="empty">暂无历史记录。编辑实例后会自动生成历史快照。</div>`}
+      </div>
+    </div>
+    `;
+  } catch (err) {
+    return `<div class="empty">加载历史记录失败：${err.message || '未知错误'}</div>`;
+  }
+}
+
+async function wireInstanceHistory(instanceId) {
+  // 展开逻辑在全局函数里
+}
+
+function toggleHistoryDetail(histId) {
+  const row = document.getElementById("hist_" + histId);
+  if (!row) return;
+  row.style.display = (row.style.display === "none" || !row.style.display) ? "table-row" : "none";
+}
+
+// Modal 操作
+const modalMask = document.getElementById("modalMask");
+const modalTitle = document.getElementById("modalTitle");
+const modalDesc = document.getElementById("modalDesc");
+const modalBody = document.getElementById("modalBody");
+const modalFooter = document.getElementById("modalFooter");
+
+function openModal({title, desc, bodyHtml, footerHtml}) {
+  if (modalTitle) modalTitle.textContent = title;
+  if (modalDesc) modalDesc.textContent = desc || "";
+  if (modalBody) modalBody.innerHTML = bodyHtml || "";
+  if (modalFooter) modalFooter.innerHTML = footerHtml || "";
+  if (modalMask) modalMask.classList.add("show");
+}
+
+function closeModal() {
+  if (modalMask) modalMask.classList.remove("show");
+  if (modalBody) modalBody.innerHTML = "";
+  if (modalFooter) modalFooter.innerHTML = "";
+}
+
+// 策略定义Modal
+async function openDefinitionModal(id = null) {
+  const editing = id != null;
+  let cur = null;
+  
+  if (editing) {
+    try {
+      const res = await request({ url: `/api/strategy/definition/${id}`, method: 'GET' });
+      cur = res.data;
+    } catch (err) {
+      toast('加载策略信息失败', 'error');
+      return;
+    }
+  }
+  
+  openModal({
+    title: editing ? "编辑策略定义" : "新建策略定义",
+    desc: "字段对齐：strategyName / strategyType / strategyPattern / enabled",
+    bodyHtml: `
+      <div class="row">
+        <div class="field">
+          <span>策略名称 strategyName *</span>
+          <input id="def_name" placeholder="例如：BTC 趋势策略" value="${cur ? escapeAttr(cur.strategyName) : ""}" />
+        </div>
+        <div class="field">
+          <span>状态 enabled</span>
+          <select id="def_enabled">
+            <option value="1" ${cur && cur.enabled ? "selected" : (!cur ? "selected" : "")}>启用</option>
+            <option value="0" ${cur && !cur.enabled ? "selected" : ""}>禁用</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <span>策略类型 strategyType *</span>
+          <select id="def_type">
+            ${["Martin","Grid","Trend","Arbitrage"].map(t => 
+              `<option value="${t}" ${(cur && cur.strategyType === t) ? "selected" : ""}>${t}</option>`
+            ).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <span>策略模式 strategyPattern *</span>
+          <select id="def_pattern">
+            ${[
+              ["SIGNAL_DRIVEN","SIGNAL_DRIVEN（信号驱动）"],
+              ["INDICATOR_DRIVEN","INDICATOR_DRIVEN（指标驱动）"],
+              ["HYBRID","HYBRID（混合）"],
+            ].map(([v, txt]) => 
+              `<option value="${v}" ${(cur && cur.strategyPattern === v) ? "selected" : ""}>${txt}</option>`
+            ).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="help" style="margin-top:10px;">
+        • 唯一性：同一 userId 下 <code>strategyName</code> 不可重复。<br/>
+        • 启停会影响后续 N2 事件路由（这里只做管理闭环）。
+      </div>
+    `,
+    footerHtml: `
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="${editing ? `submitDefinitionUpdate(${id})` : `submitDefinitionCreate()`}">${editing ? "保存修改" : "创建策略"}</button>
+    `
+  });
+}
+
+async function submitDefinitionCreate() {
+  try {
+    const nameEl = document.getElementById("def_name");
+    const typeEl = document.getElementById("def_type");
+    const patternEl = document.getElementById("def_pattern");
+    const enabledEl = document.getElementById("def_enabled");
+    
+    if (!nameEl || !typeEl || !patternEl || !enabledEl) {
+      toast('表单元素未找到', 'error');
+      return;
+    }
+    
+    const payload = {
+      strategyName: nameEl.value.trim(),
+      strategyType: typeEl.value,
+      strategyPattern: patternEl.value,
+      enabled: enabledEl.value === "1" ? 1 : 0
+    };
+    
+    const res = await request({
+      url: '/api/strategy/definition',
+      method: 'POST',
+      data: payload
+    });
+    
+    toast('创建成功：strategyId=' + res.data.id);
+    closeModal();
+    location.hash = "#/strategies/" + res.data.id;
+  } catch (e) {
+    toast('创建失败：' + (e.message || '未知错误'), 'error');
+  }
+}
+
+async function submitDefinitionUpdate(id) {
+  try {
+    const nameEl = document.getElementById("def_name");
+    const typeEl = document.getElementById("def_type");
+    const patternEl = document.getElementById("def_pattern");
+    const enabledEl = document.getElementById("def_enabled");
+    
+    if (!nameEl || !typeEl || !patternEl || !enabledEl) {
+      toast('表单元素未找到', 'error');
+      return;
+    }
+    
+    const payload = {
+      strategyName: nameEl.value.trim(),
+      strategyType: typeEl.value,
+      strategyPattern: patternEl.value,
+      enabled: parseInt(enabledEl.value)
+    };
+    
+    const res = await request({
+      url: `/api/strategy/definition/${id}`,
+      method: 'PUT',
+      data: payload
+    });
+    
+    toast('更新成功：strategyId=' + res.data.id);
+    closeModal();
+    render();
+  } catch (e) {
+    toast('更新失败：' + (e.message || '未知错误'), 'error');
+  }
+}
+
+// 实例Modal
+async function openInstanceModal(instanceId = null, forceStrategyId = null) {
+  const editing = instanceId != null;
+  let cur = null;
+  
+  if (editing) {
+    try {
+      const res = await request({ url: `/api/strategy/instance/${instanceId}`, method: 'GET' });
+      cur = res.data;
+    } catch (err) {
+      toast('加载实例信息失败', 'error');
+      return;
+    }
+  }
+  
+  // 加载策略列表
+  await loadDefinitions();
+  const defs = ctx.definitions.filter(d => d.userId === ctx.userId || !d.userId);
+  if (!defs.length) {
+    toast('请先创建策略定义');
+    location.hash = "#/strategies";
+    return;
+  }
+  
+  await loadTradingPairs();
+  const pairs = ctx.tradingPairs;
+  
+  await loadSignalConfigs();
+  const signals = ctx.signalConfigs;
+  
+  const strategyId = forceStrategyId != null ? Number(forceStrategyId) : (cur ? cur.strategyId : defs[0].id);
+  const selectedStrategy = defs.find(d => d.id === strategyId);
+  
+  openModal({
+    title: editing ? "编辑策略实例" : "新建策略实例",
+    desc: "字段对齐：strategyId / tradingPairId / signalConfigId / initialCapital / TP/SL / runtimeRules / enabled",
+    bodyHtml: `
+      <div class="row">
+        <div class="field">
+          <span>所属策略 strategyId *</span>
+          <select id="inst_strategy" ${forceStrategyId != null ? "disabled" : ""} onchange="onInstStrategyChange()">
+            ${defs.map(d => 
+              `<option value="${d.id}" ${(String(d.id) === String(strategyId)) ? "selected" : ""}>${escapeHtml(d.strategyName)} (#${d.id})</option>`
+            ).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <span>状态 enabled</span>
+          <select id="inst_enabled">
+            <option value="1" ${cur && cur.enabled ? "selected" : (!cur ? "selected" : "")}>启用</option>
+            <option value="0" ${cur && !cur.enabled ? "selected" : ""}>禁用</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <span>交易对 tradingPairId *</span>
+          <select id="inst_pair" onchange="onInstPairChange()">
+            ${pairs.map(p => {
+              // 只显示交易对名称，如果是合约加上-SWAP
+              const displayName = computeStrategySymbol(p);
+              const selected = cur ? (cur.tradingPairId === p.id) : (p.id === (pairs[0]?.id || 0));
+              return `<option value="${p.id}" data-symbol="${escapeAttr(p.symbol)}" data-market-type="${escapeAttr(p.marketType)}" ${selected ? "selected" : ""}>${escapeHtml(displayName)}</option>`;
+            }).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <span>信号配置 signalConfigId（可选）</span>
+          <select id="inst_signal">
+            ${signals.map(s => {
+              const selected = cur ? ((cur.signalConfigId || 0) === s.id) : (s.id === 0);
+              const displayName = s.id === 0 ? s.name : `${escapeHtml(s.name)} (#${s.id})`;
+              return `<option value="${s.id}" ${selected ? "selected" : ""}>${displayName}</option>`;
+            }).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <span>初始资金 initialCapital *</span>
+          <input id="inst_capital" type="number" step="0.01" min="0.00000001" placeholder="例如：1000" value="${cur ? cur.initialCapital : 1000}" />
+        </div>
+        <div class="field">
+          <span>strategySymbol（自动生成）</span>
+          <input id="inst_symbol" class="mono" value="${cur ? escapeAttr(cur.strategySymbol) : (pairs[0] ? escapeAttr(computeStrategySymbol(pairs[0])) : '')}" disabled />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <span>止盈比例 takeProfitRatio（0~1，可空）</span>
+          <input id="inst_tp" type="number" step="0.0001" min="0" max="1" placeholder="例如：0.03" value="${cur && cur.takeProfitRatio != null ? cur.takeProfitRatio : ""}" />
+        </div>
+        <div class="field">
+          <span>止损比例 stopLossRatio（0~1，可空）</span>
+          <input id="inst_sl" type="number" step="0.0001" min="0" max="1" placeholder="例如：0.01" value="${cur && cur.stopLossRatio != null ? cur.stopLossRatio : ""}" />
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <span>runtimeRules（N4 使用，N1 允许为空）</span>
+        <textarea id="inst_rules" placeholder='例如：{"entry":{"type":"SIGNAL","id":11}}'>${cur ? escapeHtml(cur.runtimeRules || "") : ""}</textarea>
+      </div>
+      <div class="help" style="margin-top:10px;">
+        • 唯一性：<code>user + strategy + pair + signal</code> 必须唯一（signal=0 表示未绑定）。<br/>
+        • 更新实例会生成历史快照，并自动 <code>version + 1</code>。
+      </div>
+    `,
+    footerHtml: `
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="${editing ? `submitInstanceUpdate(${instanceId})` : `submitInstanceCreate(${forceStrategyId != null ? Number(forceStrategyId) : "null"})`}">${editing ? "保存修改" : "创建实例"}</button>
+    `
+  });
+}
+
+function onInstPairChange() {
+  const pairEl = document.getElementById("inst_pair");
+  const symbolEl = document.getElementById("inst_symbol");
+  if (!pairEl || !symbolEl) return;
+  
+  const pairId = Number(pairEl.value);
+  const pair = ctx.tradingPairs.find(p => p.id === pairId);
+  if (pair) {
+    symbolEl.value = computeStrategySymbol(pair);
+  }
+}
+
+function onInstStrategyChange() {
+  // 预留：未来可按策略过滤可选交易对/信号
+}
+
+async function submitInstanceCreate(forceStrategyId) {
+  try {
+    const strategyEl = document.getElementById("inst_strategy");
+    const pairEl = document.getElementById("inst_pair");
+    const signalEl = document.getElementById("inst_signal");
+    const capitalEl = document.getElementById("inst_capital");
+    const tpEl = document.getElementById("inst_tp");
+    const slEl = document.getElementById("inst_sl");
+    const rulesEl = document.getElementById("inst_rules");
+    const enabledEl = document.getElementById("inst_enabled");
+    
+    if (!strategyEl || !pairEl || !signalEl || !capitalEl || !enabledEl) {
+      toast('表单元素未找到', 'error');
+      return;
+    }
+    
+    const strategyId = forceStrategyId != null ? Number(forceStrategyId) : Number(strategyEl.value);
+    const signalConfigId = signalEl.value ? (Number(signalEl.value) === 0 ? null : Number(signalEl.value)) : null;
+    
+    // 获取选中的交易对信息
+    const pairId = Number(pairEl.value);
+    const selectedPair = ctx.tradingPairs.find(p => p.id === pairId);
+    if (!selectedPair) {
+      toast('请选择有效的交易对', 'error');
+      return;
+    }
+    
+    // 计算正确的交易对名称（合约要加-SWAP）
+    const strategySymbol = computeStrategySymbol(selectedPair);
+    
+    const payload = {
+      strategyId: strategyId,
+      tradingPairId: pairId,
+      signalConfigId: signalConfigId,
+      initialCapital: Number(capitalEl.value),
+      takeProfitRatio: tpEl.value ? parseFloat(tpEl.value) : null,
+      stopLossRatio: slEl.value ? parseFloat(slEl.value) : null,
+      runtimeRules: rulesEl ? rulesEl.value : "",
+      enabled: enabledEl.value === "1" ? 1 : 0,
+      strategySymbol: strategySymbol  // 保存正确的交易对名称（合约带-SWAP）
+    };
+    
+    const res = await request({
+      url: '/api/strategy/instance',
+      method: 'POST',
+      data: payload
+    });
+    
+    toast('创建实例成功：instanceId=' + res.data.id);
+    closeModal();
+    location.hash = "#/instances/" + res.data.id;
+  } catch (e) {
+    toast('创建失败：' + (e.message || '未知错误'), 'error');
+  }
+}
+
+async function submitInstanceUpdate(instanceId) {
+  try {
+    const strategyEl = document.getElementById("inst_strategy");
+    const pairEl = document.getElementById("inst_pair");
+    const signalEl = document.getElementById("inst_signal");
+    const capitalEl = document.getElementById("inst_capital");
+    const tpEl = document.getElementById("inst_tp");
+    const slEl = document.getElementById("inst_sl");
+    const rulesEl = document.getElementById("inst_rules");
+    
+    if (!strategyEl || !pairEl || !signalEl || !capitalEl) {
+      toast('表单元素未找到', 'error');
+      return;
+    }
+    
+    const signalConfigId = signalEl.value ? (Number(signalEl.value) === 0 ? null : Number(signalEl.value)) : null;
+    
+    // 获取选中的交易对信息
+    const pairId = Number(pairEl.value);
+    const selectedPair = ctx.tradingPairs.find(p => p.id === pairId);
+    if (!selectedPair) {
+      toast('请选择有效的交易对', 'error');
+      return;
+    }
+    
+    // 计算正确的交易对名称（合约要加-SWAP）
+    const strategySymbol = computeStrategySymbol(selectedPair);
+    
+    const payload = {
+      strategyId: Number(strategyEl.value),
+      tradingPairId: pairId,
+      signalConfigId: signalConfigId,
+      initialCapital: Number(capitalEl.value),
+      takeProfitRatio: tpEl.value ? parseFloat(tpEl.value) : null,
+      stopLossRatio: slEl.value ? parseFloat(slEl.value) : null,
+      runtimeRules: rulesEl ? rulesEl.value : "",
+      strategySymbol: strategySymbol  // 保存正确的交易对名称（合约带-SWAP）
+    };
+    
+    const res = await request({
+      url: `/api/strategy/instance/${instanceId}`,
+      method: 'PUT',
+      data: payload
+    });
+    
+    toast(`更新成功：instanceId=${res.data.id}，version=${res.data.version}`);
+    closeModal();
+    render();
+  } catch (e) {
+    toast('更新失败：' + (e.message || '未知错误'), 'error');
+  }
+}
+
+// UI Actions
+async function uiToggleDefinition(id, currentEnabled) {
+  try {
+    const enabled = currentEnabled === 1 ? 0 : 1;
+    const msg = enabled === 1 ? '确认启用该策略吗？' : '确认禁用该策略吗？禁用后不会参与后续事件路由。';
+    
+    if (!confirm(msg)) {
+      return;
+    }
+    
+    await request({
+      url: `/api/strategy/definition/${id}/toggle`,
+      method: 'PUT',
+      data: { enabled: enabled }
+    });
+    
+    toast('已切换策略状态');
+    render();
+  } catch (e) {
+    toast('操作失败：' + (e.message || '未知错误'), 'error');
+  }
+}
+
+async function uiToggleInstance(id, currentEnabled) {
+  try {
+    const enabled = currentEnabled === 1 ? 0 : 1;
+    const msg = enabled === 1 ? '确认启用该实例吗？' : '确认禁用该实例吗？禁用后不会参与后续事件路由。';
+    
+    if (!confirm(msg)) {
+      return;
+    }
+    
+    await request({
+      url: `/api/strategy/instance/${id}/toggle`,
+      method: 'PUT',
+      data: { enabled: enabled }
+    });
+    
+    toast('已切换实例状态');
+    render();
+  } catch (e) {
+    toast('操作失败：' + (e.message || '未知错误'), 'error');
+  }
+}
+
+// 历史详情展开
+function showHistoryDetail(historyId) {
+  toggleHistoryDetail(historyId);
+}
+
+// 全局函数暴露
+window.openDefinitionModal = openDefinitionModal;
+window.submitDefinitionCreate = submitDefinitionCreate;
+window.submitDefinitionUpdate = submitDefinitionUpdate;
+window.uiToggleDefinition = uiToggleDefinition;
+
+window.openInstanceModal = openInstanceModal;
+window.submitInstanceCreate = submitInstanceCreate;
+window.submitInstanceUpdate = submitInstanceUpdate;
+window.uiToggleInstance = uiToggleInstance;
+window.onInstPairChange = onInstPairChange;
+window.onInstStrategyChange = onInstStrategyChange;
+
+window.showHistoryDetail = showHistoryDetail;
+window.toggleHistoryDetail = toggleHistoryDetail;
+window.closeModal = closeModal;
+
+// 额外的测试：直接测试 render 函数
+window.testRender = function() {
+  render();
+};
+
+// 立即执行的测试代码
+console.log('=== STRATEGY.HTML SCRIPT LOADED ===');
+console.log('Layui available:', typeof layui !== 'undefined');
+console.log('checkLogin available:', typeof checkLogin !== 'undefined');
+console.log('Current URL:', window.location.href);
+console.log('Current hash:', window.location.hash);
+</script>
+</body>
+</html>
