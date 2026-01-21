@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>指标评估 - V2 Trade</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <style>
+        body { margin: 0; padding: 0; background: #f5f7fa; }
+        .layui-layout-admin .layui-header { background-color: #23262E; }
+        .layui-logo { color: #fff; font-size: 18px; font-weight: bold; }
+        .layui-logo span { color: #1E9FFF; }
+        .layui-body { background: #f5f7fa; }
+        .evaluate-panel {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e8eaed;
+        }
+        .result-panel {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e8eaed;
+        }
+        .param-form-item {
+            margin-bottom: 15px;
+        }
+        .source-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .source-cache { background: #5FB878; color: #fff; }
+        .source-computed { background: #FFB800; color: #fff; }
+        .result-valid { color: #5FB878; }
+        .result-invalid { color: #FF5722; }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs"><span>V2</span> Trade</div>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item">
+                <a href="javascript:;">
+                    <i class="layui-icon layui-icon-username"></i>
+                    <span id="userName">用户</span>
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="/settings.html">个人设置</a></dd>
+                    <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+                </dl>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree" lay-filter="sideNav">
+                <li class="layui-nav-item"><a href="/index.html">首页</a></li>
+                <li class="layui-nav-item"><a href="/users.html">用户管理</a></li>
+                <li class="layui-nav-item"><a href="/trading-pair.html">交易对管理</a></li>
+                <li class="layui-nav-item"><a href="/signal-config.html">信号配置</a></li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">策略模块</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/strategy.html#/strategies">策略定义</a></dd>
+                        <dd><a href="/strategy.html#/instances">策略实例</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">指标管理</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="/indicator/definitions.html">指标定义</a></dd>
+                        <dd class="layui-this"><a href="/indicator/evaluate.html">指标评估</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="layui-body">
+        <div style="padding: 20px;">
+            <div class="layui-card">
+                <div class="layui-card-header">
+                    <strong>指标评估（Evaluate Playground）</strong> - V2 按需评估功能
+                </div>
+                <div class="layui-card-body">
+                    <!-- 评估配置面板 -->
+                    <div class="evaluate-panel">
+                        <form class="layui-form" lay-filter="evaluateForm">
+                            <div class="layui-row layui-col-space15">
+                                <div class="layui-col-md6">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">交易对</label>
+                                        <div class="layui-input-block">
+                                            <select id="tradingPairSelect" lay-verify="required" lay-search>
+                                                <option value="">请选择交易对</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="layui-col-md6">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">周期</label>
+                                        <div class="layui-input-block">
+                                            <select id="timeframeSelect" lay-verify="required">
+                                                <option value="">请选择周期</option>
+                                                <option value="5m">5分钟</option>
+                                                <option value="15m">15分钟</option>
+                                                <option value="30m">30分钟</option>
+                                                <option value="1h">1小时</option>
+                                                <option value="4h">4小时</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="layui-row layui-col-space15">
+                                <div class="layui-col-md6">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Bar时间</label>
+                                        <div class="layui-input-block">
+                                            <input type="text" id="barTimeInput" class="layui-input" 
+                                                   placeholder="YYYY-MM-DD HH:mm:ss" lay-verify="required">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="layui-col-md6">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">指标</label>
+                                        <div class="layui-input-block">
+                                            <select id="indicatorSelect" lay-verify="required" lay-search lay-filter="indicatorSelect">
+                                                <option value="">请选择指标</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 参数表单（动态渲染） -->
+                            <div id="paramsContainer">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">参数</label>
+                                    <div class="layui-input-block">
+                                        <div id="paramsForm" class="layui-form">
+                                            <p style="color: #999; padding: 10px;">请先选择指标，将自动渲染参数表单</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="button" class="layui-btn" id="evaluateBtn">
+                                        <i class="layui-icon layui-icon-play"></i> 评估
+                                    </button>
+                                    <button type="button" class="layui-btn layui-btn-normal" id="batchEvaluateBtn" style="display: none;">
+                                        <i class="layui-icon layui-icon-list"></i> 批量评估
+                                    </button>
+                                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- 结果展示面板 -->
+                    <div class="result-panel" id="resultPanel" style="display: none;">
+                        <h3>评估结果</h3>
+                        <div id="resultContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+layui.use(['element', 'layer', 'form', 'laydate'], function(){
+    var element = layui.element;
+    var layer = layui.layer;
+    var form = layui.form;
+    var laydate = layui.laydate;
+    var $ = layui.$;
+    
+    if (!checkLogin()) return;
+    
+    var user = getCurrentUser();
+    if (user) { $('#userName').text(user.username); }
+    
+    var tradingPairs = [];
+    var indicators = [];
+    var currentParamSchema = null;
+    
+    // 初始化日期时间选择器
+    laydate.render({
+        elem: '#barTimeInput',
+        type: 'datetime',
+        format: 'yyyy-MM-dd HH:mm:ss',
+        value: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    });
+    
+    // 加载交易对列表
+    function loadTradingPairs() {
+        request({url: '/api/trading-pair/list'}).then(function(res){
+            tradingPairs = res.data || [];
+            var html = '<option value="">请选择交易对</option>';
+            tradingPairs.forEach(function(pair){
+                // 如果是合约（SWAP），在交易对名称后添加 -SWAP
+                var displaySymbol = pair.symbol || ('ID:' + pair.id);
+                if (pair.marketType === 'SWAP' || pair.marketType === 'swap') {
+                    // 如果symbol中不包含-SWAP，则添加
+                    if (displaySymbol.indexOf('-SWAP') === -1) {
+                        displaySymbol = displaySymbol + '-SWAP';
+                    }
+                }
+                html += '<option value="' + pair.id + '" data-symbol="' + (pair.symbol || '') + 
+                        '" data-market-type="' + (pair.marketType || '') + '">' + 
+                        displaySymbol + '</option>';
+            });
+            $('#tradingPairSelect').html(html);
+            form.render('select');
+        }).catch(function(err){
+            console.error('加载交易对失败:', err);
+            layer.msg('加载交易对失败: ' + (err.message || '未知错误'), {icon: 2});
+        });
+    }
+    
+    // 加载指标列表
+    function loadIndicators() {
+        request({url: '/api/indicator/definitions?enabled=1'}).then(function(res){
+            // API返回的是分页数据，需要从res.data.records中获取
+            var dataList = [];
+            if (res.data && res.data.records) {
+                dataList = res.data.records;
+            } else if (Array.isArray(res.data)) {
+                dataList = res.data;
+            }
+            indicators = dataList;
+            var html = '<option value="">请选择指标</option>';
+            indicators.forEach(function(indicator){
+                html += '<option value="' + indicator.indicatorCode + '" data-version="' + 
+                        (indicator.indicatorVersion || 'v1') + '" data-schema="' + 
+                        encodeURIComponent(JSON.stringify(indicator.paramSchema || {})) + '">' + 
+                        indicator.indicatorName + ' (' + indicator.indicatorCode + ')' + '</option>';
+            });
+            $('#indicatorSelect').html(html);
+            form.render('select');
+        }).catch(function(err){
+            console.error('加载指标列表失败:', err);
+            layer.msg('加载指标列表失败: ' + (err.message || '未知错误'), {icon: 2});
+        });
+    }
+    
+    // 渲染参数表单
+    function renderParamsForm(paramSchema) {
+        if (!paramSchema || Object.keys(paramSchema).length === 0) {
+            $('#paramsForm').html('<p style="color: #999; padding: 10px;">该指标无需参数</p>');
+            return;
+        }
+        
+        // 跳过特殊字段（这些字段不应该显示在参数表单中）
+        var skipFields = ['data_source', 'impl_key', 'param_limits'];
+        
+        var html = '';
+        var hasParams = false;
+        for (var key in paramSchema) {
+            // 跳过特殊字段
+            if (skipFields.indexOf(key) >= 0) {
+                continue;
+            }
+            
+            var param = paramSchema[key];
+            // 跳过非参数定义（如果param不是对象，说明可能是特殊字段的值）
+            if (!param || typeof param !== 'object' || !param.type) {
+                continue;
+            }
+            
+            hasParams = true;
+            // 类型映射：前端定义的类型（int/float/bool/string）映射到标准类型
+            var rawType = param.type || 'string';
+            var type = rawType;
+            // 类型标准化：int -> integer, float -> number, bool -> boolean
+            if (rawType === 'int') {
+                type = 'integer';
+            } else if (rawType === 'float') {
+                type = 'number';
+            } else if (rawType === 'bool') {
+                type = 'boolean';
+            }
+            
+            var required = param.required ? 'lay-verify="required"' : '';
+            var defaultValue = param.default !== undefined ? param.default : '';
+            
+            html += '<div class="param-form-item">';
+            html += '<label class="layui-form-label">' + key + 
+                    (param.required ? '<span style="color: red;">*</span>' : '') + '</label>';
+            html += '<div class="layui-input-block">';
+            
+            if (type === 'integer' || type === 'decimal' || type === 'number' || rawType === 'int' || rawType === 'float') {
+                html += '<input type="number" name="' + key + '" class="layui-input" ' +
+                        'placeholder="' + (param.description || key) + '" ' +
+                        'value="' + defaultValue + '" ' + required + 
+                        (param.min !== undefined ? ' min="' + param.min + '"' : '') +
+                        (param.max !== undefined ? ' max="' + param.max + '"' : '') + '>';
+            } else if (type === 'boolean' || rawType === 'bool') {
+                html += '<input type="checkbox" name="' + key + '" lay-skin="switch" ' +
+                        'lay-text="是|否" ' + (defaultValue ? 'checked' : '') + '>';
+            } else if (param.enum) {
+                html += '<select name="' + key + '" ' + required + '>';
+                if (!param.required && !defaultValue) {
+                    html += '<option value="">请选择</option>';
+                }
+                param.enum.forEach(function(val){
+                    html += '<option value="' + val + '"' + 
+                            (val === defaultValue ? ' selected' : '') + '>' + val + '</option>';
+                });
+                html += '</select>';
+            } else {
+                html += '<input type="text" name="' + key + '" class="layui-input" ' +
+                        'placeholder="' + (param.description || key) + '" ' +
+                        'value="' + defaultValue + '" ' + required + '>';
+            }
+            
+            if (param.description) {
+                html += '<div class="layui-form-mid layui-word-aux">' + param.description + '</div>';
+            }
+            
+            html += '</div></div>';
+        }
+        
+        if (!hasParams) {
+            html = '<p style="color: #999; padding: 10px;">该指标无需参数</p>';
+        }
+        
+        $('#paramsForm').html(html);
+        form.render();
+    }
+    
+    // 监听指标选择
+    form.on('select(indicatorSelect)', function(data){
+        var option = $('#indicatorSelect option:selected');
+        var schemaStr = decodeURIComponent(option.attr('data-schema') || '{}');
+        try {
+            currentParamSchema = JSON.parse(schemaStr);
+            renderParamsForm(currentParamSchema);
+        } catch(e) {
+            console.error('解析参数schema失败:', e);
+            currentParamSchema = {};
+            renderParamsForm({});
+        }
+    });
+    
+    // 执行评估
+    $('#evaluateBtn').click(function(){
+        var tradingPairId = $('#tradingPairSelect').val();
+        var timeframe = $('#timeframeSelect').val();
+        var barTime = $('#barTimeInput').val();
+        var indicatorCode = $('#indicatorSelect').val();
+        var option = $('#indicatorSelect option:selected');
+        var version = option.attr('data-version') || 'v1';
+        
+        if (!tradingPairId || !timeframe || !barTime || !indicatorCode) {
+            layer.msg('请填写完整的评估参数', {icon: 2});
+            return;
+        }
+        
+        // 收集参数
+        var params = {};
+        // 跳过特殊字段（这些字段不应该作为指标参数）
+        var skipFields = ['data_source', 'impl_key', 'param_limits'];
+        
+        // 先收集所有表单字段的值
+        $('#paramsForm input, #paramsForm select').each(function(){
+            var name = $(this).attr('name');
+            if (!name || skipFields.indexOf(name) >= 0) {
+                return; // 跳过特殊字段
+            }
+            
+            var value = $(this).val();
+            var type = $(this).attr('type');
+            var paramDef = currentParamSchema && currentParamSchema[name];
+            
+            if (type === 'checkbox') {
+                // checkbox 总是有值（true/false）
+                params[name] = $(this).prop('checked');
+            } else if (type === 'number') {
+                // number 类型：如果填写了值就使用，否则检查是否有默认值
+                if (value !== '' && value !== null && value !== undefined && !isNaN(value)) {
+                    params[name] = parseFloat(value);
+                } else if (paramDef && paramDef.default !== undefined) {
+                    // 使用默认值
+                    params[name] = paramDef.default;
+                }
+                // 如果是必填但没有值也没有默认值，后面会统一检查
+            } else {
+                // 文本或选择类型
+                if (value !== '' && value !== null && value !== undefined) {
+                    params[name] = value;
+                } else if (paramDef && paramDef.default !== undefined) {
+                    // 使用默认值
+                    params[name] = paramDef.default;
+                }
+                // 如果是必填但没有值也没有默认值，后面会统一检查
+            }
+        });
+        
+        // 检查是否有必填参数缺失
+        if (currentParamSchema) {
+            for (var key in currentParamSchema) {
+                if (skipFields.indexOf(key) >= 0) continue;
+                
+                var paramDef = currentParamSchema[key];
+                // 跳过非参数定义（如果param不是对象，说明可能是特殊字段的值）
+                if (!paramDef || typeof paramDef !== 'object' || !paramDef.type) {
+                    continue;
+                }
+                
+                // 检查必填参数
+                if (paramDef.required && params[key] === undefined) {
+                    layer.msg('参数 "' + key + '" 为必填项，请填写', {icon: 2});
+                    var field = $('#paramsForm [name="' + key + '"]');
+                    if (field.length > 0) {
+                        field.focus();
+                    }
+                    return;
+                }
+            }
+        }
+        
+        // 转换日期格式：将 "YYYY-MM-DD HH:mm:ss" 转换为 ISO-8601 格式 "YYYY-MM-DDTHH:mm:ss"
+        var formattedBarTime = barTime;
+        if (formattedBarTime && formattedBarTime.indexOf(' ') >= 0) {
+            formattedBarTime = formattedBarTime.replace(' ', 'T');
+        }
+        
+        // 构建请求
+        var requestData = {
+            userId: user.id,
+            tradingPairId: parseInt(tradingPairId),
+            timeframe: timeframe,
+            asOfBarTime: formattedBarTime,
+            indicatorCode: indicatorCode,
+            indicatorVersion: version,
+            params: params
+        };
+        
+        // 发送请求
+        $('#evaluateBtn').prop('disabled', true).text('评估中...');
+        request({
+            url: '/api/indicator/evaluate',
+            method: 'POST',
+            data: requestData
+        }).then(function(res){
+            if (res.code === 200) {
+                displayResult(res.data);
+            } else {
+                layer.msg(res.message || '评估失败', {icon: 2});
+            }
+        }).catch(function(err){
+            layer.msg('评估失败: ' + (err.message || '未知错误'), {icon: 2});
+        }).finally(function(){
+            $('#evaluateBtn').prop('disabled', false).html('<i class="layui-icon layui-icon-play"></i> 评估');
+        });
+    });
+    
+    // 显示结果
+    function displayResult(result) {
+        if (!result) {
+            $('#resultPanel').hide();
+            return;
+        }
+        
+        var html = '<table class="layui-table">';
+        html += '<tr><td width="150"><strong>有效性</strong></td><td>' +
+                (result.valid ? 
+                    '<span class="result-valid">✓ 有效</span>' : 
+                    '<span class="result-invalid">✗ 无效</span>') + '</td></tr>';
+        html += '<tr><td><strong>数据来源</strong></td><td>' +
+                '<span class="source-badge source-' + result.source.toLowerCase() + '">' + 
+                result.source + '</span></td></tr>';
+        
+        if (result.values) {
+            html += '<tr><td><strong>指标值</strong></td><td>';
+            for (var key in result.values) {
+                html += '<div><strong>' + key + ':</strong> ' + result.values[key] + '</div>';
+            }
+            html += '</td></tr>';
+        }
+        
+        if (result.fingerprint) {
+            html += '<tr><td><strong>计算指纹</strong></td><td><code style="font-size: 12px;">' + 
+                    result.fingerprint + '</code></td></tr>';
+        }
+        
+        if (result.costMs !== undefined) {
+            html += '<tr><td><strong>计算耗时</strong></td><td>' + result.costMs + ' ms</td></tr>';
+        }
+        
+        if (result.errorMsg) {
+            html += '<tr><td><strong>错误信息</strong></td><td style="color: #FF5722;">' + 
+                    result.errorMsg + '</td></tr>';
+        }
+        
+        html += '</table>';
+        
+        $('#resultContent').html(html);
+        $('#resultPanel').show();
+    }
+    
+    // 初始化
+    loadTradingPairs();
+    loadIndicators();
+});
+</script>
+</body>
+</html>
+

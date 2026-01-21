@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>N4 运行大脑配置</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121a33;
+      --border: #233158;
+      --text: #eaf0ff;
+      --muted: #8aa0d4;
+      --accent: #4c6fff;
+    }
+    body { margin:0; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 16px; }
+    .row { display: grid; grid-template-columns: 380px 1fr; gap: 12px; align-items: start; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    .muted { color: var(--muted); }
+    .hr { height:1px; background: var(--border); margin:12px 0; }
+    label { display:block; font-size:12px; color:var(--muted); margin:10px 0 6px; }
+    input, select, textarea {
+      width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);
+      background:#0f1730; color:var(--text); outline:none;
+    }
+    textarea { min-height: 200px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .btn {
+      cursor:pointer; border:1px solid var(--border); background:#0f1730; color:var(--text);
+      border-radius:10px; padding:10px 12px; transition: all .1s ease;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .mini { font-size:12px; padding:8px 10px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .list { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+    .item { border:1px solid var(--border); border-radius:12px; padding:10px; background:#0f1730; }
+    .itemHead { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+    .tag { font-size:12px; color:var(--muted); }
+    .layout {
+      min-height: 100vh;
+    }
+    .topbar {
+      background:#0f1730;
+      border-bottom:1px solid var(--border);
+      padding:10px 16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .topbar a { color:var(--text); margin-right:12px; font-size:13px; }
+    .topbar a.active { color:var(--accent); font-weight:700; }
+    .badge { display:inline-block; padding:2px 6px; border-radius:6px; background:rgba(76,111,255,.15); color:var(--accent); font-size:11px; }
+    .inline-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .pill { display:inline-flex; gap:6px; align-items:center; padding:6px 10px; border:1px solid var(--border); border-radius:12px; background:#0f1730; }
+    .flex { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div class="topbar">
+    <div>
+      <strong>N4 大脑配置</strong>
+      <span class="badge">runtimeRules</span>
+      <a href="/strategy.html#/instances">返回实例列表</a>
+    </div>
+    <div class="flex">
+      <span class="muted mini">用户：<span id="userName">-</span></span>
+      <button class="btn mini" id="loadTemplateTrend">载入趋势模板</button>
+      <button class="btn mini" id="loadTemplateGrid">载入网格模板</button>
+      <button class="btn mini" id="loadTemplateMartingale">载入马丁模板</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h2 style="margin:0 0 6px">运行大脑规则配置（N4）</h2>
+    <div class="muted">参考原型：Entry/Exit 多因子、all/weight 模式、JSON 导出。指标数据来源后端指标库。</div>
+
+    <div class="row" style="margin-top:12px">
+      <!-- 左侧 -->
+      <div class="card">
+        <h3 style="margin:0 0 8px">全局</h3>
+        <label>rulesType（大脑类型）</label>
+        <select id="rulesType">
+          <option value="1">1 趋势</option>
+          <option value="2">2 马丁</option>
+          <option value="3">3 网格</option>
+        </select>
+
+        <div class="hr"></div>
+        <h3 style="margin:0 0 8px">Entry Rules</h3>
+        <label>entryType</label>
+        <select id="entryType">
+          <option value="all">all（全部满足）</option>
+          <option value="weight" selected>weight（权重阈值）</option>
+        </select>
+
+        <div class="grid2">
+          <div>
+            <label>longEnterScore（≥）</label>
+            <input id="longEnterScore" type="number" value="30"/>
+          </div>
+          <div>
+            <label>shortEnterScore（≤）</label>
+            <input id="shortEnterScore" type="number" value="-30"/>
+          </div>
+        </div>
+        <div class="muted mini" id="scoreHint" style="margin-top:6px"></div>
+
+        <div class="hr"></div>
+        <button class="btn" id="addFactorBtn">+ 添加因子（指标库）</button>
+        <div class="list" id="factorList"></div>
+
+        <div class="hr"></div>
+        <h3 style="margin:0 0 8px">Exit Rules</h3>
+        <label>exitType</label>
+        <select id="exitType">
+          <option value="all">all（全部满足）</option>
+          <option value="weight" selected>weight（权重阈值）</option>
+        </select>
+
+        <div class="grid2">
+          <div>
+            <label>longExitScore（≤）</label>
+            <input id="longExitScore" type="number" value="-30"/>
+          </div>
+          <div>
+            <label>shortExitScore（≥）</label>
+            <input id="shortExitScore" type="number" value="30"/>
+          </div>
+        </div>
+        <div class="muted mini" id="exitScoreHint" style="margin-top:6px"></div>
+
+        <div class="hr"></div>
+        <button class="btn" id="addExitFactorBtn">+ 添加退出因子（指标库）</button>
+        <div class="list" id="exitFactorList"></div>
+      </div>
+
+      <!-- 右侧 -->
+      <div class="card">
+        <h3 style="margin:0 0 8px">因子编辑</h3>
+        <div class="inline-actions" style="margin-bottom:8px">
+          <button class="btn mini" id="editEntryBtn">编辑：Entry</button>
+          <button class="btn mini" id="editExitBtn">编辑：Exit</button>
+          <span class="muted mini" id="editHint">当前编辑：Entry</span>
+        </div>
+        <div class="muted mini">选择左侧某个因子后，这里显示其参数表单（空头权重默认负数）。</div>
+
+        <div id="editorArea" style="margin-top:10px" class="item">
+          <div class="muted">尚未选择因子</div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="inline-actions">
+          <button class="btn" id="exportBtn">导出 runtimeRules JSON</button>
+          <button class="btn" id="copyBtn">复制 JSON</button>
+          <button class="btn" id="confirmBtn" style="display:none; background:rgba(76,111,255,.2); border-color:rgba(76,111,255,.4);">确认并返回</button>
+          <button class="btn" id="resetBtn">重置</button>
+        </div>
+
+        <div class="hr"></div>
+        <label>version / notes（可选，随 JSON 一起导出）</label>
+        <div class="grid2">
+          <div><input id="versionInput" type="number" value="1"/></div>
+          <div><input id="notesInput" placeholder="给量化/开发看的备注"/></div>
+        </div>
+
+        <label style="margin-top:10px">JSON 预览</label>
+        <textarea id="jsonPreview" spellcheck="false"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 指标选择弹窗 -->
+<div id="indicatorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;">
+  <div style="max-width:720px;margin:6vh auto;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <b>选择指标</b>
+      <button class="btn mini" id="indicatorModalClose">关闭</button>
+    </div>
+    <div class="hr"></div>
+    <input id="indicatorSearch" placeholder="搜索：rsi / macd / signal / price ..." />
+    <div class="list" id="indicatorList" style="margin-top:10px;max-height:52vh;overflow:auto"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/js/common.js"></script>
+<script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+  const uid = ()=>"f_"+Math.random().toString(16).slice(2,10);
+
+  let INDICATOR_LIBRARY = [];
+  let _modalAddTarget = "entry";
+
+  let state = {
+    rulesType: "1",
+    version: 1,
+    notes: "",
+    entryRules: { entryType:"weight", threshold:{longEnterScore:30,shortEnterScore:-30}, factorList:[] },
+    exitRules: { exitType:"weight", threshold:{longExitScore:-30,shortExitScore:30}, factorList:[] },
+    _ui: { selectedRuleSet:"entry", selectedFactorId:null, condSide:"long" }
+  };
+
+  // ===== 初始化 =====
+  function init(){
+    if(!checkLogin()) return;
+    const user = getCurrentUser();
+    if(user){ $("userName").innerText = user.username; }
+    
+    // 检测是否在弹窗模式
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEmbedded = urlParams.get('embedded') === '1';
+    const initialRulesStr = urlParams.get('initialRules') || '';
+    
+    if(isEmbedded){
+      // 隐藏顶部导航，显示确认按钮
+      const topbar = document.querySelector('.topbar');
+      if(topbar) topbar.style.display = 'none';
+      const confirmBtn = $("confirmBtn");
+      if(confirmBtn) confirmBtn.style.display = 'inline-block';
+    }
+    
+    bindEvents();
+    loadIndicatorLibrary().then(()=>{
+      if(initialRulesStr){
+        try{
+          const parsed = JSON.parse(decodeURIComponent(initialRulesStr));
+          loadFromJson(parsed);
+        }catch(e){
+          console.warn("解析 initialRules 失败，使用默认值", e);
+          resetAll();
+        }
+      }else{
+        resetAll();
+      }
+    });
+  }
+  
+  // ===== 从 JSON 加载状态 =====
+  function loadFromJson(json){
+    if(json.rulesType) state.rulesType = String(json.rulesType);
+    if(json.version) state.version = Number(json.version);
+    if(json.notes) state.notes = String(json.notes);
+    
+    if(json.entryRules){
+      if(json.entryRules.entryType) state.entryRules.entryType = json.entryRules.entryType;
+      if(json.entryRules.threshold){
+        state.entryRules.threshold = json.entryRules.threshold;
+      }
+      if(json.entryRules.factorList && Array.isArray(json.entryRules.factorList)){
+        state.entryRules.factorList = json.entryRules.factorList.map(f=>{
+          const factor = {
+            factorId: f.factorId || uid(),
+            enabled: f.enabled !== false,
+            name: f.name || f.indicator?.code || "",
+            indicatorCode: f.indicator?.code || "",
+            dataSource: f.indicator?.dataSource || "BAR",
+            params: f.indicator?.params || {},
+            scope: {
+              longWeight: f.scope?.longWeight || 20,
+              shortWeight: f.scope?.shortWeight || -20
+            },
+            condition: f.condition || { op:"GT", left:{ref:`ind.${f.indicator?.code||""}.value`}, right:{const:0} },
+            conditionLong: f.conditionLong || f.condition || { op:"GT", left:{ref:`ind.${f.indicator?.code||""}.value`}, right:{const:0} },
+            conditionShort: f.conditionShort || { op:"LT", left:{ref:`ind.${f.indicator?.code||""}.value`}, right:{const:0} }
+          };
+          return factor;
+        });
+      }
+    }
+    
+    if(json.exitRules){
+      if(json.exitRules.exitType) state.exitRules.exitType = json.exitRules.exitType;
+      if(json.exitRules.threshold){
+        state.exitRules.threshold = json.exitRules.threshold;
+      }
+      if(json.exitRules.factorList && Array.isArray(json.exitRules.factorList)){
+        state.exitRules.factorList = json.exitRules.factorList.map(f=>{
+          const factor = {
+            factorId: f.factorId || uid(),
+            enabled: f.enabled !== false,
+            name: f.name || f.indicator?.code || "",
+            indicatorCode: f.indicator?.code || "",
+            dataSource: f.indicator?.dataSource || "BAR",
+            params: f.indicator?.params || {},
+            scope: {
+              longWeight: f.scope?.longWeight || 20,
+              shortWeight: f.scope?.shortWeight || -20
+            },
+            condition: f.condition || { op:"GT", left:{ref:`ind.${f.indicator?.code||""}.value`}, right:{const:0} },
+            conditionLong: f.conditionLong || f.condition || { op:"GT", left:{ref:`ind.${f.indicator?.code||""}.value`}, right:{const:0} },
+            conditionShort: f.conditionShort || { op:"LT", left:{ref:`ind.${f.indicator?.code||""}.value`}, right:{const:0} }
+          };
+          return factor;
+        });
+      }
+    }
+    
+    // 同步 UI
+    $("rulesType").value = state.rulesType;
+    $("entryType").value = state.entryRules.entryType;
+    $("exitType").value = state.exitRules.exitType;
+    if(state.entryRules.threshold){
+      $("longEnterScore").value = String(state.entryRules.threshold.longEnterScore || 30);
+      $("shortEnterScore").value = String(state.entryRules.threshold.shortEnterScore || -30);
+    }
+    if(state.exitRules.threshold){
+      $("longExitScore").value = String(state.exitRules.threshold.longExitScore || -30);
+      $("shortExitScore").value = String(state.exitRules.threshold.shortExitScore || 30);
+    }
+    $("versionInput").value = String(state.version || 1);
+    $("notesInput").value = state.notes || "";
+    
+    const isEntryWeight = state.entryRules.entryType === "weight";
+    $("longEnterScore").disabled = !isEntryWeight;
+    $("shortEnterScore").disabled = !isEntryWeight;
+    const isExitWeight = state.exitRules.exitType === "weight";
+    $("longExitScore").disabled = !isExitWeight;
+    $("shortExitScore").disabled = !isExitWeight;
+    
+    syncEditToggleUi();
+    renderFactorList();
+    renderExitFactorList();
+    renderEditor();
+    updateJsonPreview();
+  }
+  
+  // ===== 确认并返回（弹窗模式） =====
+  function confirmAndReturn(){
+    updateJsonPreview();
+    if(!validateRules()) return;
+    
+    const jsonStr = $("jsonPreview").value;
+    
+    // 通过 postMessage 发送给父窗口
+    if(window.parent && window.parent !== window){
+      window.parent.postMessage({
+        type: 'runtimeRulesConfigComplete',
+        runtimeRules: jsonStr
+      }, '*');
+    }
+    
+    // 如果不在 iframe 中，尝试通过 opener 发送
+    if(window.opener && !window.opener.closed){
+      window.opener.postMessage({
+        type: 'runtimeRulesConfigComplete',
+        runtimeRules: jsonStr
+      }, '*');
+    }
+  }
+
+  // ===== 指标库 =====
+  async function loadIndicatorLibrary(){
+    try{
+      const res = await request({ url:"/api/indicator/definitions?size=200&enabled=1" });
+      let dataList = [];
+      if(res.data?.records){ dataList = res.data.records; }
+      else if(Array.isArray(res.data)){ dataList = res.data; }
+      INDICATOR_LIBRARY = dataList.map(transformIndicator).filter(Boolean);
+      // 兜底加入内置 price/signal
+      ensureBuiltin("price_breakout","价格突破N根K线高低","MIXED",[
+        {k:"timeframe",t:"select",options:["1m","5m","15m","1h"],d:"5m"},
+        {k:"lookback",t:"number",d:60},
+        {k:"source",t:"select",options:["HIGH_LOW","CLOSE"],d:"HIGH_LOW"},
+        {k:"epsilonRatio",t:"number",d:0.0005}
+      ]);
+      ensureBuiltin("signal_confirm","信号确认","MIXED",[
+        {k:"validityPeriodSec",t:"number",d:60},
+        {k:"triggerMode",t:"select",options:["RETRACE","BREAKOUT","BOTH"],d:"BOTH"},
+        {k:"retraceRatio",t:"number",d:0.03},
+        {k:"breakoutRatio",t:"number",d:0.03},
+        {k:"priceRef",t:"select",options:["SIGNAL_PRICE","TRIGGER_PRICE","LAST_PRICE_SNAPSHOT"],d:"SIGNAL_PRICE"}
+      ]);
+      renderIndicatorOptions("");
+    }catch(e){
+      console.error("加载指标库失败", e);
+      INDICATOR_LIBRARY = [];
+      renderIndicatorOptions("");
+    }
+  }
+
+  function transformIndicator(ind){
+    if(!ind || !ind.indicatorCode) return null;
+    const params = [];
+    const schema = ind.paramSchema || {};
+    const skip = ["data_source","impl_key","param_limits"];
+    Object.keys(schema).forEach(k=>{
+      if(skip.includes(k)) return;
+      const p = schema[k];
+      if(!p || typeof p !== "object") return;
+      const t = normalizeType(p.type);
+      if(p.enum){
+        params.push({ k, t:"select", options:p.enum, d:p.default ?? (p.enum[0] ?? "") });
+      }else if(t==="boolean"){
+        params.push({ k, t:"select", options:["true","false"], d:String(p.default ?? true) });
+      }else{
+        params.push({ k, t:"number", d:p.default ?? 0 });
+      }
+    });
+    const returns = [];
+    const retSchema = ind.returnSchema || {};
+    Object.keys(retSchema).forEach(k=>{
+      const val = retSchema[k];
+      if(val && typeof val === "object"){
+        returns.push(k);
+      }
+    });
+    return {
+      code: ind.indicatorCode,
+      name: ind.indicatorName || ind.indicatorCode,
+      dataSource: ind.dataSource || "BAR",
+      params,
+      returns
+    };
+  }
+
+  function normalizeType(t){
+    if(!t) return "number";
+    const lower = String(t).toLowerCase();
+    if(["int","integer","float","double","decimal","number"].includes(lower)) return "number";
+    if(["bool","boolean"].includes(lower)) return "boolean";
+    return "number";
+  }
+
+  function ensureBuiltin(code,name,dataSource,params){
+    if(INDICATOR_LIBRARY.some(x=>x.code===code)) return;
+    INDICATOR_LIBRARY.push({ code,name,dataSource,params, returns:["value"] });
+  }
+
+  function buildRefOptions(lib){
+    const base = [
+      "price.last","bar.close","bar.open","bar.high","bar.low",
+      "signal.direction","signal.price"
+    ];
+    const indRefs = (lib?.returns||[]).map(r=>`ind.${lib.code}.${r || "value"}`);
+    return Array.from(new Set([...base, ...indRefs]));
+  }
+
+  // ===== 渲染 =====
+  function renderFactorList(){
+    const box = $("factorList");
+    box.innerHTML = "";
+    state.entryRules.factorList.forEach(f=>{
+      const div = document.createElement("div");
+      div.className = "item";
+      const selected = state._ui.selectedRuleSet==="entry" && state._ui.selectedFactorId===f.factorId;
+      div.style.outline = selected ? "2px solid var(--accent)" : "none";
+      div.innerHTML = `
+        <div class="itemHead">
+          <div>
+            <div><b>${escapeHtml(f.name||f.indicatorCode)}</b></div>
+            <div class="tag">code: ${escapeHtml(f.indicatorCode)} · source: ${escapeHtml(f.dataSource)} · longW=${Number(f.scope.longWeight||0)} · shortW=${Number(f.scope.shortWeight||0)}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn mini" data-act="edit">编辑</button>
+            <button class="btn mini" data-act="del">删除</button>
+          </div>
+        </div>
+      `;
+      div.querySelectorAll("button").forEach(btn=>{
+        btn.onclick = (e)=>{
+          e.stopPropagation();
+          if(btn.dataset.act==="edit"){ selectFactor("entry", f.factorId); }
+          if(btn.dataset.act==="del"){ deleteFactor("entry", f.factorId); }
+        };
+      });
+      div.onclick = ()=>selectFactor("entry", f.factorId);
+      box.appendChild(div);
+    });
+  }
+
+  function renderExitFactorList(){
+    const box = $("exitFactorList");
+    box.innerHTML = "";
+    state.exitRules.factorList.forEach(f=>{
+      const div = document.createElement("div");
+      div.className = "item";
+      const selected = state._ui.selectedRuleSet==="exit" && state._ui.selectedFactorId===f.factorId;
+      div.style.outline = selected ? "2px solid var(--accent)" : "none";
+      div.innerHTML = `
+        <div class="itemHead">
+          <div>
+            <div><b>${escapeHtml(f.name||f.indicatorCode)}</b></div>
+            <div class="tag">code: ${escapeHtml(f.indicatorCode)} · source: ${escapeHtml(f.dataSource)} · longW=${Number(f.scope.longWeight||0)} · shortW=${Number(f.scope.shortWeight||0)}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn mini" data-act="edit">编辑</button>
+            <button class="btn mini" data-act="del">删除</button>
+          </div>
+        </div>
+      `;
+      div.querySelectorAll("button").forEach(btn=>{
+        btn.onclick = (e)=>{
+          e.stopPropagation();
+          if(btn.dataset.act==="edit"){ selectFactor("exit", f.factorId); }
+          if(btn.dataset.act==="del"){ deleteFactor("exit", f.factorId); }
+        };
+      });
+      div.onclick = ()=>selectFactor("exit", f.factorId);
+      box.appendChild(div);
+    });
+  }
+
+  function renderEditor(){
+    const area = $("editorArea");
+    const list = state._ui.selectedRuleSet==="exit" ? state.exitRules.factorList : state.entryRules.factorList;
+    const f = list.find(x=>x.factorId===state._ui.selectedFactorId);
+    if(!f){ area.innerHTML = `<div class="muted">尚未选择因子</div>`; return; }
+    const lib = INDICATOR_LIBRARY.find(x=>x.code===f.indicatorCode);
+    const refOptions = buildRefOptions(lib);
+    const condSide = state._ui.condSide || "long";
+    const cond = condSide==="long"
+      ? (f.conditionLong || f.condition || {})
+      : (f.conditionShort || f.condition || {});
+    const paramsUi = (lib?.params||[]).map(p=>{
+      const v = f.params[p.k];
+      if(p.t==="select"){
+        const opts = p.options.map(o=>`<option value="${escapeAttr(o)}" ${String(v)===String(o)?"selected":""}>${escapeHtml(o)}</option>`).join("");
+        return `<label>${escapeHtml(p.k)}</label><select data-k="${escapeAttr(p.k)}">${opts}</select>`;
+      }
+      return `<label>${escapeHtml(p.k)}</label><input data-k="${escapeAttr(p.k)}" type="number" step="any" value="${escapeAttr(v)}"/>`;
+    }).join("");
+
+    area.innerHTML = `
+      <div class="grid2">
+        <div>
+          <label>名称（给量化看的）</label>
+          <input id="f_name" value="${escapeAttr(f.name||"")}" />
+        </div>
+        <div>
+          <label>indicatorCode</label>
+          <select id="f_code">
+            ${INDICATOR_LIBRARY.map(x=>`<option value="${escapeAttr(x.code)}" ${x.code===f.indicatorCode?"selected":""}>${escapeHtml(x.code)}（${escapeHtml(x.name)}）</option>`).join("")}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label>dataSource</label>
+          <input id="f_source" value="${escapeAttr(f.dataSource)}" disabled/>
+        </div>
+        <div>
+          <label>enabled</label>
+          <select id="f_enabled">
+            <option value="true" ${f.enabled?"selected":""}>true</option>
+            <option value="false" ${!f.enabled?"selected":""}>false</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+      <h4 style="margin:0 0 6px">params（指标参数）</h4>
+      ${paramsUi || `<div class="muted">该指标暂无可配置参数</div>`}
+
+      <div class="hr"></div>
+      <h4 style="margin:0 0 6px">condition（判定逻辑）</h4>
+      <div class="grid2">
+        <div>
+          <label>op</label>
+          <select id="f_cond_op">
+            ${["GT","GTE","LT","LTE","EQ","BETWEEN","CROSS_UP","CROSS_DOWN"].map(op=>`<option value="${op}" ${op===(cond.op||"GT")?"selected":""}>${op}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label>left.ref</label>
+          <input id="f_cond_left" placeholder="如 ind.rsi.value / price.last" value="${escapeAttr(getRef(cond.left)||getRef(cond.value)||"")}" />
+        </div>
+      </div>
+      <div class="grid2">
+        <div>
+          <label>right.const（常量，空则不生效）</label>
+          <input id="f_cond_right_const" placeholder="数值或 true/false" value="${escapeAttr(getConst(cond.right) ?? "")}" />
+        </div>
+        <div>
+          <label>right.ref（优先 ref）</label>
+          <input id="f_cond_right_ref" placeholder="如 ind.ma.slow" value="${escapeAttr(getRef(cond.right)||"")}" />
+        </div>
+      </div>
+      <div class="grid2">
+        <div>
+          <label>lower（BETWEEN 专用）</label>
+          <input id="f_cond_lower" placeholder="如 0.002 或 brain.xxx" value="${escapeAttr(getConst(cond.lower) ?? getRef(cond.lower) ?? "")}" />
+        </div>
+        <div>
+          <label>upper（BETWEEN 专用）</label>
+          <input id="f_cond_upper" placeholder="如 0.02 或 brain.xxx" value="${escapeAttr(getConst(cond.upper) ?? getRef(cond.upper) ?? "")}" />
+        </div>
+      </div>
+      <div class="muted mini">说明：右侧若填写 ref 则使用 ref，否则使用 const；BETWEEN 使用 lower/upper。</div>
+
+      <div class="hr"></div>
+      <div class="inline-actions" style="gap:6px">
+        <span class="muted mini">条件判定（区分多头/空头）：</span>
+        <button class="btn mini" id="condLongBtn" style="border-color:${condSide==="long"?"var(--accent)":"var(--border)"}">多头</button>
+        <button class="btn mini" id="condShortBtn" style="border-color:${condSide==="short"?"var(--accent)":"var(--border)"}">空头</button>
+      </div>
+      <h4 style="margin:0 0 6px">condition（判定逻辑）</h4>
+      <div class="grid2">
+        <div>
+          <label>op</label>
+          <select id="f_cond_op">
+            ${["GT","GTE","LT","LTE","EQ","BETWEEN","CROSS_UP","CROSS_DOWN"].map(op=>`<option value="${op}" ${op===(cond.op||"GT")?"selected":""}>${op}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label>left.ref</label>
+          <select id="f_cond_left_sel">${refOptions.map(r=>`<option value="${escapeAttr(r)}" ${r===(getRef(cond.left)||getRef(cond.value)||"")?"selected":""}>${escapeHtml(r)}</option>`)}</select>
+          <input id="f_cond_left" placeholder="自定义如 ind.rsi.value / price.last" value="${escapeAttr(getRef(cond.left)||getRef(cond.value)||"")}" style="margin-top:6px"/>
+        </div>
+      </div>
+      <div class="grid2">
+        <div>
+          <label>right.const（常量，空则不生效）</label>
+          <input id="f_cond_right_const" placeholder="数值或 true/false" value="${escapeAttr(getConst(cond.right) ?? "")}" />
+        </div>
+        <div>
+          <label>right.ref（优先 ref）</label>
+          <select id="f_cond_right_sel">${refOptions.map(r=>`<option value="${escapeAttr(r)}" ${r===(getRef(cond.right)||"")?"selected":""}>${escapeHtml(r)}</option>`)}</select>
+          <input id="f_cond_right_ref" placeholder="如 ind.ma.slow" value="${escapeAttr(getRef(cond.right)||"")}" style="margin-top:6px"/>
+        </div>
+      </div>
+      <div class="grid2">
+        <div>
+          <label>lower（BETWEEN 专用）</label>
+          <input id="f_cond_lower" placeholder="如 0.002 或 brain.xxx" value="${escapeAttr(getConst(cond.lower) ?? getRef(cond.lower) ?? "")}" />
+        </div>
+        <div>
+          <label>upper（BETWEEN 专用）</label>
+          <input id="f_cond_upper" placeholder="如 0.02 或 brain.xxx" value="${escapeAttr(getConst(cond.upper) ?? getRef(cond.upper) ?? "")}" />
+        </div>
+      </div>
+      <div class="muted mini">说明：右侧若填写 ref 则使用 ref，否则使用 const；BETWEEN 使用 lower/upper；多头/空头条件分别保存。</div>
+
+      <div class="hr"></div>
+      <h4 style="margin:0 0 6px">scope（权重，空头建议为负）</h4>
+      <div class="grid2">
+        <div>
+          <label>longWeight（正数）</label>
+          <input id="f_longW" type="number" value="${Number(f.scope.longWeight||0)}" />
+        </div>
+        <div>
+          <label>shortWeight（负数）</label>
+          <input id="f_shortW" type="number" value="${Number(f.scope.shortWeight||0)}" />
+        </div>
+      </div>
+    `;
+
+    $("f_name").oninput = (e)=>{ f.name = e.target.value; renderFactorList(); renderExitFactorList(); };
+    $("f_enabled").onchange = (e)=>{ f.enabled = (e.target.value==="true"); updateJsonPreview(); };
+
+    $("f_code").onchange = (e)=>{
+      const code = e.target.value;
+      const lib2 = INDICATOR_LIBRARY.find(x=>x.code===code);
+      f.indicatorCode = code;
+      f.dataSource = lib2?.dataSource || "BAR";
+      f.params = {};
+      (lib2?.params||[]).forEach(p=>f.params[p.k]=p.d);
+      f.condition = { op:"GT", left:{ref:`ind.${code}.value`}, right:{const:0} };
+      f.conditionLong = f.condition;
+      f.conditionShort = { op:"LT", left:{ref:`ind.${code}.value`}, right:{const:0} };
+      renderFactorList();
+      renderExitFactorList();
+      renderEditor();
+      updateJsonPreview();
+    };
+
+    area.querySelectorAll("[data-k]").forEach(el=>{
+      el.onchange = (e)=>{
+        const k = e.target.dataset.k;
+        const val = e.target.value;
+        const libParam = lib?.params?.find(p=>p.k===k);
+        if(libParam?.t==="select"){
+          f.params[k] = val;
+        }else{
+          f.params[k] = isFinite(Number(val)) ? Number(val) : val;
+        }
+        updateJsonPreview();
+        renderFactorList();
+        renderExitFactorList();
+      };
+    });
+
+    $("f_longW").onchange = (e)=>{ f.scope.longWeight = Number(e.target.value||0); updateJsonPreview(); renderFactorList(); };
+    $("f_shortW").onchange = (e)=>{ f.scope.shortWeight = Number(e.target.value||0); updateJsonPreview(); renderExitFactorList(); };
+
+    // condition 事件
+    $("condLongBtn").onclick = ()=>{ state._ui.condSide="long"; renderEditor(); };
+    $("condShortBtn").onclick = ()=>{ state._ui.condSide="short"; renderEditor(); };
+    const condLeftSel = $("f_cond_left_sel");
+    const condRightSel = $("f_cond_right_sel");
+    const condOpEl = $("f_cond_op");
+    const condLeftEl = $("f_cond_left");
+    const condRightConstEl = $("f_cond_right_const");
+    const condRightRefEl = $("f_cond_right_ref");
+    const condLowerEl = $("f_cond_lower");
+    const condUpperEl = $("f_cond_upper");
+
+    if(condLeftSel) condLeftSel.onchange = ()=>{ condLeftEl.value = condLeftSel.value; syncCondition(); };
+    if(condRightSel) condRightSel.onchange = ()=>{ condRightRefEl.value = condRightSel.value; syncCondition(); };
+
+    function syncCondition(){
+      const op = condOpEl.value;
+      const leftRef = condLeftEl.value.trim();
+      const rightConstRaw = condRightConstEl.value.trim();
+      const rightRefRaw = condRightRefEl.value.trim();
+      const lowerRaw = condLowerEl.value.trim();
+      const upperRaw = condUpperEl.value.trim();
+
+      const left = leftRef ? {ref:leftRef} : {ref:""};
+      const right = rightRefRaw ? {ref:rightRefRaw} : (rightConstRaw!=="" ? {const:parseMaybe(rightConstRaw)} : undefined);
+      const lower = lowerRaw!=="" ? buildConstOrRef(lowerRaw) : undefined;
+      const upper = upperRaw!=="" ? buildConstOrRef(upperRaw) : undefined;
+
+      if(op==="BETWEEN"){
+        setCond({ op, value:left, lower, upper });
+      }else if(op==="CROSS_UP" || op==="CROSS_DOWN"){
+        setCond({ op, left, right: right || {ref:""} });
+      }else{
+        setCond({ op, left, right: right || {const:0} });
+      }
+      updateJsonPreview();
+    }
+
+    [condOpEl, condLeftEl, condRightConstEl, condRightRefEl, condLowerEl, condUpperEl].forEach(el=>{
+      if(el){ el.onchange = syncCondition; el.oninput = syncCondition; }
+    });
+
+    function setCond(obj){
+      if(state._ui.condSide==="short"){
+        f.conditionShort = obj;
+      }else{
+        f.conditionLong = obj;
+      }
+      // 同时维持 condition 兼容字段
+      f.condition = f.conditionLong || f.conditionShort || obj;
+    }
+  }
+
+  // ===== 选择/删除/添加因子 =====
+  function selectFactor(ruleSet, fid){
+    state._ui.selectedRuleSet = ruleSet;
+    state._ui.selectedFactorId = fid;
+    syncEditToggleUi();
+    renderFactorList();
+    renderExitFactorList();
+    renderEditor();
+  }
+
+  function deleteFactor(ruleSet, fid){
+    if(ruleSet==="entry"){
+      state.entryRules.factorList = state.entryRules.factorList.filter(x=>x.factorId!==fid);
+    }else{
+      state.exitRules.factorList = state.exitRules.factorList.filter(x=>x.factorId!==fid);
+    }
+    if(state._ui.selectedRuleSet===ruleSet && state._ui.selectedFactorId===fid){
+      state._ui.selectedFactorId = null;
+    }
+    updateJsonPreview();
+    renderFactorList();
+    renderExitFactorList();
+    renderEditor();
+  }
+
+  function addFactorByLib(lib){
+    const f = {
+      factorId: uid(),
+      name: lib.name,
+      indicatorCode: lib.code,
+      dataSource: lib.dataSource,
+      enabled: true,
+      params: {},
+      scope: { longWeight: 20, shortWeight: -20 },
+      condition: { op:"GT", left:{ref:`ind.${lib.code}.value`}, right:{const:0} },
+      conditionLong: { op:"GT", left:{ref:`ind.${lib.code}.value`}, right:{const:0} },
+      conditionShort: { op:"LT", left:{ref:`ind.${lib.code}.value`}, right:{const:0} }
+    };
+    (lib.params||[]).forEach(p=>f.params[p.k]=p.d);
+    if(_modalAddTarget==="exit"){
+      state.exitRules.factorList.push(f);
+      selectFactor("exit", f.factorId);
+    }else{
+      state.entryRules.factorList.push(f);
+      selectFactor("entry", f.factorId);
+    }
+    updateJsonPreview();
+  }
+
+  // ===== Modal =====
+  function openIndicatorModal(target){
+    _modalAddTarget = target;
+    $("indicatorModal").style.display = "block";
+    $("indicatorSearch").value = "";
+    renderIndicatorOptions("");
+  }
+  function closeIndicatorModal(){ $("indicatorModal").style.display = "none"; }
+  function renderIndicatorOptions(keyword){
+    const kw = (keyword||"").trim().toLowerCase();
+    const list = $("indicatorList");
+    list.innerHTML = "";
+    INDICATOR_LIBRARY
+      .filter(x=>!kw || (x.code+" "+x.name+" "+x.dataSource).toLowerCase().includes(kw))
+      .forEach(lib=>{
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `
+          <div class="itemHead">
+            <div>
+              <div><b>${escapeHtml(lib.code)}</b> <span class="tag">（${escapeHtml(lib.name)}）</span></div>
+              <div class="tag">source: ${escapeHtml(lib.dataSource)} · params: ${(lib.params||[]).map(p=>p.k).join(", ")||"-"}</div>
+            </div>
+            <button class="btn mini">选择</button>
+          </div>
+        `;
+        div.querySelector("button").onclick = ()=>{
+          addFactorByLib(lib);
+          closeIndicatorModal();
+        };
+        list.appendChild(div);
+      });
+  }
+
+  // ===== JSON & 校验 =====
+  function updateJsonPreview(){
+    state.rulesType = $("rulesType").value;
+    state.entryRules.entryType = $("entryType").value;
+    state.exitRules.exitType = $("exitType").value;
+    state.version = Number($("versionInput").value||1);
+    state.notes = $("notesInput").value || "";
+    const isEntryWeight = state.entryRules.entryType==="weight";
+    const isExitWeight = state.exitRules.exitType==="weight";
+    if(isEntryWeight){
+      state.entryRules.threshold = {
+        longEnterScore: Number($("longEnterScore").value||0),
+        shortEnterScore: Number($("shortEnterScore").value||0)
+      };
+    }else{
+      delete state.entryRules.threshold;
+    }
+    if(isExitWeight){
+      state.exitRules.threshold = {
+        longExitScore: Number($("longExitScore").value||0),
+        shortExitScore: Number($("shortExitScore").value||0)
+      };
+    }else{
+      delete state.exitRules.threshold;
+    }
+
+    const out = {
+      version: state.version,
+      rulesType: Number(state.rulesType),
+      notes: state.notes || undefined,
+      entryRules: serializeRuleSet("entry"),
+      exitRules: serializeRuleSet("exit")
+    };
+    $("jsonPreview").value = JSON.stringify(out, null, 2);
+
+    const enabledEntry = state.entryRules.factorList.filter(f=>f.enabled);
+    const maxLong = enabledEntry.reduce((s,f)=>s + (Number(f.scope.longWeight)||0), 0);
+    const minShort = enabledEntry.reduce((s,f)=>s + (Number(f.scope.shortWeight)||0), 0);
+    $("scoreHint").innerText = isEntryWeight
+      ? `启用因子数=${enabledEntry.length}，理论最大多头得分=${maxLong}，理论最小空头得分=${minShort}。`
+      : `entryType=all 时不使用阈值。`;
+
+    const enabledExit = state.exitRules.factorList.filter(f=>f.enabled);
+    const maxLongExit = enabledExit.reduce((s,f)=>s + (Number(f.scope.longWeight)||0), 0);
+    const minShortExit = enabledExit.reduce((s,f)=>s + (Number(f.scope.shortWeight)||0), 0);
+    $("exitScoreHint").innerText = isExitWeight
+      ? `启用退出因子数=${enabledExit.length}，理论最大多头退出得分=${maxLongExit}，理论最小空头退出得分=${minShortExit}。`
+      : `exitType=all 时不使用阈值。`;
+  }
+
+  function serializeRuleSet(ruleSet){
+    const rs = ruleSet==="entry" ? state.entryRules : state.exitRules;
+    const out = {
+      entryType: ruleSet==="entry" ? rs.entryType : undefined,
+      exitType: ruleSet==="exit" ? rs.exitType : undefined,
+      threshold: rs.threshold,
+      factorList: rs.factorList.map(f=>({
+        factorId: f.factorId,
+        enabled: f.enabled,
+        name: f.name,
+        indicator: {
+          code: f.indicatorCode,
+          dataSource: f.dataSource,
+          params: f.params
+        },
+        condition: f.condition || f.conditionLong || f.conditionShort || undefined,
+        conditionLong: f.conditionLong || undefined,
+        conditionShort: f.conditionShort || undefined,
+        scope: {
+          longWeight: Number(f.scope.longWeight||0),
+          shortWeight: Number(f.scope.shortWeight||0)
+        }
+      }))
+    };
+    if(ruleSet==="entry"){
+      out.entryType = rs.entryType;
+      if(out.entryType!=="weight") delete out.threshold;
+    }else{
+      out.exitType = rs.exitType;
+      if(out.exitType!=="weight") delete out.threshold;
+    }
+    return out;
+  }
+
+  function validateRules(){
+    if(state.entryRules.factorList.length===0){
+      alert("至少添加 1 个 Entry 因子后再导出/复制。");
+      return false;
+    }
+    if(state.entryRules.entryType==="weight"){
+      const longT = Number($("longEnterScore").value||0);
+      const shortT = Number($("shortEnterScore").value||0);
+      if(!(longT > 0 && shortT < 0)){
+        alert("建议：longEnterScore 为正、shortEnterScore 为负（当前仍允许导出）。");
+      }
+    }
+    return true;
+  }
+
+  async function copyJson(){
+    updateJsonPreview();
+    if(!validateRules()) return;
+    if(navigator.clipboard){
+      await navigator.clipboard.writeText($("jsonPreview").value);
+      alert("已复制到剪贴板");
+    }else{
+      alert("当前环境不支持 Clipboard，请手动复制。");
+    }
+  }
+
+  function exportJson(){
+    updateJsonPreview();
+    if(!validateRules()) return;
+    alert("已生成 runtimeRules JSON，可复制落库到 strategy_instance.runtimeRules。");
+  }
+
+  function resetAll(){
+    state = {
+      rulesType: "1",
+      version: 1,
+      notes: "",
+      entryRules: { entryType:"weight", threshold:{longEnterScore:30,shortEnterScore:-30}, factorList:[] },
+      exitRules: { exitType:"weight", threshold:{longExitScore:-30,shortExitScore:30}, factorList:[] },
+      _ui: { selectedRuleSet:"entry", selectedFactorId:null }
+    };
+    $("rulesType").value = "1";
+    $("entryType").value = "weight";
+    $("exitType").value = "weight";
+    $("longEnterScore").value = "30";
+    $("shortEnterScore").value = "-30";
+    $("longExitScore").value = "-30";
+    $("shortExitScore").value = "30";
+    $("versionInput").value = "1";
+    $("notesInput").value = "";
+    $("longEnterScore").disabled = false;
+    $("shortEnterScore").disabled = false;
+    $("longExitScore").disabled = false;
+    $("shortExitScore").disabled = false;
+    syncEditToggleUi();
+    renderFactorList();
+    renderExitFactorList();
+    renderEditor();
+    updateJsonPreview();
+  }
+
+  // ===== 模式切换 UI =====
+  function syncEditToggleUi(){
+    const isExit = state._ui.selectedRuleSet==="exit";
+    $("editHint").innerText = isExit ? "当前编辑：Exit" : "当前编辑：Entry";
+    $("editEntryBtn").style.outline = isExit ? "none" : "2px solid var(--accent)";
+    $("editExitBtn").style.outline = isExit ? "2px solid var(--accent)" : "none";
+  }
+
+  function switchToEntryEdit(){ state._ui.selectedRuleSet="entry"; syncEditToggleUi(); renderEditor(); }
+  function switchToExitEdit(){ state._ui.selectedRuleSet="exit"; syncEditToggleUi(); renderEditor(); }
+
+  // ===== 事件绑定 =====
+  function bindEvents(){
+    $("rulesType").onchange = updateJsonPreview;
+    $("entryType").onchange = ()=>{
+      const isWeight = $("entryType").value==="weight";
+      $("longEnterScore").disabled = !isWeight;
+      $("shortEnterScore").disabled = !isWeight;
+      updateJsonPreview();
+    };
+    $("exitType").onchange = ()=>{
+      const isWeight = $("exitType").value==="weight";
+      $("longExitScore").disabled = !isWeight;
+      $("shortExitScore").disabled = !isWeight;
+      updateJsonPreview();
+    };
+    ["longEnterScore","shortEnterScore","longExitScore","shortExitScore","versionInput","notesInput"].forEach(id=>{
+      $(id).oninput = updateJsonPreview;
+    });
+    $("addFactorBtn").onclick = ()=>openIndicatorModal("entry");
+    $("addExitFactorBtn").onclick = ()=>openIndicatorModal("exit");
+    $("exportBtn").onclick = exportJson;
+    $("copyBtn").onclick = copyJson;
+    $("confirmBtn").onclick = confirmAndReturn;
+    $("resetBtn").onclick = resetAll;
+    $("indicatorModalClose").onclick = closeIndicatorModal;
+    $("indicatorModal").onclick = (e)=>{ if(e.target.id==="indicatorModal") closeIndicatorModal(); };
+    $("indicatorSearch").oninput = (e)=>renderIndicatorOptions(e.target.value);
+    $("editEntryBtn").onclick = switchToEntryEdit;
+    $("editExitBtn").onclick = switchToExitEdit;
+
+    $("loadTemplateTrend").onclick = ()=>loadTemplate("trend");
+    $("loadTemplateGrid").onclick = ()=>loadTemplate("grid");
+    $("loadTemplateMartingale").onclick = ()=>loadTemplate("martingale");
+  }
+
+  // ===== 模板（基于文档示例，裁剪为主要字段） =====
+  function loadTemplate(type){
+    resetAll();
+    if(type==="trend"){
+      state.rulesType = "1";
+      $("rulesType").value = "1";
+      const f1 = buildFactorFromLib("ma","均线金叉确认", {fastPeriod:20, slowPeriod:60, timeframe:"5m", source:"CLOSE"}, {longWeight:15, shortWeight:-15});
+      const f2 = buildFactorFromLib("rsi","RSI 非超买", {timeframe:"5m", length:14}, {longWeight:10, shortWeight:-10});
+      const f3 = buildFactorFromLib("price_breakout","价格突破确认", {timeframe:"5m", lookback:60, source:"HIGH_LOW", epsilonRatio:0.0005}, {longWeight:20, shortWeight:-20});
+      state.entryRules.factorList.push(f1,f2,f3);
+      const e1 = buildFactorFromLib("ma","均线死叉退出", {fastPeriod:20, slowPeriod:60, timeframe:"5m", source:"CLOSE"}, {longWeight:20, shortWeight:-20});
+      const e2 = buildFactorFromLib("rsi","RSI 高位退出", {timeframe:"5m", length:14}, {longWeight:15, shortWeight:-15});
+      state.exitRules.factorList.push(e1,e2);
+    }else if(type==="grid"){
+      state.rulesType = "3";
+      $("rulesType").value = "3";
+      const f1 = buildFactorFromLib("grid_range","识别震荡区间",{timeframe:"15m",lookback:96,maxRangePct:0.06},{longWeight:20,shortWeight:-20});
+      const f2 = buildFactorFromLib("atr","ATR 适中",{timeframe:"15m",length:14},{longWeight:10,shortWeight:-10});
+      state.entryRules.factorList.push(f1,f2);
+      const e1 = buildFactorFromLib("grid_range","突破区间退出",{timeframe:"15m",lookback:96,maxRangePct:0.06},{longWeight:20,shortWeight:-20});
+      const e2 = buildFactorFromLib("atr","波动率爆发退出",{timeframe:"15m",length:14},{longWeight:10,shortWeight:-10});
+      state.exitRules.factorList.push(e1,e2);
+    }else if(type==="martingale"){
+      state.rulesType = "2";
+      $("rulesType").value = "2";
+      const f1 = buildFactorFromLib("signal_confirm","外部信号做多",{validityPeriodSec:120,triggerMode:"BOTH",retraceRatio:0.02,breakoutRatio:0.02,priceRef:"SIGNAL_PRICE"},{longWeight:30,shortWeight:-30});
+      const f2 = buildFactorFromLib("ma","趋势过滤",{timeframe:"1h",fastPeriod:20,slowPeriod:60,source:"CLOSE"},{longWeight:15,shortWeight:-15});
+      state.entryRules.factorList.push(f1,f2);
+      const e1 = buildFactorFromLib("risk","硬止损",{field:"unrealizedLossPct"},{longWeight:20,shortWeight:-20});
+      const e2 = buildFactorFromLib("position","均价止盈",{field:"avgEntryPrice"},{longWeight:20,shortWeight:-20});
+      state.exitRules.factorList.push(e1,e2);
+    }
+    renderFactorList();
+    renderExitFactorList();
+    renderEditor();
+    updateJsonPreview();
+  }
+
+  function buildFactorFromLib(code, name, paramOverrides, scopeOverrides){
+    const lib = INDICATOR_LIBRARY.find(x=>x.code===code) || {code,name,dataSource:"BAR",params:[]};
+    const params = {};
+    (lib.params||[]).forEach(p=>params[p.k]=p.d);
+    Object.assign(params, paramOverrides||{});
+    return {
+      factorId: uid(),
+      name: name || lib.name || code,
+      indicatorCode: lib.code,
+      dataSource: lib.dataSource,
+      enabled: true,
+      params,
+      scope: { longWeight:20, shortWeight:-20, ...(scopeOverrides||{}) }
+    };
+  }
+
+  // ===== 工具 =====
+  function escapeHtml(s){ return String(s||"").replace(/[&<>\"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[m])); }
+  function escapeAttr(s){ return String(s||"").replace(/\"/g,"&quot;"); }
+  function parseMaybe(val){
+    if(val === "true") return true;
+    if(val === "false") return false;
+    const n = Number(val);
+    return isFinite(n) && val!=="" ? n : val;
+  }
+  function getRef(obj){ return obj && typeof obj==="object" ? obj.ref : undefined; }
+  function getConst(obj){ return obj && typeof obj==="object" ? obj.const : undefined; }
+  function buildConstOrRef(raw){
+    return String(raw||"").includes(".") || isNaN(Number(raw))
+      ? { ref:String(raw) }
+      : { const: parseMaybe(raw) };
+  }
+
+  // go
+  init();
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,100 @@
+            if (connected) {
+                indicator.className = 'status-dot connected';
+                statusText.innerText = 'Connected';
+                document.getElementById('headerStatus').innerText = '● Live';
+                document.getElementById('headerStatus').style.color = '#0ecb81';
+            } else {
+                indicator.className = 'status-dot disconnected';
+                statusText.innerText = 'Disconnected';
+                document.getElementById('headerStatus').innerText = '● Offline';
+                document.getElementById('headerStatus').style.color = '#f6465d';
+            }
+        }
+
+        // ========== 历史数据自动加载系统 ==========
+        /**
+         * 设置历史数据自动加载监听器
+         * 监听时间轴变化，智能加载历史数据
+         */
+        function setupHistoricalDataLoading() {
+            if (!tvChart) return;
+            
+            // 防抖：避免频繁触发
+            let debounceTimer = null;
+            const DEBOUNCE_DELAY = 300; // 300ms防抖
+            
+            // 监听时间轴可见范围变化
+            tvChart.timeScale().subscribeVisibleTimeRangeChange(function() {
+                // 清除之前的定时器
+                if (debounceTimer) {
+                    clearTimeout(debounceTimer);
+                }
+                
+                // 防抖处理
+                debounceTimer = setTimeout(function() {
+                    handleTimeScaleChange();
+                }, DEBOUNCE_DELAY);
+            });
+        }
+        
+        /**
+         * 处理时间轴变化事件
+         * 1. 检测是否需要加载历史数据
+         * 2. 检测是否应该恢复实时模式
+         */
+        function handleTimeScaleChange() {
+            if (!tvChart || !activeSymbol || isLoadingMore) return;
+            
+            try {
+                const visibleRange = tvChart.timeScale().getVisibleRange();
+                if (!visibleRange || !visibleRange.from === null || !visibleRange.to === null) {
+                    return;
+                }
+                
+                // 转换为毫秒级时间戳
+                const visibleStartTimeMs = Math.floor(visibleRange.from) * 1000;
+                const visibleEndTimeMs = Math.floor(visibleRange.to) * 1000;
+                
+                // 1. 检查是否需要加载更早的历史数据
+                // 阈值：当距离左边界还有5根K线时，开始加载
+                const LOAD_THRESHOLD_BARS = 5;
+                if (dataWindow.shouldLoadEarlier(visibleStartTimeMs, LOAD_THRESHOLD_BARS)) {
+                    loadEarlierKlines(visibleStartTimeMs);
+                }
+                
+                // 2. 检查是否应该恢复实时模式（Auto-Scroll）
+                // 阈值：当接近最新数据时，启用Auto-Scroll
+                const REALTIME_THRESHOLD_BARS = 3;
+                const shouldEnableAutoScroll = dataWindow.isNearRealtime(visibleEndTimeMs, REALTIME_THRESHOLD_BARS);
+                
+                if (shouldEnableAutoScroll && !isAutoScrollEnabled) {
+                    enableAutoScroll();
+                } else if (!shouldEnableAutoScroll && isAutoScrollEnabled) {
+                    disableAutoScroll();
+                }
+            } catch (error) {
+                console.error('处理时间轴变化失败:', error);
+            }
+        }
+        
+        /**
+         * 启用自动滚动（实时模式）
+         * 图表自动跟随最新数据
+         */
+        function enableAutoScroll() {
+            isAutoScrollEnabled = true;
+            console.log('切换到实时模式：启用Auto-Scroll');
+        }
+        
+        /**
+         * 禁用自动滚动（历史模式）
+         * 用户正在查看历史数据，不自动滚动
+         */
+        function disableAutoScroll() {
+            isAutoScrollEnabled = false;
+            console.log('切换到历史模式：禁用Auto-Scroll');
+        }
+        
+        // ========== 历史数据加载 ==========
+        let isLoadingMore = false;
+        let lastLoadRequestId = 0;
