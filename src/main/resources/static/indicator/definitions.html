@@ -28,6 +28,43 @@
         .filter-bar .layui-form-item { margin-bottom: 0; }
         .filter-bar .layui-input { width: 200px; height: 36px; }
         .filter-bar .layui-select { width: 150px; height: 36px; }
+        .param-table, .output-table {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .param-table th, .output-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            text-align: center;
+        }
+        .param-table td, .output-table td {
+            text-align: center;
+        }
+        .param-table input, .output-table input {
+            width: 100%;
+            border: none;
+            padding: 4px 8px;
+        }
+        .param-table select, .output-table select {
+            width: 100%;
+            height: 32px;
+            border: 1px solid #e6e6e6;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+        .param-table select:focus, .output-table select:focus {
+            border-color: #1E9FFF;
+        }
+        .schema-debug {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .schema-debug.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -65,11 +102,8 @@
                 <li class="layui-nav-item layui-nav-itemed">
                     <a href="javascript:;">指标管理</a>
                     <dl class="layui-nav-child">
-                        <dd><a href="/indicator/dashboard.html">仪表盘</a></dd>
                         <dd class="layui-this"><a href="/indicator/definitions.html">指标定义</a></dd>
-                        <dd><a href="/indicator/subscriptions.html">指标订阅</a></dd>
-                        <dd><a href="/indicator/values.html">指标结果</a></dd>
-                        <dd><a href="/indicator/logs.html">计算日志</a></dd>
+                        <dd><a href="/indicator/evaluate.html">指标评估</a></dd>
                     </dl>
                 </li>
             </ul>
@@ -80,7 +114,10 @@
         <div style="padding: 20px;">
             <div class="layui-card">
                 <div class="layui-card-header">
-                    <strong>指标定义</strong> - 查看系统支持的指标
+                    <strong>指标定义</strong> - 管理指标定义
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-normal" style="float: right;" onclick="showCreateDialog()">
+                        <i class="layui-icon layui-icon-add-1"></i> 创建指标
+                    </button>
                 </div>
                 <div class="layui-card-body">
                     <!-- 筛选栏 -->
@@ -95,6 +132,8 @@
                                     <option value="MOMENTUM">动量</option>
                                     <option value="TREND">趋势</option>
                                     <option value="VOLATILITY">波动率</option>
+                                    <option value="VOLUME">成交量</option>
+                                    <option value="GENERAL">通用</option>
                                 </select>
                             </div>
                             <div class="layui-form-item">
@@ -159,8 +198,11 @@ layui.use(['element', 'layer', 'form', 'table'], function(){
             {field: 'enabled', title: '状态', width: 80, templet: function(d){
                 return d.enabled === 1 ? '<span style="color: #5FB878;">启用</span>' : '<span style="color: #999;">禁用</span>';
             }},
-            {fixed: 'right', title: '操作', width: 100, align: 'center', templet: function(d){
-                return '<button class="layui-btn layui-btn-xs" onclick="viewSchema(' + d.id + ')">查看Schema</button>';
+            {fixed: 'right', title: '操作', width: 250, align: 'center', templet: function(d){
+                var html = '<button class="layui-btn layui-btn-xs" onclick="viewSchema(' + d.id + ')">查看</button>';
+                html += '<button class="layui-btn layui-btn-xs layui-btn-normal" onclick="showEditDialog(' + d.id + ')">编辑</button>';
+                html += '<button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteDefinition(' + d.id + ')">删除</button>';
+                return html;
             }}
         ]],
         request: {
@@ -259,6 +301,755 @@ layui.use(['element', 'layer', 'form', 'table'], function(){
     
     // 初始加载
     loadDefinitions();
+    
+    // ========== 参数和输出解析函数 ==========
+    
+    // 解析参数Schema到表格行
+    function parseParamsToRows(paramSchema){
+        if (!paramSchema || typeof paramSchema !== 'object') {
+            return '<tr><td colspan="9" style="text-align: center; color: #999;">暂无参数，点击"添加参数"按钮添加</td></tr>';
+        }
+        
+        var rows = '';
+        var rowIndex = 0;
+        for (var paramName in paramSchema) {
+            // 跳过元数据字段
+            if (paramName === 'data_source' || paramName === 'impl_key' || paramName === 'param_limits') {
+                continue;
+            }
+            
+            var spec = paramSchema[paramName];
+            if (typeof spec !== 'object' || spec === null) {
+                continue;
+            }
+            
+            var type = spec.type || 'int';
+            var defaultValue = spec.default !== undefined ? spec.default : '';
+            var required = spec.required === true;
+            var description = spec.description || '';
+            
+            rows += '<tr data-row-index="' + rowIndex + '">';
+            rows += '<td><input type="text" class="param-name" value="' + (paramName || '').replace(/"/g, '&quot;') + '" placeholder="参数名" required></td>';
+            rows += '<td><select class="param-type">';
+            rows += '<option value="int"' + (type === 'int' || type === 'integer' ? ' selected' : '') + '>int</option>';
+            rows += '<option value="float"' + (type === 'float' || type === 'decimal' || type === 'number' ? ' selected' : '') + '>float</option>';
+            rows += '<option value="bool"' + (type === 'bool' || type === 'boolean' ? ' selected' : '') + '>bool</option>';
+            rows += '<option value="string"' + (type === 'string' || type === 'enum' || type === 'timeframe' || type === 'price_source' ? ' selected' : '') + '>string</option>';
+            rows += '</select></td>';
+            rows += '<td><input type="text" class="param-default" value="' + (defaultValue || '').toString().replace(/"/g, '&quot;') + '" placeholder="默认值"></td>';
+            rows += '<td><select class="param-required">';
+            rows += '<option value="false"' + (!required ? ' selected' : '') + '>false</option>';
+            rows += '<option value="true"' + (required ? ' selected' : '') + '>true</option>';
+            rows += '</select></td>';
+            rows += '<td><input type="text" class="param-description" value="' + (description || '').replace(/"/g, '&quot;') + '" placeholder="说明"></td>';
+            rows += '<td style="text-align: center;"><button type="button" class="layui-btn layui-btn-xs layui-btn-danger" onclick="removeParamRow(this)">删除</button></td>';
+            rows += '</tr>';
+            rowIndex++;
+        }
+        
+        if (rows === '') {
+            return '<tr><td colspan="6" style="text-align: center; color: #999;">暂无参数，点击"添加参数"按钮添加</td></tr>';
+        }
+        return rows;
+    }
+    
+    // 解析返回Schema到表格行
+    function parseOutputsToRows(returnSchema){
+        if (!returnSchema || typeof returnSchema !== 'object') {
+            return '<tr><td colspan="6" style="text-align: center; color: #999;">暂无输出，点击"添加输出"按钮添加</td></tr>';
+        }
+        
+        var rows = '';
+        var rowIndex = 0;
+        
+        // 如果returnSchema有outputs字段（新格式）
+        var outputs = returnSchema.outputs || returnSchema;
+        if (Array.isArray(outputs)) {
+            outputs.forEach(function(output){
+            rows += '<tr data-row-index="' + rowIndex + '">';
+            rows += '<td><input type="text" class="output-name" value="' + (output.name || '').replace(/"/g, '&quot;') + '" placeholder="输出名" required></td>';
+            rows += '<td><select class="output-type">';
+            rows += '<option value="SCALAR"' + (output.type === 'SCALAR' ? ' selected' : '') + '>SCALAR</option>';
+            rows += '<option value="SIGNAL"' + (output.type === 'SIGNAL' ? ' selected' : '') + '>SIGNAL</option>';
+            rows += '<option value="SERIES"' + (output.type === 'SERIES' ? ' selected' : '') + '>SERIES</option>';
+            rows += '<option value="STATE"' + (output.type === 'STATE' ? ' selected' : '') + '>STATE</option>';
+            rows += '</select></td>';
+            rows += '<td><input type="text" class="output-description" value="' + (output.description || '').replace(/"/g, '&quot;') + '" placeholder="说明"></td>';
+            rows += '<td style="text-align: center;"><button type="button" class="layui-btn layui-btn-xs layui-btn-danger" onclick="removeOutputRow(this)">删除</button></td>';
+            rows += '</tr>';
+                rowIndex++;
+            });
+        } else if (typeof outputs === 'object') {
+            // 兼容旧格式：直接是对象
+            for (var key in outputs) {
+                var output = outputs[key];
+                if (typeof output === 'object' && output !== null) {
+                    rows += '<tr data-row-index="' + rowIndex + '">';
+                    rows += '<td><input type="text" class="output-name" value="' + (key || '').replace(/"/g, '&quot;') + '" placeholder="输出名" required></td>';
+                    rows += '<td><select class="output-type">';
+                    rows += '<option value="SCALAR"' + (output.type === 'SCALAR' ? ' selected' : '') + '>SCALAR</option>';
+                    rows += '<option value="SIGNAL"' + (output.type === 'SIGNAL' ? ' selected' : '') + '>SIGNAL</option>';
+                    rows += '<option value="SERIES"' + (output.type === 'SERIES' ? ' selected' : '') + '>SERIES</option>';
+                    rows += '<option value="STATE"' + (output.type === 'STATE' ? ' selected' : '') + '>STATE</option>';
+                    rows += '</select></td>';
+                    rows += '<td><input type="text" class="output-description" value="' + (output.description || '').replace(/"/g, '&quot;') + '" placeholder="说明"></td>';
+                    rows += '<td style="text-align: center;"><button type="button" class="layui-btn layui-btn-xs layui-btn-danger" onclick="removeOutputRow(this)">删除</button></td>';
+                    rows += '</tr>';
+                    rowIndex++;
+                }
+            }
+        }
+        
+        if (rows === '') {
+            return '<tr><td colspan="4" style="text-align: center; color: #999;">暂无输出，点击"添加输出"按钮添加</td></tr>';
+        }
+        return rows;
+    }
+    
+    // 显示创建对话框
+    window.showCreateDialog = function(){
+        showEditDialog(null);
+    };
+    
+    // 显示编辑对话框
+    window.showEditDialog = function(id){
+        var title = id ? '编辑指标定义' : '创建指标定义';
+        var formData = {};
+        
+        // 如果是编辑，先从API获取完整数据
+        if (id) {
+            // 先尝试从表格缓存获取
+            var data = table.cache.defTable;
+            var def = data.find(function(item){ return item.id == id; });
+            if (def) {
+                formData = {
+                    id: def.id,
+                    indicatorCode: def.indicatorCode,
+                    indicatorVersion: def.indicatorVersion,
+                    indicatorName: def.indicatorName,
+                    description: def.description || '',
+                    category: def.category || '',
+                    dataSource: def.dataSource || 'BAR',
+                    implKey: def.implKey || '',
+                    engine: def.engine || 'ta4j',
+                    minRequiredBars: def.minRequiredBars || 0,
+                    supportedTimeframes: def.supportedTimeframes || [],
+                    paramSchema: def.paramSchema || {},
+                    returnSchema: def.returnSchema || {},
+                    enabled: def.enabled !== undefined ? def.enabled : 1
+                };
+            } else {
+                // 如果缓存中没有，从API获取
+                request({
+                    url: '/api/indicator/definitions/' + id,
+                    method: 'GET'
+                }).then(function(res){
+                    if (res.code === 200 && res.data) {
+                        var def = res.data;
+                        formData = {
+                            id: def.id,
+                            indicatorCode: def.indicatorCode,
+                            indicatorVersion: def.indicatorVersion,
+                            indicatorName: def.indicatorName,
+                            description: def.description || '',
+                            category: def.category || '',
+                            dataSource: def.dataSource || 'BAR',
+                            implKey: def.implKey || '',
+                            engine: def.engine || 'ta4j',
+                            minRequiredBars: def.minRequiredBars || 0,
+                            supportedTimeframes: def.supportedTimeframes || [],
+                            paramSchema: def.paramSchema || {},
+                            returnSchema: def.returnSchema || {},
+                            enabled: def.enabled !== undefined ? def.enabled : 1
+                        };
+                        // 使用获取到的数据重新打开对话框
+                        showEditDialogWithData(id, formData);
+                        return;
+                    }
+                }).catch(function(err){
+                    layer.msg('获取数据失败: ' + (err.message || '未知错误'), {icon: 2});
+                });
+            }
+        } else {
+            // 新建时设置默认值
+            formData = {
+                indicatorVersion: 'v1',
+                category: 'MOMENTUM',
+                dataSource: 'BAR',
+                engine: 'ta4j',
+                minRequiredBars: 0,
+                supportedTimeframes: '["5m","15m","30m","1h","4h"]',
+                paramSchema: '{}',
+                returnSchema: '{}',
+                enabled: 1
+            };
+        }
+        
+        // 调用核心方法打开对话框
+        openEditDialog(id, title, formData);
+    }
+    
+    // 打开编辑对话框的核心方法
+    function openEditDialog(id, title, formData) {
+        var content = '<form class="layui-form" lay-filter="defForm" style="padding: 20px;">';
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">指标编码</label>';
+        content += '<div class="layui-input-block">';
+        content += '<input type="text" name="indicatorCode" lay-verify="required" placeholder="如：RSI" class="layui-input" value="' + (formData.indicatorCode || '') + '" ' + (id ? 'disabled' : '') + '>';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">版本</label>';
+        content += '<div class="layui-input-block">';
+        content += '<input type="text" name="indicatorVersion" lay-verify="required" placeholder="如：v1" class="layui-input" value="' + (formData.indicatorVersion || 'v1') + '">';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">指标名称</label>';
+        content += '<div class="layui-input-block">';
+        content += '<input type="text" name="indicatorName" lay-verify="required" placeholder="如：相对强弱指标" class="layui-input" value="' + (formData.indicatorName || '') + '">';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">描述</label>';
+        content += '<div class="layui-input-block">';
+        content += '<textarea name="description" placeholder="指标描述" class="layui-textarea">' + (formData.description || '') + '</textarea>';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">分类</label>';
+        content += '<div class="layui-input-block">';
+        content += '<select name="category" lay-verify="required">';
+        content += '<option value="MOMENTUM"' + (formData.category === 'MOMENTUM' ? ' selected' : '') + '>动量</option>';
+        content += '<option value="TREND"' + (formData.category === 'TREND' ? ' selected' : '') + '>趋势</option>';
+        content += '<option value="VOLATILITY"' + (formData.category === 'VOLATILITY' ? ' selected' : '') + '>波动率</option>';
+        content += '<option value="VOLUME"' + (formData.category === 'VOLUME' ? ' selected' : '') + '>成交量</option>';
+        content += '<option value="GENERAL"' + (formData.category === 'GENERAL' ? ' selected' : '') + '>通用</option>';
+        content += '</select>';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">数据源</label>';
+        content += '<div class="layui-input-block">';
+        content += '<select name="dataSource">';
+        content += '<option value="BAR"' + (formData.dataSource === 'BAR' ? ' selected' : '') + '>BAR</option>';
+        content += '<option value="TICK"' + (formData.dataSource === 'TICK' ? ' selected' : '') + '>TICK</option>';
+        content += '<option value="SIGNAL"' + (formData.dataSource === 'SIGNAL' ? ' selected' : '') + '>SIGNAL</option>';
+        content += '<option value="MIXED"' + (formData.dataSource === 'MIXED' ? ' selected' : '') + '>MIXED</option>';
+        content += '</select>';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">实现键</label>';
+        content += '<div class="layui-input-block">';
+        content += '<input type="text" name="implKey" placeholder="如：ta4j:rsi" class="layui-input" value="' + (formData.implKey || '') + '">';
+        content += '<div class="layui-form-mid layui-word-aux">如：ta4j:rsi, builtin:price_breakout</div>';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">引擎</label>';
+        content += '<div class="layui-input-block">';
+        content += '<select name="engine">';
+        content += '<option value="ta4j"' + (formData.engine === 'ta4j' ? ' selected' : '') + '>ta4j</option>';
+        content += '<option value="custom"' + (formData.engine === 'custom' ? ' selected' : '') + '>custom</option>';
+        content += '</select>';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">最小K线数</label>';
+        content += '<div class="layui-input-block">';
+        content += '<input type="number" name="minRequiredBars" placeholder="最小所需K线数量" class="layui-input" value="' + (formData.minRequiredBars || 0) + '">';
+        content += '</div></div>';
+        
+        // 解析已选择的周期（在字符串拼接前处理）
+        var selectedTimeframes = [];
+        if (formData.supportedTimeframes) {
+            try {
+                if (typeof formData.supportedTimeframes === 'string') {
+                    selectedTimeframes = JSON.parse(formData.supportedTimeframes);
+                } else {
+                    selectedTimeframes = formData.supportedTimeframes;
+                }
+            } catch(e) {
+                selectedTimeframes = [];
+            }
+        }
+        // 所有支持的周期
+        var allTimeframes = ['5m', '15m', '30m', '1h', '4h'];
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">支持周期</label>';
+        content += '<div class="layui-input-block">';
+        // 使用自定义的多选输入框
+        content += '<div style="position: relative;">';
+        // 输入框容器（显示选中的标签）
+        content += '<div id="timeframesInput" style="min-height: 38px; padding: 4px 8px; border: 1px solid #d2d2d2; border-radius: 2px; background: #fff; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">';
+        if (selectedTimeframes.length === 0) {
+            content += '<span style="color: #999; font-size: 14px;">请选择支持的周期（可多选）</span>';
+        } else {
+            selectedTimeframes.forEach(function(tf){
+                content += '<span class="timeframe-tag-selected" data-timeframe="' + tf + '" style="display: inline-flex; align-items: center; padding: 2px 20px 2px 8px; background: #1E9FFF; color: #fff; border-radius: 3px; font-size: 12px; position: relative;">';
+                content += tf;
+                content += '<i class="layui-icon layui-icon-close" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 12px; cursor: pointer; padding: 0 2px;" title="移除"></i>';
+                content += '</span>';
+            });
+        }
+        content += '</div>';
+        // 隐藏的多选框组（用于数据提交）
+        allTimeframes.forEach(function(tf){
+            var checked = selectedTimeframes.indexOf(tf) >= 0 ? 'checked' : '';
+            content += '<input type="checkbox" name="supportedTimeframes" value="' + tf + '" title="' + tf + '" lay-skin="primary" style="display: none;" ' + checked + '>';
+        });
+        // 下拉选择面板
+        content += '<div id="timeframesDropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 999; margin-top: 2px; background: #fff; border: 1px solid #d2d2d2; border-radius: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.12); max-height: 200px; overflow-y: auto;">';
+        allTimeframes.forEach(function(tf){
+            var checked = selectedTimeframes.indexOf(tf) >= 0 ? 'checked' : '';
+            content += '<div style="padding: 8px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">';
+            content += '<input type="checkbox" class="timeframe-checkbox" value="' + tf + '" ' + checked + ' style="margin-right: 8px;">';
+            content += '<label style="cursor: pointer; margin: 0; font-size: 14px;">' + tf + '</label>';
+            content += '</div>';
+        });
+        content += '</div>';
+        content += '</div>';
+        content += '<div class="layui-form-mid layui-word-aux">可多选，支持5m、15m、30m、1h、4h周期</div>';
+        content += '</div></div>';
+        
+        // 参数定义表格
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">参数定义</label>';
+        content += '<div class="layui-input-block">';
+        content += '<div style="margin-bottom: 10px;">';
+        content += '<button type="button" class="layui-btn layui-btn-sm" onclick="addParamRow(this)">+ 添加参数</button>';
+        content += '<span style="margin-left: 10px; color: #999; font-size: 12px;">类型：int / float / bool / string</span>';
+        content += '</div>';
+        content += '<table class="layui-table param-table" id="paramTable">';
+        content += '<thead>';
+        content += '<tr>';
+        content += '<th width="20%">参数名</th>';
+        content += '<th width="15%">类型</th>';
+        content += '<th width="15%">默认值</th>';
+        content += '<th width="12%">必填</th>';
+        content += '<th width="30%">说明</th>';
+        content += '<th width="8%">操作</th>';
+        content += '</tr>';
+        content += '</thead>';
+        content += '<tbody id="paramTableBody">';
+        // 解析参数并生成行
+        var paramRows = parseParamsToRows(formData.paramSchema || {});
+        content += paramRows;
+        content += '</tbody>';
+        content += '</table>';
+        content += '</div></div>';
+        
+        // 输出定义表格
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">输出定义</label>';
+        content += '<div class="layui-input-block">';
+        content += '<div style="margin-bottom: 10px;">';
+        content += '<button type="button" class="layui-btn layui-btn-sm" onclick="addOutputRow(this)">+ 添加输出</button>';
+        content += '<span style="margin-left: 10px; color: #999; font-size: 12px;">输出类型：SCALAR(数值) / SIGNAL(信号) / SERIES(序列) / STATE(状态)</span>';
+        content += '</div>';
+        content += '<table class="layui-table output-table" id="outputTable">';
+        content += '<thead>';
+        content += '<tr>';
+        content += '<th width="20%">输出名</th>';
+        content += '<th width="20%">输出类型</th>';
+        content += '<th width="50%">说明</th>';
+        content += '<th width="10%">操作</th>';
+        content += '</tr>';
+        content += '</thead>';
+        content += '<tbody id="outputTableBody">';
+        // 解析输出并生成行
+        var outputRows = parseOutputsToRows(formData.returnSchema || {});
+        content += outputRows;
+        content += '</tbody>';
+        content += '</table>';
+        content += '</div></div>';
+        
+        // Schema调试区域（隐藏，仅供debug）
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">Schema调试</label>';
+        content += '<div class="layui-input-block">';
+        content += '<button type="button" class="layui-btn layui-btn-xs layui-btn-primary" onclick="toggleSchemaDebug(this)">显示Schema</button>';
+        content += '<div class="schema-debug" id="schemaDebug">';
+        content += '<div style="margin-top: 10px;"><strong>参数Schema:</strong></div>';
+        content += '<pre id="paramSchemaDebug" style="background: #fff; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-size: 12px;"></pre>';
+        content += '<div style="margin-top: 10px;"><strong>返回Schema:</strong></div>';
+        content += '<pre id="returnSchemaDebug" style="background: #fff; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-size: 12px;"></pre>';
+        content += '</div>';
+        content += '</div></div>';
+        
+        content += '<div class="layui-form-item">';
+        content += '<label class="layui-form-label">状态</label>';
+        content += '<div class="layui-input-block">';
+        content += '<input type="radio" name="enabled" value="1" title="启用" ' + (formData.enabled === 1 ? 'checked' : '') + '>';
+        content += '<input type="radio" name="enabled" value="0" title="禁用" ' + (formData.enabled === 0 ? 'checked' : '') + '>';
+        content += '</div></div>';
+        
+        content += '</form>';
+        
+        var layerIndex = 0; // 保存 layer 的 index
+        layerIndex = layer.open({
+            type: 1,
+            title: title,
+            area: ['1200px', '95%'],
+            content: content,
+            btn: ['保存', '取消'],
+            yes: function(index){
+                // 获取表单元素（通过 layer 的 index）
+                var layero = $('#layui-layer' + index).find('.layui-layer-content');
+                
+                // 表单验证
+                form.on('submit(defForm)', function(data){
+                    return false; // 阻止表单跳转
+                });
+                
+                var formData = form.val('defForm');
+                
+                // 处理支持周期（checkbox 多选的值）
+                var selectedTimeframes = [];
+                layero.find('input[name="supportedTimeframes"]:checked').each(function(){
+                    selectedTimeframes.push($(this).val());
+                });
+                
+                if (selectedTimeframes.length === 0) {
+                    layer.msg('请至少选择一个支持周期', {icon: 2});
+                    return;
+                }
+                formData.supportedTimeframes = selectedTimeframes;
+                
+                // 从表格生成参数Schema
+                try {
+                    formData.paramSchema = generateParamSchemaFromTable(layero);
+                    formData.returnSchema = generateReturnSchemaFromTable(layero);
+                } catch(e) {
+                    layer.msg('生成Schema失败: ' + e.message, {icon: 2});
+                    return;
+                }
+                
+                // 转换为整数
+                formData.enabled = parseInt(formData.enabled);
+                formData.minRequiredBars = parseInt(formData.minRequiredBars) || 0;
+                
+                // 发送请求
+                var url = id ? '/api/indicator/definitions/' + id : '/api/indicator/definitions';
+                var method = id ? 'PUT' : 'POST';
+                
+                request({
+                    url: url,
+                    method: method,
+                    data: formData
+                }).then(function(res){
+                    if (res.code === 200) {
+                        layer.msg(id ? '更新成功' : '创建成功', {icon: 1});
+                        layer.close(index);
+                        loadDefinitions(); // 刷新列表
+                    } else {
+                        layer.msg(res.message || '操作失败', {icon: 2});
+                    }
+                }).catch(function(err){
+                    var errorMsg = err.message || '未知错误';
+                    if (err.responseJSON && err.responseJSON.message) {
+                        errorMsg = err.responseJSON.message;
+                    }
+                    layer.msg('操作失败: ' + errorMsg, {icon: 2, time: 3000});
+                });
+            },
+            success: function(layero, index){
+                // 渲染表单
+                form.render();
+                
+                // 如果是编辑且有ID，禁用指标编码
+                if (id && formData.id) {
+                    layero.find('input[name="indicatorCode"]').attr('disabled', true);
+                }
+                
+                // 初始化支持周期选择器
+                initTimeframesSelector(layero);
+                
+                // 移除了枚举值相关的监听和初始化代码（枚举值列已移除）
+                
+                // 确保layui select组件正确渲染
+                form.render('select');
+            }
+        });
+    };
+    
+    // ========== 参数和输出表格操作函数 ==========
+    
+    // 从表格生成参数Schema
+    function generateParamSchemaFromTable(layero){
+        var paramSchema = {};
+        var tbody = layero.find('#paramTableBody');
+        
+        tbody.find('tr').each(function(){
+            var $row = $(this);
+            var paramName = $row.find('.param-name').val();
+            if (!paramName || paramName.trim() === '') {
+                return; // 跳过空行
+            }
+            
+            var spec = {
+                type: $row.find('.param-type').val(),
+                required: $row.find('.param-required').val() === 'true'
+            };
+            
+            // 单位列已移除（单位信息仍保存在paramSchema的unit字段中，但不再通过UI编辑）
+            
+            var defaultValue = $row.find('.param-default').val();
+            if (defaultValue !== '') {
+                // 尝试转换类型
+                if (spec.type === 'int') {
+                    spec.default = parseInt(defaultValue) || defaultValue;
+                } else if (spec.type === 'float') {
+                    spec.default = parseFloat(defaultValue) || defaultValue;
+                } else if (spec.type === 'bool') {
+                    spec.default = defaultValue === 'true' || defaultValue === true;
+                } else {
+                    spec.default = defaultValue;
+                }
+            }
+            
+            var description = $row.find('.param-description').val();
+            if (description) spec.description = description;
+            
+            // 枚举值处理已移除（枚举值信息仍保存在paramSchema的enum字段中，但不再通过UI编辑）
+            
+            paramSchema[paramName] = spec;
+        });
+        
+        return paramSchema;
+    }
+    
+    // 从表格生成返回Schema
+    function generateReturnSchemaFromTable(layero){
+        var outputs = [];
+        var tbody = layero.find('#outputTableBody');
+        
+        tbody.find('tr').each(function(){
+            var $row = $(this);
+            var outputName = $row.find('.output-name').val();
+            if (!outputName || outputName.trim() === '') {
+                return; // 跳过空行
+            }
+            
+            var output = {
+                name: outputName,
+                type: $row.find('.output-type').val()
+            };
+            
+            var description = $row.find('.output-description').val();
+            if (description) output.description = description;
+            
+            outputs.push(output);
+        });
+        
+        return { outputs: outputs };
+    }
+    
+    // 添加参数行
+    window.addParamRow = function(btn){
+        var layero = $(btn).closest('.layui-layer-content');
+        if (layero.length === 0) {
+            layero = $(btn).closest('.layui-layer');
+        }
+        var tbody = layero.find('#paramTableBody');
+        
+        // 如果当前只有提示行，先清空
+        var firstRow = tbody.find('tr').first();
+        if (firstRow.length > 0 && firstRow.find('td').text().indexOf('暂无参数') >= 0) {
+            tbody.empty();
+        }
+        
+        var rowIndex = tbody.find('tr').length;
+        var row = '<tr data-row-index="' + rowIndex + '">';
+        row += '<td><input type="text" class="param-name" placeholder="参数名" required></td>';
+        row += '<td><select class="param-type"><option value="int">int</option><option value="float">float</option><option value="bool">bool</option><option value="string" selected>string</option></select></td>';
+        row += '<td><input type="text" class="param-default" placeholder="默认值"></td>';
+        row += '<td><select class="param-required"><option value="false" selected>false</option><option value="true">true</option></select></td>';
+        // 移除枚举值列
+        row += '<td><input type="text" class="param-description" placeholder="说明"></td>';
+        row += '<td style="text-align: center;"><button type="button" class="layui-btn layui-btn-xs layui-btn-danger" onclick="removeParamRow(this)">删除</button></td>';
+        row += '</tr>';
+        
+        tbody.append(row);
+        
+        // 重新渲染layui的select组件
+        form.render('select');
+        
+        // 由于默认类型是string，枚举值列应该显示，不需要额外处理
+    };
+    
+    // 删除参数行
+    window.removeParamRow = function(btn){
+        var $row = $(btn).closest('tr');
+        $row.remove();
+        
+        var tbody = $row.closest('tbody');
+        if (tbody.find('tr').length === 0) {
+            tbody.html('<tr><td colspan="6" style="text-align: center; color: #999;">暂无参数，点击"添加参数"按钮添加</td></tr>');
+        }
+    };
+    
+    // 添加输出行
+    window.addOutputRow = function(btn){
+        var layero = $(btn).closest('.layui-layer-content');
+        if (layero.length === 0) {
+            layero = $(btn).closest('.layui-layer');
+        }
+        var tbody = layero.find('#outputTableBody');
+        
+        // 如果当前只有提示行，先清空
+        var firstRow = tbody.find('tr').first();
+        if (firstRow.length > 0 && firstRow.find('td').text().indexOf('暂无输出') >= 0) {
+            tbody.empty();
+        }
+        
+        var rowIndex = tbody.find('tr').length;
+        var row = '<tr data-row-index="' + rowIndex + '">';
+        row += '<td><input type="text" class="output-name" placeholder="输出名" required></td>';
+        row += '<td><select class="output-type"><option value="SCALAR">SCALAR</option><option value="SIGNAL">SIGNAL</option><option value="SERIES">SERIES</option><option value="STATE">STATE</option></select></td>';
+        row += '<td><input type="text" class="output-description" placeholder="说明"></td>';
+        row += '<td style="text-align: center;"><button type="button" class="layui-btn layui-btn-xs layui-btn-danger" onclick="removeOutputRow(this)">删除</button></td>';
+        row += '</tr>';
+        
+        tbody.append(row);
+        
+        // 重新渲染layui的select组件
+        form.render('select');
+    };
+    
+    // 删除输出行
+    window.removeOutputRow = function(btn){
+        var $row = $(btn).closest('tr');
+        $row.remove();
+        
+        var tbody = $row.closest('tbody');
+        if (tbody.find('tr').length === 0) {
+            tbody.html('<tr><td colspan="4" style="text-align: center; color: #999;">暂无输出，点击"添加输出"按钮添加</td></tr>');
+        }
+    };
+    
+    // 切换Schema调试显示
+    window.toggleSchemaDebug = function(btn){
+        var layero = $(btn).closest('.layui-layer-content');
+        if (layero.length === 0) {
+            layero = $(btn).closest('.layui-layer');
+        }
+        var debugDiv = layero.find('#schemaDebug');
+        var isShow = debugDiv.hasClass('show');
+        
+        if (!isShow) {
+            // 生成Schema并显示
+            try {
+                var paramSchema = generateParamSchemaFromTable(layero);
+                var returnSchema = generateReturnSchemaFromTable(layero);
+                
+                layero.find('#paramSchemaDebug').text(JSON.stringify(paramSchema, null, 2));
+                layero.find('#returnSchemaDebug').text(JSON.stringify(returnSchema, null, 2));
+                
+                debugDiv.addClass('show');
+                $(btn).text('隐藏Schema');
+            } catch(e) {
+                layer.msg('生成Schema失败: ' + e.message, {icon: 2});
+            }
+        } else {
+            debugDiv.removeClass('show');
+            $(btn).text('显示Schema');
+        }
+    };
+    
+    // 初始化支持周期选择器
+    function initTimeframesSelector(layero){
+        var inputDiv = layero.find('#timeframesInput');
+        var dropdown = layero.find('#timeframesDropdown');
+        var isOpen = false;
+        
+        // 点击输入框展开/收起下拉框
+        inputDiv.on('click', function(e){
+            e.stopPropagation();
+            if (isOpen) {
+                dropdown.hide();
+                isOpen = false;
+            } else {
+                dropdown.show();
+                isOpen = true;
+                // 点击外部关闭
+                setTimeout(function(){
+                    $(document).one('click', function(){
+                        dropdown.hide();
+                        isOpen = false;
+                    });
+                }, 10);
+            }
+        });
+        
+        // 点击下拉框中的checkbox
+        dropdown.on('click', '.timeframe-checkbox', function(e){
+            e.stopPropagation();
+            updateTimeframesDisplay(layero);
+        });
+        
+        // 点击标签删除按钮
+        layero.on('click', '.timeframe-tag-selected .layui-icon-close', function(e){
+            e.stopPropagation();
+            e.preventDefault();
+            var tf = $(this).parent().data('timeframe');
+            // 取消对应的checkbox选中
+            layero.find('input[name="supportedTimeframes"][value="' + tf + '"]').prop('checked', false);
+            dropdown.find('.timeframe-checkbox[value="' + tf + '"]').prop('checked', false);
+            // 更新显示
+            updateTimeframesDisplay(layero);
+        });
+        
+        // 初始化显示
+        updateTimeframesDisplay(layero);
+        
+        // 更新显示函数
+        function updateTimeframesDisplay(layero){
+            var selected = [];
+            layero.find('input[name="supportedTimeframes"]:checked').each(function(){
+                selected.push($(this).val());
+            });
+            
+            var html = '';
+            if (selected.length === 0) {
+                html = '<span style="color: #999; font-size: 14px;">请选择支持的周期（可多选）</span>';
+            } else {
+                selected.forEach(function(tf){
+                    html += '<span class="timeframe-tag-selected" data-timeframe="' + tf + '" style="display: inline-flex; align-items: center; padding: 2px 20px 2px 8px; background: #1E9FFF; color: #fff; border-radius: 3px; font-size: 12px; position: relative;">';
+                    html += tf;
+                    html += '<i class="layui-icon layui-icon-close" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 12px; cursor: pointer; padding: 0 2px;" title="移除"></i>';
+                    html += '</span>';
+                });
+            }
+            inputDiv.html(html);
+        }
+    }
+    
+    // 删除指标定义
+    window.deleteDefinition = function(id){
+        layer.confirm('确定要删除这个指标定义吗？', {icon: 3, title: '确认删除'}, function(index){
+            request({
+                url: '/api/indicator/definitions/' + id,
+                method: 'DELETE'
+            }).then(function(res){
+                if (res.code === 200) {
+                    layer.msg('删除成功', {icon: 1});
+                    layer.close(index);
+                    loadDefinitions(); // 刷新列表
+                } else {
+                    layer.msg(res.message || '删除失败', {icon: 2});
+                }
+            }).catch(function(err){
+                var errorMsg = err.message || '未知错误';
+                if (err.responseJSON && err.responseJSON.message) {
+                    errorMsg = err.responseJSON.message;
+                }
+                layer.msg('删除失败: ' + errorMsg, {icon: 2, time: 3000});
+            });
+        });
+    };
 });
 </script>
 </body>

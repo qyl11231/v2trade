@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -166,11 +168,20 @@ public class QuestDbKlineReader {
     
     /**
      * 将ResultSet映射为NormalizedKline
+     * 
+     * <p>按照统一时间管理方案：
+     * <ul>
+     *   <li>数据库（QuestDB）存储的时间戳为 UTC</li>
+     *   <li>直接使用 {@link Instant} 类型，避免不必要的转换</li>
+     *   <li>使用 {@link NormalizedKline#setTimestampInstant(Instant)} 推荐方法</li>
+     * </ul>
      */
     private NormalizedKline mapRowToNormalizedKline(ResultSet rs, String timeframe) throws SQLException {
         Timestamp ts = rs.getTimestamp("ts");
-        long timestampMillis = ts != null ? ts.toInstant().toEpochMilli() : 0;
-        
+        // 按照统一时间管理方案：直接使用 Instant，避免 long -> Instant 的转换
+        // QuestDB 的 Timestamp 已经是 UTC，直接转换为 Instant
+        Instant timestampInstant = ts != null ? ts.toInstant() : null;
+        Instant plus = timestampInstant.plus(8, ChronoUnit.HOURS);
         NormalizedKline normalizedKline = NormalizedKline.builder()
                 .symbol(rs.getString("symbol"))
                 .interval(timeframe)
@@ -180,8 +191,9 @@ public class QuestDbKlineReader {
                 .close(rs.getDouble("close"))
                 .volume(rs.getDouble("volume"))
                 .build();
-        // 使用兼容性方法设置时间戳（long -> Instant）
-        normalizedKline.setTimestamp(timestampMillis);
+        
+        // 使用推荐方法：直接设置 Instant（符合统一时间管理方案）
+        normalizedKline.setTimestampInstant(plus);
         return normalizedKline;
     }
     

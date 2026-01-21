@@ -335,11 +335,8 @@
         <li class="layui-nav-item">
           <a href="javascript:;">指标管理</a>
           <dl class="layui-nav-child">
-            <dd><a href="/indicator/dashboard.html">仪表盘</a></dd>
             <dd><a href="/indicator/definitions.html">指标定义</a></dd>
-            <dd><a href="/indicator/subscriptions.html">指标订阅</a></dd>
-            <dd><a href="/indicator/values.html">指标结果</a></dd>
-            <dd><a href="/indicator/logs.html">计算日志</a></dd>
+            <dd><a href="/indicator/evaluate.html">指标评估</a></dd>
           </dl>
         </li>
         <li class="layui-nav-item">
@@ -1567,8 +1564,13 @@ async function openInstanceModal(instanceId = null, forceStrategyId = null) {
         </div>
       </div>
       <div class="field" style="margin-top:10px;">
-        <span>runtimeRules（N4 使用，N1 允许为空）</span>
-        <textarea id="inst_rules" placeholder='例如：{"entry":{"type":"SIGNAL","id":11}}'>${cur ? escapeHtml(cur.runtimeRules || "") : ""}</textarea>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span>runtimeRules（N4 使用，N1 允许为空）</span>
+          <button type="button" class="btn mini" onclick="openRuntimeRulesConfig()" style="padding:6px 12px; font-size:12px;">
+            <i class="layui-icon layui-icon-set" style="font-size:12px;"></i> 配置运行大脑规则
+          </button>
+        </div>
+        <textarea id="inst_rules" placeholder='例如：{"entry":{"type":"SIGNAL","id":11}} 或点击上方按钮进行可视化配置'>${cur ? escapeHtml(cur.runtimeRules || "") : ""}</textarea>
       </div>
       <div class="help" style="margin-top:10px;">
         • 唯一性：<code>user + strategy + pair + signal</code> 必须唯一（signal=0 表示未绑定）。<br/>
@@ -1757,6 +1759,37 @@ function showHistoryDetail(historyId) {
   toggleHistoryDetail(historyId);
 }
 
+// 打开运行大脑规则配置弹窗
+function openRuntimeRulesConfig() {
+  const rulesEl = document.getElementById("inst_rules");
+  const currentRules = rulesEl ? rulesEl.value.trim() : "";
+  
+  // 使用 layui layer 打开配置页面
+  layui.use('layer', function(){
+    const layer = layui.layer;
+    
+    const index = layer.open({
+      type: 2,
+      title: '配置运行大脑规则（N4）',
+      area: ['95%', '90%'],
+      content: '/strategy-runtime-rules.html?embedded=1&initialRules=' + encodeURIComponent(currentRules),
+      success: function(layero, index) {
+        // 监听来自配置页面的消息
+        window.addEventListener('message', function(event) {
+          if (event.data && event.data.type === 'runtimeRulesConfigComplete') {
+            const jsonStr = event.data.runtimeRules;
+            if (rulesEl) {
+              rulesEl.value = jsonStr;
+              toast('已自动填充运行大脑规则配置');
+            }
+            layer.close(index);
+          }
+        });
+      }
+    });
+  });
+}
+
 // 全局函数暴露
 window.openDefinitionModal = openDefinitionModal;
 window.submitDefinitionCreate = submitDefinitionCreate;
@@ -1773,6 +1806,7 @@ window.onInstStrategyChange = onInstStrategyChange;
 window.showHistoryDetail = showHistoryDetail;
 window.toggleHistoryDetail = toggleHistoryDetail;
 window.closeModal = closeModal;
+window.openRuntimeRulesConfig = openRuntimeRulesConfig;
 
 // 额外的测试：直接测试 render 函数
 window.testRender = function() {

@@ -28,9 +28,18 @@ public class IndicatorEngineConfig {
     
     @PostConstruct
     public void registerEngines() {
-        log.info("开始注册指标引擎，共{}个", engines.size());
-        engineRouter.registerEngines(engines);
-        log.info("指标引擎注册完成");
+        log.info("开始注册指标引擎，共{}个", engines != null ? engines.size() : 0);
+        
+        // 注册所有引擎
+        if (engines != null && !engines.isEmpty()) {
+            engineRouter.registerEngines(engines);
+            log.info("指标引擎注册完成");
+        } else {
+            log.warn("未找到任何指标引擎实现");
+        }
+        
+        // 注册 impl_key 映射（需要在引擎注册完成后执行）
+        engineRouter.registerImplKeys();
     }
 }
 

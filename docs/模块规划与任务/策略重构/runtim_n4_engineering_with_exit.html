@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>N4 策略大脑配置原型（统一指标模型）</title>
+    <style>
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,"PingFang SC","Microsoft YaHei";
+          background:#0b1020;color:#eaf0ff}
+        .wrap{max-width:1200px;margin:0 auto;padding:16px}
+        .row{display:grid;grid-template-columns:360px 1fr;gap:12px;align-items:start}
+        .card{background:#121a33;border:1px solid #233158;border-radius:12px;padding:12px}
+        .muted{color:#8aa0d4}
+        label{display:block;font-size:12px;color:#8aa0d4;margin:10px 0 6px}
+        input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #233158;
+          background:#0f1730;color:#eaf0ff;outline:none}
+        textarea{min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+        .btn{cursor:pointer;border:1px solid #233158;background:#0f1730;color:#eaf0ff;border-radius:10px;
+          padding:10px 12px}
+        .btn:hover{filter:brightness(1.08)}
+        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+        .item{border:1px solid #233158;border-radius:12px;padding:10px;background:#0f1730}
+        .itemHead{display:flex;justify-content:space-between;gap:8px;align-items:center}
+        .tag{font-size:12px;color:#8aa0d4}
+        .mini{font-size:12px}
+        .hr{height:1px;background:#233158;margin:12px 0}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h2 style="margin:0 0 6px">N4 策略大脑规则配置（原型）</h2>
+    <div class="muted">核心思路：把 price / signal 也当作“内置指标”，统一用指标库配置方式。</div>
+
+    <div class="row" style="margin-top:12px">
+        <!-- 左侧：全局规则 -->
+        <div class="card">
+            <h3 style="margin:0 0 8px">全局</h3>
+            <label>rulesType（大脑类型）</label>
+            <select id="rulesType">
+                <option value="1">1 趋势</option>
+                <option value="2">2 马丁</option>
+                <option value="3">3 网格</option>
+            </select>
+
+            <div class="hr"></div>
+            <h3 style="margin:0 0 8px">Entry Rules</h3>
+
+            <label>entryType</label>
+            <select id="entryType">
+                <option value="all">all（全部满足）</option>
+                <option value="weight" selected>weight（权重阈值）</option>
+            </select>
+
+            <div class="grid2">
+                <div>
+                    <label>longEnterScore（≥）</label>
+                    <input id="longEnterScore" type="number" value="30"/>
+                </div>
+                <div>
+                    <label>shortEnterScore（≤）</label>
+                    <input id="shortEnterScore" type="number" value="-30"/>
+                </div>
+            </div>
+            <div class="muted mini" id="scoreHint" style="margin-top:8px"></div>
+
+            <div class="hr"></div>
+            <button class="btn" id="addFactorBtn">+ 添加因子（从指标库）</button>
+            <div class="list" id="factorList"></div>
+
+            <div class="hr"></div>
+            <h3 style="margin:0 0 8px">Exit Rules</h3>
+
+            <label>exitType</label>
+            <select id="exitType">
+                <option value="all">all（全部满足）</option>
+                <option value="weight" selected>weight（权重阈值）</option>
+            </select>
+
+            <div class="grid2">
+                <div>
+                    <label>longExitScore（≤）</label>
+                    <input id="longExitScore" type="number" value="-30"/>
+                </div>
+                <div>
+                    <label>shortExitScore（≥）</label>
+                    <input id="shortExitScore" type="number" value="30"/>
+                </div>
+            </div>
+            <div class="muted mini" id="exitScoreHint" style="margin-top:8px"></div>
+
+            <div class="hr"></div>
+            <button class="btn" id="addExitFactorBtn">+ 添加退出因子（从指标库）</button>
+            <div class="list" id="exitFactorList"></div>
+
+        </div>
+
+        <!-- 右侧：编辑器 + JSON -->
+        <div class="card">
+            <h3 style="margin:0 0 8px">因子编辑</h3>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                <button class="btn mini" id="editEntryBtn">编辑：Entry</button>
+                <button class="btn mini" id="editExitBtn">编辑：Exit</button>
+                <span class="muted mini" id="editHint">当前编辑：Entry</span>
+            </div>
+
+            <div class="muted mini">选择左侧某个因子后，这里会显示它的参数表单（含权重，空头权重默认负数）。</div>
+
+            <div id="editorArea" style="margin-top:10px" class="item">
+                <div class="muted">尚未选择因子</div>
+            </div>
+
+            <div class="hr"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn" id="exportBtn">导出 runtimeRules JSON</button>
+                <button class="btn" id="copyBtn">复制 JSON</button>
+                <button class="btn" id="resetBtn">重置</button>
+            </div>
+
+            <label style="margin-top:10px">JSON 预览</label>
+            <textarea id="jsonPreview" spellcheck="false"></textarea>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- 指标选择弹窗（工程版：替代 prompt） -->
+<div id="indicatorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;">
+  <div style="max-width:720px;margin:6vh auto;background:#121a33;border:1px solid #233158;border-radius:12px;padding:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <b>选择指标</b>
+      <button class="btn mini" id="indicatorModalClose">关闭</button>
+    </div>
+    <div class="hr"></div>
+    <input id="indicatorSearch" placeholder="搜索：rsi / macd / signal / price ..." />
+    <div class="list" id="indicatorList" style="margin-top:10px;max-height:52vh;overflow:auto"></div>
+  </div>
+</div>
+
+<script>
+
+    /** 指标库（示例：工程版支持后端/配置中心动态下发） */
+    const INDICATOR_LIBRARY = window.__INDICATOR_LIBRARY__ || [
+      // 传统指标
+      { code:"rsi", name:"RSI", dataSource:"BAR", params:[
+        {k:"timeframe", t:"select", options:["1m","5m","15m","1h"], d:"5m"},
+        {k:"length", t:"number", d:14},
+        {k:"overSold", t:"number", d:30},
+        {k:"overBought", t:"number", d:80},
+      ]},
+      { code:"macd", name:"MACD", dataSource:"BAR", params:[
+        {k:"timeframe", t:"select", options:["1m","5m","15m","1h"], d:"5m"},
+        {k:"fast", t:"number", d:12},
+        {k:"slow", t:"number", d:26},
+        {k:"signal", t:"number", d:9},
+      ]},
+
+      // 内置：价格类（把 price 写入指标库）
+      { code:"price_breakout", name:"价格突破N根K线高低", dataSource:"MIXED", params:[
+        {k:"timeframe", t:"select", options:["1m","5m","15m","1h"], d:"5m"},
+        {k:"lookback", t:"number", d:60},
+        {k:"source", t:"select", options:["HIGH_LOW","CLOSE"], d:"HIGH_LOW"},
+        {k:"epsilonRatio", t:"number", d:0.0005}
+      ]},
+
+      // 内置：信号类（把 signal 写入指标库）
+      { code:"signal_confirm", name:"信号回撤/突破确认", dataSource:"MIXED", params:[
+        {k:"validityPeriodSec", t:"number", d:60},
+        {k:"triggerMode", t:"select", options:["RETRACE","BREAKOUT","BOTH"], d:"BOTH"},
+        {k:"retraceRatio", t:"number", d:0.03},
+        {k:"breakoutRatio", t:"number", d:0.03},
+        {k:"priceRef", t:"select", options:["SIGNAL_PRICE","TRIGGER_PRICE","LAST_PRICE_SNAPSHOT"], d:"SIGNAL_PRICE"}
+      ]},
+    ];
+
+    let state = {
+      rulesType: "1",
+      entryRules: {
+        entryType: "weight",
+        threshold: { longEnterScore: 30, shortEnterScore: -30 },
+        factorList: []
+      },
+      _ui: { selectedFactorId: null }
+    };
+
+    const $ = (id)=>document.getElementById(id);
+    const uid = ()=>"f_"+Math.random().toString(16).slice(2,10);
+
+    function renderFactorList(){
+      const box = $("factorList");
+      box.innerHTML = "";
+      state.entryRules.factorList.forEach(f=>{
+        const div = document.createElement("div");
+        div.className = "item";
+        const selected = state._ui.selectedFactorId===f.factorId;
+        div.style.outline = selected ? "2px solid #4c6fff" : "none";
+        div.innerHTML = `
+          <div class="itemHead">
+            <div>
+              <div><b>${escapeHtml(f.name||f.indicatorCode)}</b></div>
+              <div class="tag">code: ${escapeHtml(f.indicatorCode)} · source: ${escapeHtml(f.dataSource)} · longW=${Number(f.scope.longWeight||0)} · shortW=${Number(f.scope.shortWeight||0)}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn mini" data-act="edit" data-id="${f.factorId}">编辑</button>
+              <button class="btn mini" data-act="del" data-id="${f.factorId}">删除</button>
+            </div>
+          </div>
+        `;
+        div.querySelectorAll("button").forEach(b=>{
+          b.onclick = ()=>{
+            const act=b.dataset.act, id=b.dataset.id;
+            if(act==="edit"){ selectFactor(id); }
+            if(act==="del"){ deleteFactor(id); }
+          };
+        });
+        div.onclick = (e)=>{
+          if(e.target.tagName.toLowerCase()==="button") return;
+          selectFactor(f.factorId);
+        };
+        box.appendChild(div);
+      });
+
+    function renderExitFactorList(){
+      const box = $("exitFactorList");
+      box.innerHTML = "";
+      state.exitRules.factorList.forEach(f=>{
+        const div = document.createElement("div");
+        div.className = "item";
+        const selected = state._ui.selectedRuleSet==="exit" && state._ui.selectedFactorId===f.factorId;
+        div.style.outline = selected ? "2px solid #4c6fff" : "none";
+        div.innerHTML = `
+          <div class="itemHead">
+            <div>
+              <div><b>${escapeHtml(f.name||f.indicatorCode)}</b></div>
+              <div class="tag">code: ${escapeHtml(f.indicatorCode)} · source: ${escapeHtml(f.dataSource)} · longW=${Number(f.scope.longWeight||0)} · shortW=${Number(f.scope.shortWeight||0)}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn mini" data-act="edit" data-id="${f.factorId}">编辑</button>
+              <button class="btn mini" data-act="del" data-id="${f.factorId}">删除</button>
+            </div>
+          </div>
+        `;
+        div.querySelectorAll("button").forEach(b=>{
+          b.onclick = ()=>{
+            const act=b.dataset.act, id=b.dataset.id;
+            if(act==="edit"){ selectFactorExit(id); }
+            if(act==="del"){ deleteExitFactor(id); }
+          };
+        });
+        div.onclick = (e)=>{
+          if(e.target.tagName.toLowerCase()==="button") return;
+          selectFactorExit(f.factorId);
+        };
+        box.appendChild(div);
+      });
+      updateJsonPreview();
+    }
+
+    function selectFactorExit(fid){
+      state._ui.selectedRuleSet = "exit";
+      state._ui.selectedFactorId = fid;
+      syncEditToggleUi();
+      renderFactorList();
+      renderExitFactorList();
+      renderEditor();
+    }
+
+    function deleteExitFactor(fid){
+      state.exitRules.factorList = state.exitRules.factorList.filter(x=>x.factorId!==fid);
+      if(state._ui.selectedRuleSet==="exit" && state._ui.selectedFactorId===fid) state._ui.selectedFactorId=null;
+      renderExitFactorList();
+      renderEditor();
+    }
+
+          updateJsonPreview();
+    }
+
+    function selectFactor(fid){
+      state._ui.selectedRuleSet = "entry";
+      state._ui.selectedFactorId = fid;
+      syncEditToggleUi();
+      renderFactorList();
+      renderExitFactorList();
+      renderEditor();
+    }
+
+    function deleteFactor(fid){
+      state.entryRules.factorList = state.entryRules.factorList.filter(x=>x.factorId!==fid);
+      if(state._ui.selectedRuleSet==="entry" && state._ui.selectedFactorId===fid) state._ui.selectedFactorId=null;
+      renderFactorList();
+      renderExitFactorList();
+      renderEditor();
+    }
+
+    function renderEditor(){
+      const area = $("editorArea");
+      const list = state._ui.selectedRuleSet==="exit" ? state.exitRules.factorList : state.entryRules.factorList;
+      const f = list.find(x=>x.factorId===state._ui.selectedFactorId);
+      if(!f){ area.innerHTML = `<div class="muted">尚未选择因子</div>`; return; }
+
+      const lib = INDICATOR_LIBRARY.find(x=>x.code===f.indicatorCode);
+      const paramsUi = (lib?.params||[]).map(p=>{
+        const v = f.params[p.k];
+        if(p.t==="select"){
+          const opts = p.options.map(o=>`<option value="${escapeAttr(o)}" ${String(v)===String(o)?"selected":""}>${escapeHtml(o)}</option>`).join("");
+          return `<label>${escapeHtml(p.k)}</label><select data-k="${escapeAttr(p.k)}">${opts}</select>`;
+        }
+        return `<label>${escapeHtml(p.k)}</label><input data-k="${escapeAttr(p.k)}" type="number" step="any" value="${escapeAttr(v)}"/>`;
+      }).join("");
+
+      area.innerHTML = `
+        <div class="grid2">
+          <div>
+            <label>名称（给量化看的）</label>
+            <input id="f_name" value="${escapeAttr(f.name||"")}" />
+          </div>
+          <div>
+            <label>indicatorCode</label>
+            <select id="f_code">
+              ${INDICATOR_LIBRARY.map(x=>`<option value="${escapeAttr(x.code)}" ${x.code===f.indicatorCode?"selected":""}>${escapeHtml(x.code)}（${escapeHtml(x.name)}）</option>`).join("")}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label>dataSource</label>
+            <input id="f_source" value="${escapeAttr(f.dataSource)}" disabled/>
+          </div>
+          <div>
+            <label>enabled</label>
+            <select id="f_enabled">
+              <option value="true" ${f.enabled?"selected":""}>true</option>
+              <option value="false" ${!f.enabled?"selected":""}>false</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <h4 style="margin:0 0 6px">params（指标参数）</h4>
+        ${paramsUi || `<div class="muted">该指标暂无可配置参数</div>`}
+
+        <div class="hr"></div>
+        <h4 style="margin:0 0 6px">scope（权重，空头建议为负）</h4>
+        <div class="grid2">
+          <div>
+            <label>longWeight（正数）</label>
+            <input id="f_longW" type="number" value="${Number(f.scope.longWeight||0)}" />
+          </div>
+          <div>
+            <label>shortWeight（负数）</label>
+            <input id="f_shortW" type="number" value="${Number(f.scope.shortWeight||0)}" />
+          </div>
+        </div>
+      `;
+
+      $("f_name").oninput = (e)=>{ f.name = e.target.value; renderFactorList(); };
+      $("f_enabled").onchange = (e)=>{ f.enabled = (e.target.value==="true"); renderFactorList(); };
+
+      $("f_code").onchange = (e)=>{
+        const code = e.target.value;
+        const lib2 = INDICATOR_LIBRARY.find(x=>x.code===code);
+        f.indicatorCode = code;
+        f.dataSource = lib2?.dataSource || "BAR";
+        f.params = {};
+        (lib2?.params||[]).forEach(p=>f.params[p.k]=p.d);
+        renderFactorList();
+        renderEditor();
+      };
+
+      area.querySelectorAll("[data-k]").forEach(el=>{
+        el.onchange = (e)=>{
+          const k = e.target.dataset.k;
+          const val = e.target.value;
+          f.params[k] = isFinite(Number(val)) ? Number(val) : val;
+          renderFactorList();
+        };
+      });
+
+      $("f_longW").onchange = (e)=>{ f.scope.longWeight = Number(e.target.value||0); renderFactorList(); };
+      $("f_shortW").onchange = (e)=>{ f.scope.shortWeight = Number(e.target.value||0); renderFactorList(); };
+    }
+
+    // ===== 指标选择弹窗（工程版：替代 prompt） =====
+    function openIndicatorModal(){
+      const modal = $("indicatorModal");
+      modal.style.display = "block";
+      $("indicatorSearch").value = "";
+      renderIndicatorOptions("");
+      $("indicatorSearch").oninput = (e)=>renderIndicatorOptions(e.target.value);
+    }
+    function closeIndicatorModal(){
+      $("indicatorModal").style.display = "none";
+    }
+    function renderIndicatorOptions(keyword){
+      const kw = (keyword||"").trim().toLowerCase();
+      const list = $("indicatorList");
+      list.innerHTML = "";
+
+      INDICATOR_LIBRARY
+        .filter(x=>{
+          if(!kw) return true;
+          return (x.code+" "+x.name+" "+x.dataSource).toLowerCase().includes(kw);
+        })
+        .forEach(lib=>{
+          const div = document.createElement("div");
+          div.className = "item";
+          div.innerHTML = `
+            <div class="itemHead">
+              <div>
+                <div><b>${escapeHtml(lib.code)}</b> <span class="tag">（${escapeHtml(lib.name)}）</span></div>
+                <div class="tag">source: ${escapeHtml(lib.dataSource)} · params: ${(lib.params||[]).map(p=>p.k).join(", ")||"-"}</div>
+              </div>
+              <button class="btn mini">选择</button>
+            </div>
+          `;
+          div.querySelector("button").onclick = ()=>{
+            addFactorByLib(lib);
+            closeIndicatorModal();
+          };
+          list.appendChild(div);
+        });
+    }
+
+    let _modalAddTarget = "entry";
+
+    function addFactor(){
+      _modalAddTarget = "entry";
+      openIndicatorModal();
+    }
+
+    function addExitFactor(){
+      _modalAddTarget = "exit";
+      openIndicatorModal();
+    }
+
+    function addFactorByLib(lib){
+      const f = {
+        factorId: uid(),
+        name: lib.name,
+        indicatorCode: lib.code,
+        dataSource: lib.dataSource,
+        enabled: true,
+        params: {},
+        scope: { longWeight: 20, shortWeight: -20 }
+      };
+      (lib.params||[]).forEach(p=>f.params[p.k]=p.d);
+
+      if(_modalAddTarget==="exit"){
+        state.exitRules.factorList.push(f);
+        selectFactorExit(f.factorId);
+      } else {
+        state.entryRules.factorList.push(f);
+        selectFactor(f.factorId);
+      }
+    }
+
+    function updateJsonPreview(){
+      // 同步全局字段
+      state.rulesType = $("rulesType").value;
+      state.entryRules.entryType = $("entryType").value;
+      state.entryRules.threshold.longEnterScore = Number($("longEnterScore").value||0);
+      state.entryRules.threshold.shortEnterScore = Number($("shortEnterScore").value||0);
+      state.exitRules.exitType = $("exitType").value;
+      state.exitRules.threshold.longExitScore = Number($("longExitScore").value||0);
+      state.exitRules.threshold.shortExitScore = Number($("shortExitScore").value||0);
+
+      const out = {
+        rulesType: Number(state.rulesType),
+        entryRules: {
+          entryType: state.entryRules.entryType,
+          threshold: state.entryRules.entryType==="weight" ? state.entryRules.threshold : undefined,
+          factorList: state.entryRules.factorList.map(f=>({
+            factorId: f.factorId,
+            enabled: f.enabled,
+            name: f.name,
+            indicator: {
+              code: f.indicatorCode,
+              dataSource: f.dataSource,
+              params: f.params
+            },
+            scope: {
+              longWeight: Number(f.scope.longWeight||0),
+              shortWeight: Number(f.scope.shortWeight||0)
+            }
+          }))
+        }
+      };
+      if(out.entryRules.threshold===undefined) delete out.entryRules.threshold;
+
+      $("jsonPreview").value = JSON.stringify(out, null, 2);
+
+      // 语义提示：最大/最小得分（weight 模式）
+      const enabledFactors = state.entryRules.factorList.filter(f=>f.enabled);
+      const maxLong = enabledFactors.reduce((s,f)=>s + (Number(f.scope.longWeight)||0), 0);
+      const minShort = enabledFactors.reduce((s,f)=>s + (Number(f.scope.shortWeight)||0), 0);
+      const isWeight = state.entryRules.entryType==="weight";
+      $("scoreHint").innerText = isWeight
+        ? `提示：启用因子数=${enabledFactors.length}，理论最大多头得分=${maxLong}，理论最小空头得分=${minShort}。`
+        : `提示：entryType=all 时不使用阈值。`;
+
+      const enabledExit = state.exitRules.factorList.filter(f=>f.enabled);
+      const maxLongExit = enabledExit.reduce((s,f)=>s + (Number(f.scope.longWeight)||0), 0);
+      const minShortExit = enabledExit.reduce((s,f)=>s + (Number(f.scope.shortWeight)||0), 0);
+      const isExitWeight = state.exitRules.exitType==="weight";
+      $("exitScoreHint").innerText = isExitWeight
+        ? `提示：启用退出因子数=${enabledExit.length}，理论最大多头退出得分=${maxLongExit}，理论最小空头退出得分=${minShortExit}。`
+        : `提示：exitType=all 时不使用阈值。`;
+    }
+
+    function validateRules(){
+      if(state.entryRules.factorList.length===0){
+        alert("至少添加 1 个 Entry 因子后再导出/复制。");
+        return false;
+      }
+      if(state.exitRules.factorList.length===0){
+        // 允许没有 Exit Rules，但给提示
+        // alert("提示：尚未配置 Exit Rules，策略可能无法自动退出。");
+      }
+      if(state.entryRules.entryType==="weight"){
+        const longT = Number($("longEnterScore").value||0);
+        const shortT = Number($("shortEnterScore").value||0);
+        if(!(longT > 0 && shortT < 0)){
+          alert("建议：longEnterScore 为正、shortEnterScore 为负（当前仍允许导出）。");
+        }
+      }
+      return true;
+    }
+
+    function exportJson(){
+      updateJsonPreview();
+      if(!validateRules()) return;
+      alert("已在右侧生成 runtimeRules JSON，可复制给后端保存到 strategy_instance.runtimeRules。");
+    }
+    async function copyJson(){
+      updateJsonPreview();
+      if(!validateRules()) return;
+      await navigator.clipboard.writeText($("jsonPreview").value);
+      alert("已复制到剪贴板");
+    }
+    function resetAll(){
+      state = {
+        rulesType: "1",
+        entryRules: { entryType:"weight", threshold:{longEnterScore:30,shortEnterScore:-30}, factorList:[] },
+        exitRules: { exitType:"weight", threshold:{longExitScore:-30,shortExitScore:30}, factorList:[] },
+        _ui: { selectedFactorId:null, selectedRuleSet:"entry" }
+      };
+      $("rulesType").value="1";
+      $("entryType").value="weight";
+      $("longEnterScore").value="30";
+      $("shortEnterScore").value="-30";
+      $("exitType").value="weight";
+      $("longExitScore").value="-30";
+      $("shortExitScore").value="30";
+
+      const isWeightInit = $("entryType").value === "weight";
+      $("longEnterScore").disabled = !isWeightInit;
+      $("shortEnterScore").disabled = !isWeightInit;
+      const isExitWeightInit = $("exitType").value === "weight";
+      $("longExitScore").disabled = !isExitWeightInit;
+      $("shortExitScore").disabled = !isExitWeightInit;
+
+      renderFactorList();
+      renderEditor();
+    }
+
+    function escapeHtml(s){ return String(s||"").replace(/[&<>\"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[m])); }
+    function escapeAttr(s){ return String(s||"").replace(/\"/g,"&quot;"); }
+
+
+    function syncEditToggleUi(){
+      const isExit = state._ui.selectedRuleSet==="exit";
+      $("editHint").innerText = isExit ? "当前编辑：Exit" : "当前编辑：Entry";
+      // 轻量高亮
+      $("editEntryBtn").style.outline = isExit ? "none" : "2px solid #4c6fff";
+      $("editExitBtn").style.outline = isExit ? "2px solid #4c6fff" : "none";
+    }
+
+    function switchToEntryEdit(){
+      state._ui.selectedRuleSet = "entry";
+      // 如果当前选中不存在，保持不选
+      syncEditToggleUi();
+      renderFactorList();
+      renderExitFactorList();
+      renderEditor();
+    }
+
+    function switchToExitEdit(){
+      state._ui.selectedRuleSet = "exit";
+      syncEditToggleUi();
+      renderFactorList();
+      renderExitFactorList();
+      renderEditor();
+    }
+
+    // 绑定
+    $("rulesType").onchange = updateJsonPreview;
+    $("entryType").onchange = ()=>{
+      const isWeight = $("entryType").value === "weight";
+      $("longEnterScore").disabled = !isWeight;
+      $("shortEnterScore").disabled = !isWeight;
+      updateJsonPreview();
+      renderFactorList();
+      renderExitFactorList();
+    };
+    $("exitType").onchange = ()=>{
+      const isWeight = $("exitType").value === "weight";
+      $("longExitScore").disabled = !isWeight;
+      $("shortExitScore").disabled = !isWeight;
+      updateJsonPreview();
+      renderExitFactorList();
+      renderFactorList();
+    };
+    $("longEnterScore").oninput = updateJsonPreview;
+    $("shortEnterScore").oninput = updateJsonPreview;
+    $("longExitScore").oninput = updateJsonPreview;
+    $("shortExitScore").oninput = updateJsonPreview;
+    $("addFactorBtn").onclick = addFactor;
+    $("addExitFactorBtn").onclick = addExitFactor;
+    $("exportBtn").onclick = exportJson;
+    $("copyBtn").onclick = copyJson;
+    $("resetBtn").onclick = resetAll;
+
+    $("editEntryBtn").onclick = switchToEntryEdit;
+    $("editExitBtn").onclick = switchToExitEdit;
+
+    $("indicatorModalClose").onclick = closeIndicatorModal;
+    $("indicatorModal").onclick = (e)=>{
+      if(e.target.id==="indicatorModal") closeIndicatorModal();
+    };
+
+    // init
+    const isWeightInit = $("entryType").value === "weight";
+    $("longEnterScore").disabled = !isWeightInit;
+    $("shortEnterScore").disabled = !isWeightInit;
+    const isExitWeightInit = $("exitType").value === "weight";
+    $("longExitScore").disabled = !isExitWeightInit;
+    $("shortExitScore").disabled = !isExitWeightInit;
+
+    syncEditToggleUi();
+    renderFactorList();
+    renderExitFactorList();
+    renderEditor();
+    updateJsonPreview();
+
+</script>
+</body>
+</html>

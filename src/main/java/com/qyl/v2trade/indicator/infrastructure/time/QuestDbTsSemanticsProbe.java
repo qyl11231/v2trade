@@ -110,7 +110,11 @@ public class QuestDbTsSemanticsProbe implements CommandLineRunner {
             );
             
             List<Map<String, Object>> rows = questDbJdbcTemplate.queryForList(sql);
-            
+            if(rows == null || rows.isEmpty()) {
+                log.warn("QuestDB表{}中记录为空，无法检测语义", probeTable);
+                return QuestDbTsSemantics.TS_IS_OPEN_TIME;
+            }
+
             if (rows.size() < 2) {
                 log.warn("QuestDB表{}中记录不足2条，无法检测语义", probeTable);
                 return QuestDbTsSemantics.UNKNOWN;

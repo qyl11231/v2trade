@@ -120,7 +120,7 @@ public class StrategyRuntime {
             stateRepo.persistIfChanged(createInstanceProxy(), currentState);
             
             // 5. 打印 runtime 日志
-            logRuntimeEvent(trigger, seq, stripeId, currentState);
+         //   logRuntimeEvent(trigger, seq, stripeId, currentState);
             
         } catch (Exception e) {
             log.error("处理事件失败: instanceId={}, eventKey={}, seq={}", 

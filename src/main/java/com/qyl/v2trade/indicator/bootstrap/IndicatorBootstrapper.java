@@ -83,6 +83,11 @@ public class IndicatorBootstrapper implements CommandLineRunner {
         entity.setIndicatorVersion(def.version());
         entity.setCategory(def.category().name());
         entity.setEngine(def.engine());
+        
+        // 设置 dataSource 和 implKey（独立字段）
+        entity.setDataSource("BAR"); // 默认数据源
+        entity.setImplKey(def.engine() + ":" + def.code().toLowerCase()); // 例如 "ta4j:rsi"
+        
         entity.setParamSchema(def.parameters().toMap());
         entity.setReturnSchema(def.returns().toMap());
         entity.setMinRequiredBars(def.minRequiredBars());

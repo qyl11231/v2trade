@@ -1,0 +1,372 @@
+{
+    "code": 200,
+    "message": "操作成功",
+    "data": {
+        "total": 11,
+        "current": 1,
+        "size": 200,
+        "records": [
+            {
+                "id": 20,
+                "userId": 0,
+                "indicatorCode": "MACD",
+                "indicatorName": "MACD指标",
+                "indicatorVersion": "v1",
+                "category": "MOMENTUM",
+                "engine": "ta4j",
+                "dataSource": "BAR",
+                "implKey": "ta4j:macd",
+                "paramSchema": {
+                    "longPeriod": {
+                        "max": 100,
+                        "min": 1,
+                        "type": "int",
+                        "default": 26,
+                        "required": true
+                    },
+                    "shortPeriod": {
+                        "max": 50,
+                        "min": 1,
+                        "type": "int",
+                        "default": 12,
+                        "required": true
+                    },
+                    "signalPeriod": {
+                        "max": 50,
+                        "min": 1,
+                        "type": "int",
+                        "default": 9,
+                        "required": true
+                    }
+                },
+                "returnSchema": {
+                    "macd": {
+                        "type": "SCALAR"
+                    },
+                    "signal": {
+                        "type": "SCALAR"
+                    },
+                    "histogram": {
+                        "type": "SCALAR"
+                    }
+                },
+                "minRequiredBars": 26,
+                "supportedTimeframes": [
+                    "30m",
+                    "1h",
+                    "4h",
+                    "15m",
+                    "5m",
+                    "1m"
+                ],
+                "enabled": 1,
+                "createdAt": "2026-01-20T16:00:36",
+                "updatedAt": "2026-01-20T16:00:36",
+                "paramLimits": null
+            },
+            {
+                "id": 21,
+                "userId": 0,
+                "indicatorCode": "KDJ",
+                "indicatorName": "KDJ指标",
+                "indicatorVersion": "v1",
+                "category": "MOMENTUM",
+                "engine": "ta4j",
+                "dataSource": "BAR",
+                "implKey": "ta4j:kdj",
+                "paramSchema": {
+                    "dPeriod": {
+                        "max": 50,
+                        "min": 1,
+                        "type": "int",
+                        "default": 3,
+                        "required": true
+                    },
+                    "jPeriod": {
+                        "max": 50,
+                        "min": 1,
+                        "type": "int",
+                        "default": 3,
+                        "required": true
+                    },
+                    "kPeriod": {
+                        "max": 50,
+                        "min": 1,
+                        "type": "int",
+                        "default": 9,
+                        "required": true
+                    }
+                },
+                "returnSchema": {
+                    "d": {
+                        "type": "SCALAR"
+                    },
+                    "j": {
+                        "type": "SCALAR"
+                    },
+                    "k": {
+                        "type": "SCALAR"
+                    }
+                },
+                "minRequiredBars": 9,
+                "supportedTimeframes": [
+                    "30m",
+                    "1h",
+                    "4h",
+                    "15m",
+                    "5m",
+                    "1m"
+                ],
+                "enabled": 1,
+                "createdAt": "2026-01-20T16:00:36",
+                "updatedAt": "2026-01-20T16:00:36",
+                "paramLimits": null
+            },
+            {
+                "id": 12,
+                "userId": 0,
+                "indicatorCode": "SMA",
+                "indicatorName": "简单移动平均",
+                "indicatorVersion": "v1",
+                "category": "TREND",
+                "engine": "ta4j",
+                "dataSource": "BAR",
+                "implKey": "ta4j:sma",
+                "paramSchema": {
+                    "period": {
+                        "max": 500,
+                        "min": 1,
+                        "type": "int",
+                        "default": 20,
+                        "required": true
+                    }
+                },
+                "returnSchema": {
+                    "value": {
+                        "type": "SCALAR"
+                    }
+                },
+                "minRequiredBars": 20,
+                "supportedTimeframes": [
+                    "30m",
+                    "1h",
+                    "4h",
+                    "15m",
+                    "5m",
+                    "1m"
+                ],
+                "enabled": 1,
+                "createdAt": "2026-01-20T16:00:35",
+                "updatedAt": "2026-01-20T16:00:35",
+                "paramLimits": null
+            },
+            {
+                "id": 13,
+                "userId": 0,
+                "indicatorCode": "EMA",
+                "indicatorName": "指数移动平均",
+                "indicatorVersion": "v1",
+                "category": "TREND",
+                "engine": "ta4j",
+                "dataSource": "BAR",
+                "implKey": "ta4j:ema",
+                "paramSchema": {
+                    "period": {
+                        "max": 500,
+                        "min": 1,
+                        "type": "int",
+                        "default": 20,
+                        "required": true
+                    }
+                },
+                "returnSchema": {
+                    "value": {
+                        "type": "SCALAR"
+                    }
+                },
+                "minRequiredBars": 20,
+                "supportedTimeframes": [
+                    "30m",
+                    "1h",
+                    "4h",
+                    "15m",
+                    "5m",
+                    "1m"
+                ],
+                "enabled": 1,
+                "createdAt": "2026-01-20T16:00:35",
+                "updatedAt": "2026-01-20T16:00:35",
+                "paramLimits": null
+            },
+            {
+                "id": 14,
+                "userId": 0,
+                "indicatorCode": "WMA",
+                "indicatorName": "加权移动平均",
+                "indicatorVersion": "v1",
+                "category": "TREND",
+                "engine": "ta4j",
+                "dataSource": "BAR",
+                "implKey": "ta4j:wma",
+                "paramSchema": {
+                    "period": {
+                        "max": 500,
+                        "min": 1,
+                        "type": "int",
+                        "default": 20,
+                        "required": true
+                    }
+                },
+                "returnSchema": {
+                    "value": {
+                        "type": "SCALAR"
+                    }
+                },
+                "minRequiredBars": 20,
+                "supportedTimeframes": [
+                    "30m",
+                    "1h",
+                    "4h",
+                    "15m",
+                    "5m",
+                    "1m"
+                ],
+                "enabled": 1,
+                "createdAt": "2026-01-20T16:00:35",
+                "updatedAt": "2026-01-20T16:00:35",
+                "paramLimits": null
+            },
+            {
+                "id": 15,
+                "userId": 0,
+                "indicatorCode": "RSI",
+                "indicatorName": "相对强弱指标",
+                "indicatorVersion": "v1",
+                "category": "MOMENTUM",
+                "engine": "ta4j",
+                "dataSource": "BAR",
+                "implKey": "ta4j:rsi",
+                "paramSchema": {
+                    "period": {
+                        "max": 100,
+                        "min": 2,
+                        "type": "int",
+                        "default": 14,
+                        "required": true
+                    }
+                },
+                "returnSchema": {
+                    "value": {
+                        "type": "SCALAR"
+                    }
+                },
+                "minRequiredBars": 14,
+                "supportedTimeframes": [
+                    "30m",
+                    "1h",
+                    "4h",
+                    "15m",
+                    "5m",
+                    "1m"
+                ],
+                "enabled": 1,
+                "createdAt": "2026-01-20T16:00:35",
+                "updatedAt": "2026-01-20T16:00:35",
+                "paramLimits": null
+            }
+
+            {
+                "id": 19,
+                "userId": 0,
+                "indicatorCode": "BOLL",
+                "indicatorName": "布林带",
+                "indicatorVersion": "v1",
+                "category": "VOLATILITY",
+                "engine": "ta4j",
+                "dataSource": "BAR",
+                "implKey": "ta4j:boll",
+                "paramSchema": {
+                    "period": {
+                        "max": 100,
+                        "min": 1,
+                        "type": "int",
+                        "default": 20,
+                        "required": true
+                    },
+                    "deviation": {
+                        "max": 5,
+                        "min": 0.1,
+                        "type": "float",
+                        "default": 2,
+                        "required": true
+                    }
+                },
+                "returnSchema": {
+                    "lower": {
+                        "type": "SCALAR"
+                    },
+                    "upper": {
+                        "type": "SCALAR"
+                    },
+                    "middle": {
+                        "type": "SCALAR"
+                    }
+                },
+                "minRequiredBars": 20,
+                "supportedTimeframes": [
+                    "30m",
+                    "1h",
+                    "4h",
+                    "15m",
+                    "5m",
+                    "1m"
+                ],
+                "enabled": 1,
+                "createdAt": "2026-01-20T16:00:35",
+                "updatedAt": "2026-01-20T16:00:35",
+                "paramLimits": null
+            },
+            {
+                "id": 11,
+                "userId": 5,
+                "indicatorCode": "NHHG",
+                "indicatorName": "周期最高价",
+                "indicatorVersion": "v1",
+                "category": "GENERAL",
+                "engine": "ta4j",
+                "dataSource": "BAR",
+                "implKey": "custom:NHHG",
+                "paramSchema": {
+                    "kNar": {
+                        "type": "int",
+                        "default": 60,
+                        "required": false,
+                        "description": "条件参数"
+                    }
+                },
+                "returnSchema": {
+                    "outputs": [
+                        {
+                            "name": "highN",
+                            "type": "SCALAR",
+                            "description": "返回条件参数的最高价"
+                        }
+                    ]
+                },
+                "minRequiredBars": 365,
+                "supportedTimeframes": [
+                    "5m",
+                    "15m",
+                    "30m",
+                    "1h",
+                    "4h"
+                ],
+                "enabled": 1,
+                "createdAt": "2026-01-20T12:00:24",
+                "updatedAt": "2026-01-20T12:00:24",
+                "paramLimits": null
+            }
+        ]
+    },
+    "timestamp": 1768981461487
+}

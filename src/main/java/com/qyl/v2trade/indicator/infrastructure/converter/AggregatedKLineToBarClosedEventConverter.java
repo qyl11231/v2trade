@@ -63,6 +63,11 @@ public class AggregatedKLineToBarClosedEventConverter {
                 .atZone(ZoneId.of("UTC"))
                 .toLocalDateTime();
         
+        log.info("转换AggregatedKLine为BarClosedEvent: symbol={}, period={}, openTime={}, closeTime={}, tradingPairId={}",
+                aggregatedKLine.symbol(), aggregatedKLine.period(), 
+                Instant.ofEpochMilli(aggregatedKLine.timestamp()).atZone(ZoneId.of("UTC")).toLocalDateTime(),
+                barCloseTime, tradingPairId);
+        
         return BarClosedEvent.of(
                 tradingPairId,
                 aggregatedKLine.symbol(),

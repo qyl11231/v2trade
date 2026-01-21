@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 指标定义Repository实现
@@ -98,6 +99,95 @@ public class IndicatorDefinitionRepositoryImpl implements IndicatorDefinitionRep
         // 分页查询
         Page<IndicatorDefinition> pageObj = new Page<>(page, size);
         return mapper.selectPage(pageObj, wrapper);
+    }
+    
+    // ========== V2 新增方法实现 ==========
+    
+    @Override
+    public Optional<IndicatorDefinition> findByCodeAndVersion(String indicatorCode, String indicatorVersion) {
+        if (indicatorCode == null || indicatorVersion == null) {
+            return Optional.empty();
+        }
+        
+        IndicatorDefinition definition = mapper.selectOne(
+            new LambdaQueryWrapper<IndicatorDefinition>()
+                .eq(IndicatorDefinition::getIndicatorCode, indicatorCode)
+                .eq(IndicatorDefinition::getIndicatorVersion, indicatorVersion)
+                .last("LIMIT 1")
+        );
+        
+        return Optional.ofNullable(definition);
+    }
+    
+    @Override
+    public Optional<IndicatorDefinition> findByImplKey(String implKey) {
+        if (implKey == null) {
+            return Optional.empty();
+        }
+        
+        // impl_key 现在是独立字段，可以直接查询
+        IndicatorDefinition definition = mapper.selectOne(
+            new LambdaQueryWrapper<IndicatorDefinition>()
+                .eq(IndicatorDefinition::getImplKey, implKey)
+                .last("LIMIT 1")
+        );
+        
+        return Optional.ofNullable(definition);
+    }
+    
+    @Override
+    public List<IndicatorDefinition> findByDataSource(String dataSource) {
+        if (dataSource == null) {
+            return List.of();
+        }
+        
+        // data_source 现在是独立字段，可以直接查询
+        return mapper.selectList(
+            new LambdaQueryWrapper<IndicatorDefinition>()
+                .eq(IndicatorDefinition::getDataSource, dataSource)
+        );
+    }
+    
+    @Override
+    public IndicatorDefinition saveOrUpdate(IndicatorDefinition definition) {
+        if (definition == null) {
+            throw new IllegalArgumentException("指标定义不能为null");
+        }
+        
+        if (definition.getId() != null) {
+            // 更新
+            mapper.updateById(definition);
+            log.debug("更新指标定义: id={}, code={}, version={}", 
+                    definition.getId(), definition.getIndicatorCode(), definition.getIndicatorVersion());
+        } else {
+            // 插入
+            mapper.insert(definition);
+            log.debug("插入指标定义: id={}, code={}, version={}", 
+                    definition.getId(), definition.getIndicatorCode(), definition.getIndicatorVersion());
+        }
+        
+        return definition;
+    }
+    
+    @Override
+    public Optional<IndicatorDefinition> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        
+        IndicatorDefinition definition = mapper.selectById(id);
+        return Optional.ofNullable(definition);
+    }
+    
+    @Override
+    public boolean deleteById(Long id) {
+        if (id == null) {
+            return false;
+        }
+        
+        int result = mapper.deleteById(id);
+        log.debug("删除指标定义: id={}, result={}", id, result);
+        return result > 0;
     }
 }
 

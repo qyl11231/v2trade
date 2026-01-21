@@ -73,7 +73,9 @@ public class QuestDbConfig {
         
         // 防止连接池在应用关闭时被错误关闭的配置
         config.setLeakDetectionThreshold(60000); // 1分钟泄漏检测
-        config.setInitializationFailTimeout(1); // 初始化失败超时
+        // 初始化失败超时设为-1，表示允许应用启动即使QuestDB不可用（连接会在使用时重试）
+        // 这样应用可以正常启动，QuestDB连接会在需要时自动重试
+        config.setInitializationFailTimeout(-1);
         
         return new HikariDataSource(config);
     }

@@ -5,8 +5,11 @@ import com.qyl.v2trade.business.system.service.MarketSubscriptionConfigService;
 import com.qyl.v2trade.indicator.domain.event.BarClosedEvent;
 import com.qyl.v2trade.indicator.domain.event.BarClosedEventPublisher;
 import com.qyl.v2trade.indicator.domain.model.NormalizedBar;
+import com.qyl.v2trade.indicator.infrastructure.resolver.TradingPairResolver;
+import com.qyl.v2trade.indicator.infrastructure.time.QuestDbTsSemanticsProbe;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -45,14 +48,12 @@ public class BarSeriesManager {
     private BarClosedEventPublisher barClosedEventPublisher;
     
     @Autowired(required = false)
-    private com.qyl.v2trade.indicator.infrastructure.resolver.TradingPairResolver tradingPairResolver;
+    private TradingPairResolver tradingPairResolver;
     
     /**
      * 支持的周期列表（指标模块只维护这5个周期）
      */
-    private static final String[] SUPPORTED_TIMEFRAMES = 
-            com.qyl.v2trade.indicator.infrastructure.time.QuestDbTsSemanticsProbe
-                    .getSupportedTimeframes();
+    private static final String[] SUPPORTED_TIMEFRAMES = QuestDbTsSemanticsProbe.getSupportedTimeframes();
     
     /**
      * BarSeries存储：key = pairId:timeframe
@@ -67,14 +68,17 @@ public class BarSeriesManager {
     
     @PostConstruct
     public void init() {
-        // 订阅BarClosedEvent
+        // 同时支持两种事件接收方式：
+        // 1. Spring @EventListener（优先，已在onBarClosed方法上添加@EventListener注解）
+        // 2. 自定义BarClosedEventPublisher订阅（向后兼容）
         if (barClosedEventPublisher != null) {
             eventConsumer = this::onBarClosed;
             barClosedEventPublisher.subscribe(eventConsumer);
-            log.info("BarSeriesManager已订阅BarClosedEvent");
+            log.info("BarSeriesManager已订阅BarClosedEvent（自定义Publisher方式，作为备选）");
         } else {
-            log.warn("BarClosedEventPublisher未注入，BarSeriesManager将不会自动接收事件");
+            log.warn("BarClosedEventPublisher未注入，将仅使用Spring @EventListener机制接收事件。如果onBarClosed方法未被调用，请检查Spring事件发布配置");
         }
+        log.info("BarSeriesManager初始化完成，已通过@EventListener监听BarClosedEvent");
     }
     
     @PreDestroy
@@ -191,20 +195,47 @@ public class BarSeriesManager {
     }
     
     /**
-     * 处理BarClosedEvent
+     * 处理BarClosedEvent（V2：只维护K线输入，不触发指标计算）
      * 
      * <p>维护K线数据：当聚合完成时，将新的K线追加到对应的BarSeries
      * <p>如果对应的BarSeries不存在，会自动创建（支持动态添加新的交易对）
+     * <p>自动维护最新365根，去除最旧的（防止内存泄漏）
      * 
-     * @param event BarClosedEvent
+     * <p>【V2 重要】此方法只做K线数据维护，不触发任何指标计算流程
+     * <p>指标计算改为按需评估模式，由策略模块调用 evaluate() 接口触发
+     * 
+     * <p>支持两种事件接收方式：
+     * <p>1. Spring @EventListener（优先，更可靠）
+     * <p>2. 自定义BarClosedEventPublisher订阅（向后兼容）
+     * 
+     * @param event BarClosedEvent（包含 bar_close_time UTC 语义的时间）
      */
+    @EventListener
     public void onBarClosed(BarClosedEvent event) {
-        if (event.tradingPairId() == null || event.timeframe() == null) {
+        log.info("收到BarClosedEvent: symbol={}, timeframe={}, tradingPairId={}, barCloseTime={}",
+                event.symbol(), event.timeframe(), event.tradingPairId(), event.barCloseTime());
+            
+        Long pairId = event.tradingPairId();
+        String symbol = event.symbol();
+
+        // 兜底解析 tradingPairId，避免因上游未注入 TradingPairResolver 导致事件被丢弃
+        if (pairId == null && tradingPairResolver != null && symbol != null) {
+            try {
+                pairId = tradingPairResolver.symbolToTradingPairId(symbol);
+                if (pairId != null) {
+                    log.info("从 symbol 解析到 tradingPairId: symbol={}, pairId={}", symbol, pairId);
+                }
+            } catch (Exception e) {
+                log.warn("解析 tradingPairId 失败，symbol={}", symbol, e);
+            }
+        }
+
+        if (pairId == null || event.timeframe() == null) {
             log.warn("BarClosedEvent缺少必要信息，跳过: symbol={}, timeframe={}, tradingPairId={}",
-                    event.symbol(), event.timeframe(), event.tradingPairId());
+                    symbol, event.timeframe(), pairId);
             return;
         }
-        
+            
         // 过滤：只处理支持的周期（5m、15m、30m、1h、4h），不处理1m
         if (!com.qyl.v2trade.indicator.infrastructure.time.QuestDbTsSemanticsProbe
                 .isTimeframeSupported(event.timeframe())) {
@@ -214,15 +245,15 @@ public class BarSeriesManager {
         }
         
         String timeframe = event.timeframe();
-        Long pairId = event.tradingPairId();
         String seriesKey = buildSeriesKey(pairId, timeframe);
         
         // 转换为NormalizedBar
+        // 注意：event.barCloseTime() 是 bar_close_time UTC 语义（指标模块统一时间语义）
         NormalizedBar bar = NormalizedBar.of(
                 event.tradingPairId(),
                 event.symbol(),
                 event.timeframe(),
-                event.barCloseTime(),
+                event.barCloseTime(),  // bar_close_time UTC
                 event.open(),
                 event.high(),
                 event.low(),
@@ -240,11 +271,14 @@ public class BarSeriesManager {
             seriesMap.put(seriesKey, series);
         }
         
-        // 追加K线（内部会自动维护365根的限制）
+        // 追加K线（内部会自动维护365根的限制，去重）
         series.append(bar);
         
-        log.debug("BarSeries已更新: pairId={}, timeframe={}, barTime={}, totalBars={}",
-                pairId, timeframe, event.barCloseTime(), series.size());
+        log.info("✓ BarSeries已更新: pairId={}, symbol={}, timeframe={}, barTime={}, totalBars={}",
+                pairId, event.symbol(), timeframe, event.barCloseTime(), series.size());
+        
+        // ❌ V2: 禁止在此处触发任何指标计算流程
+        // 指标计算改为按需评估模式，由策略模块调用 evaluate() 接口触发
     }
     
     /**
@@ -298,10 +332,12 @@ public class BarSeriesManager {
         /**
          * 追加bar（去重），并维护最新365根，去除最旧的
          * 
-         * @param bar 要追加的bar
+         * <p>【时间语义】bar.barTime() 是 bar_close_time UTC 语义（指标模块统一时间语义）
+         * 
+         * @param bar 要追加的bar（bar.barTime() 是 bar_close_time UTC）
          */
         public synchronized void append(NormalizedBar bar) {
-            // 检查是否已存在（按barTime判断）
+            // 检查是否已存在（按barTime判断，barTime是bar_close_time UTC语义）
             boolean exists = bars.stream()
                     .anyMatch(b -> b.barTime().equals(bar.barTime()));
             

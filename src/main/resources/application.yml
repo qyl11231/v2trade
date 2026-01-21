@@ -159,3 +159,31 @@ calibration:
     windowMinutes: 60
     # 清理过期数据的间隔（毫秒），默认10分钟
     cleanupIntervalMs: 600000
+
+# 指标模块配置（V2）
+indicator:
+  # 自动计算配置（V2：默认关闭）
+  auto-calculate:
+    # 是否启用自动计算（V2版本默认关闭，改为按需评估模式）
+    # 设置为 true 时仍能执行（向后兼容测试），但V2不允许在生产环境启用
+    enabled: false  # V2: 默认关闭，禁止自动计算
+  
+  # 评估缓存配置（V2：阶段四）
+  evaluate:
+    cache:
+      # 是否启用缓存（默认启用）
+      enabled: true
+      # 缓存TTL（秒），默认3600秒（1小时）
+      ttl: 3600
+      # 最大缓存容量，默认10000
+      max-size: 10000
+  
+  # 特征缓存配置（V2：阶段七，Phase 2可选）
+  feature:
+    cache:
+      # 是否启用特征缓存（默认关闭，Phase 2性能优化项）
+      enabled: false
+      # 缓存TTL（秒），默认1800秒（30分钟）
+      ttl: 1800
+      # 最大缓存容量，默认5000
+      max-size: 5000

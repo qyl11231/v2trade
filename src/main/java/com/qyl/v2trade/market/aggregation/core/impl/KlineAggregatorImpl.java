@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
@@ -44,11 +45,11 @@ import java.util.function.Consumer;
 public class KlineAggregatorImpl implements KlineAggregator {
     
     /**
-     * 聚合结果回调（用于事件发布，在任务2.2中实现）
+     * 聚合结果回调列表（支持多个回调，避免被覆盖）
      * 
-     * <p>当聚合完成时，会调用此回调函数
+     * <p>当聚合完成时，会依次调用所有回调函数
      */
-    private Consumer<AggregatedKLine> aggregationCallback;
+    private final List<Consumer<AggregatedKLine>> aggregationCallbacks = new CopyOnWriteArrayList<>();
     
     /**
      * 存储服务（可选，如果为null则不写入数据库）
@@ -145,17 +146,43 @@ public class KlineAggregatorImpl implements KlineAggregator {
      */
     public KlineAggregatorImpl(Consumer<AggregatedKLine> aggregationCallback, 
                                AggregatedKLineStorageService storageService) {
-        this.aggregationCallback = aggregationCallback;
+        if (aggregationCallback != null) {
+            this.aggregationCallbacks.add(aggregationCallback);
+        }
         this.storageService = storageService;
     }
     
     /**
-     * 设置聚合完成回调
+     * 设置聚合完成回调（支持多个回调，不会覆盖已有回调）
+     * 
+     * <p>如果callback已存在，会先移除再添加（避免重复）
      * 
      * @param callback 回调函数
      */
     public void setAggregationCallback(Consumer<AggregatedKLine> callback) {
-        this.aggregationCallback = callback;
+        if (callback == null) {
+            return;
+        }
+        // 移除已存在的相同回调（避免重复）
+        aggregationCallbacks.remove(callback);
+        // 添加到列表末尾
+        aggregationCallbacks.add(callback);
+        log.debug("添加聚合回调，当前回调数量: {}", aggregationCallbacks.size());
+    }
+    
+    /**
+     * 添加聚合完成回调（支持多个回调）
+     * 
+     * @param callback 回调函数
+     */
+    public void addAggregationCallback(Consumer<AggregatedKLine> callback) {
+        if (callback == null) {
+            return;
+        }
+        if (!aggregationCallbacks.contains(callback)) {
+            aggregationCallbacks.add(callback);
+            log.debug("添加聚合回调，当前回调数量: {}", aggregationCallbacks.size());
+        }
     }
     
     /**
@@ -478,13 +505,14 @@ public class KlineAggregatorImpl implements KlineAggregator {
                 });
             }
             
-            // 9. 发布事件（如果回调函数存在，带sourceCount）
-            if (aggregationCallback != null) {
+            // 9. 发布事件（依次调用所有回调函数，带sourceCount）
+            for (Consumer<AggregatedKLine> callback : aggregationCallbacks) {
                 try {
-                    aggregationCallback.accept(aggregated);
+                    callback.accept(aggregated);
                 } catch (Exception e) {
-                    log.error("发布聚合事件异常: symbol={}, period={}, timestamp={}", 
+                    log.error("聚合回调执行异常: symbol={}, period={}, timestamp={}", 
                             aggregated.symbol(), aggregated.period(), aggregated.timestamp(), e);
+                    // 单个回调异常不影响其他回调
                 }
             }
             

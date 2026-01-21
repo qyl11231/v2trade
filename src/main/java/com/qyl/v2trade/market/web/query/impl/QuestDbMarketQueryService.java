@@ -6,6 +6,7 @@ import com.qyl.v2trade.market.web.query.MarketQueryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -123,6 +124,12 @@ public class QuestDbMarketQueryService implements MarketQueryService {
             }
             return klines;
 
+        } catch (CannotGetJdbcConnectionException e) {
+            // QuestDB连接失败，通常是QuestDB未启动或不可用
+            // 使用WARN级别并减少日志频率，避免日志爆炸
+            log.warn("QuestDB连接失败，无法查询K线: symbol={}, interval={}. 请确认QuestDB是否已启动 ({}:{})", 
+                    symbol, interval, e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+            return new ArrayList<>();
         } catch (Exception e) {
             log.error("查询K线失败: symbol={}, interval={}", symbol, interval, e);
             return new ArrayList<>();
@@ -146,6 +153,10 @@ public class QuestDbMarketQueryService implements MarketQueryService {
             );
 
             return klines.isEmpty() ? null : klines.get(0);
+        } catch (CannotGetJdbcConnectionException e) {
+            log.warn("QuestDB连接失败，无法查询最新K线: symbol={}, interval={}. 请确认QuestDB是否已启动", 
+                    symbol, interval);
+            return null;
         } catch (Exception e) {
             log.error("查询最新K线失败: symbol={}, interval={}", symbol, interval, e);
             return null;
@@ -171,6 +182,10 @@ public class QuestDbMarketQueryService implements MarketQueryService {
             );
 
             return klines.isEmpty() ? null : klines.get(0);
+        } catch (CannotGetJdbcConnectionException e) {
+            log.warn("QuestDB连接失败，无法查询指定时间K线: symbol={}, timestamp={}. 请确认QuestDB是否已启动", 
+                    symbol, timestamp);
+            return null;
         } catch (Exception e) {
             log.error("查询指定时间K线失败: symbol={}, timestamp={}", symbol, timestamp, e);
             return null;
